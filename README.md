@@ -32,3 +32,7 @@ Run the demo code:
     10
     11
     41
+
+# JTAG info
+
+[JTAG STATE GRAPH](https://www.xjtag.com/about-jtag/jtag-a-technical-overview/tap_state_machine1)

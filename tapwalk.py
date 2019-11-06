@@ -86,6 +86,38 @@ class tapwalk:
       self.send_bit((val >> nf) & 1, (last & int((nf == 7) == True)))
       byte |= self.tdo.value() << nf
     return byte
+  
+  # send SIR command (byte integer)
+  # TAP should be in "select DR scan" state and will return to the same state
+  def sir(self, sir):
+    self.send_bit(0,1) # -> select IR scan
+    self.send_bit(0,0) # -> capture IR
+    self.send_bit(0,0) # -> shift IR
+    # IDCODE Instruction
+    self.read_data_byte(sir,1) # -> exit IR
+    self.send_bit(0,1) # -> update IR
+    self.send_bit(0,1) # -> select DR scan
+
+  # send SDR data (byte string)
+  def sdr_print(self, sdr):
+    self.send_bit(0,0) # -> capture DR
+    self.send_bit(0,0) # -> shift DR
+    for byte in sdr[:-1]:
+      self.read_data_byte(byte,0) # not last
+    self.read_data_byte(sdr[-1],1)
+    self.send_bit(0,1) # -> update DR
+    self.send_bit(0,1) # -> select DR scan
+  
+  # send SDR data (byte string) and print result
+  def sdr_print(self, sdr):
+    self.send_bit(0,0) # -> capture DR
+    self.send_bit(0,0) # -> shift DR
+    for byte in sdr[:-1]:
+      print("%02X" % self.read_data_byte(byte,0)) # not last
+    print("%02X" % self.read_data_byte(sdr[-1],1)) # last
+    self.send_bit(0,1) # -> update DR
+    self.send_bit(0,1) # -> select DR scan
+    
 
   def idcode(self):
     print("demo")
@@ -96,22 +128,7 @@ class tapwalk:
     # State = IDLE
     self.send_bit(0,1) # -> select DR scan
 
-    self.send_bit(0,1) # -> select IR scan
-    self.send_bit(0,0) # -> capture IR
-    self.send_bit(0,0) # -> shift IR
-    # IDCODE Instruction
-    self.read_data_byte(0xE0,1) # -> exit IR
-    self.send_bit(0,1) # -> update IR
-    self.send_bit(0,1) # -> select DR scan
-
-    self.send_bit(0,0) # -> capture DR
-    self.send_bit(0,0) # -> shift DR
-    # read data response from IDCODE
-    print("%02X" % self.read_data_byte(0,0))
-    print("%02X" % self.read_data_byte(0,0))
-    print("%02X" % self.read_data_byte(0,0))
-    print("%02X" % self.read_data_byte(0,1))
-    self.send_bit(0,1) # -> update DR
-    self.send_bit(0,1) # -> select DR scan
+    self.sir(0xE0)
+    self.sdr_print(b"\x00\x00\x00\x00")
 
     self.led.off()

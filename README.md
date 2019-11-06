@@ -19,6 +19,7 @@ using webrepl.
 
 List directory to check is it uploaded:
 
+    >>> import os
     >>> os.listdir()
     ['boot.py', 'tapwalk.py']
 

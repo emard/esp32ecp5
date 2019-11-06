@@ -9,6 +9,7 @@
 # 11                                                                              
 # 41                                                                              
 
+import time
 from machine import SPI, Pin
 
 class tapwalk:
@@ -117,18 +118,20 @@ class tapwalk:
     print("%02X" % self.read_data_byte(sdr[-1],1)) # last
     self.send_bit(0,1) # -> update DR
     self.send_bit(0,1) # -> select DR scan
-    
 
-  def idcode(self):
-    print("demo")
-    self.led.on()
+  def runtest_idle(self, duration):
     for n in range(0,6):
-      self.send_bit(0,1) # Test Logic Reset 1
+      self.send_bit(0,1) # -> Test Logic Reset
+    leave=time.ticks_ms() + int(duration*1000)
     self.send_bit(0,0) # -> idle
-    # State = IDLE
+    while time.ticks_ms() < leave:
+      self.send_bit(0,0) # -> idle
     self.send_bit(0,1) # -> select DR scan
 
+  def idcode(self):
+    print("idcode")
+    self.led.on()
+    self.runtest_idle(0)
     self.sir(0xE0)
     self.sdr_print(b"\x00\x00\x00\x00")
-
     self.led.off()

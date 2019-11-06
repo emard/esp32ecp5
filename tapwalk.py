@@ -12,12 +12,30 @@
 from machine import SPI, Pin
 
 class tapwalk:
+
+  # debugging with OLED to see bus state
   def pinout_oled(self):
     self.led=Pin( 5,Pin.OUT)
     self.tms=Pin(15,Pin.OUT)
     self.tck=Pin(14,Pin.OUT)
     self.tdi=Pin(13,Pin.OUT)
     self.tdo=Pin(12,Pin.IN)
+
+  # actual JTAG
+  def pinout_jtag(self):
+    self.led=Pin( 5,Pin.OUT)
+    self.tms=Pin(21,Pin.OUT)
+    self.tck=Pin(18,Pin.OUT)
+    self.tdi=Pin(23,Pin.OUT)
+    self.tdo=Pin(19,Pin.IN)
+
+  # software SPI
+
+#  def swspi_oled(self):
+#    # software SPI -1 currently can't have firstbit=SPI.LSB
+#    self.spi=SPI(-1, baudrate=10000000, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(14), mosi=Pin(13), miso=Pin(12))
+
+  # hardware SPI (oled debug)
 
 #  def hwspi_oled(self):
 #    self.spi=SPI(1, baudrate=10000000, polarity=1, phase=1, bits=8, firstbit=SPI.LSB, sck=Pin(14), mosi=Pin(13), miso=Pin(12))
@@ -30,17 +48,18 @@ class tapwalk:
 #  def spi_tms(self):
 #    self.spi.init(mosi=Pin(15))
 
-  # software spi
-#  def swspi_oled(self):
-#    # software SPI -1 currently can't have firstbit=SPI.LSB
-#    self.spi=SPI(-1, baudrate=10000000, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(14), mosi=Pin(13), miso=Pin(12))
+  # hardware SPI (real jtag)
 
-  def pinout_jtag(self):
-    self.led=Pin( 5,Pin.OUT)
-    self.tms=Pin(21,Pin.OUT)
-    self.tck=Pin(18,Pin.OUT)
-    self.tdi=Pin(23,Pin.OUT)
-    self.tdo=Pin(19,Pin.IN)
+#  def hwspi_jtag(self):
+#    self.spi=SPI(2, baudrate=10000000, polarity=1, phase=1, bits=8, firstbit=SPI.LSB, sck=Pin(18), mosi=Pin(23), miso=Pin(19))
+
+#  # HW spi problem: glitch
+#  def hwspi_tdi(self):
+#    self.spi.init(mosi=Pin(23))
+  
+#  # HW spi problem: glitch
+#  def hwspi_tms(self):
+#    self.spi.init(mosi=Pin(21))
 
   def __init__(self):
 #    self.pinout_oled()

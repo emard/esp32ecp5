@@ -197,7 +197,7 @@ class tapwalk:
     self.led.on()
     self.reset_tap()
     self.sir(0xE0)
-    self.sdr_print(b"\x01\x00\x00\x00")
+    self.sdr_print(b"\x00\x00\x00\x00")
     self.led.off()
     self.pinout_jtag_off()
   
@@ -214,12 +214,12 @@ class tapwalk:
     self.sdr(b"\x00", idle=(2,1.0E-2))
     self.sir(0x3C, idle=(2,1.0E-3)) # LSC_READ_STATUS
     self.sdr_print(b"\x00\x00\x00\x00")
-    print("00000000 mask 40402000 status");
+    print("00000000 mask 40402000 status check");
     self.sir(0x0E) # ISC erase RAM
     self.sdr(b"\x01", idle=(2,1.0E-2))
     self.sir(0x3C, idle=(2,1.0E-3)) # LSC_READ_STATUS
     self.sdr_print(b"\x00\x00\x00\x00")
-    print("00000000 mask 00B00000 status");
+    print("00000000 mask 00B00000 status check");
     self.sir(0x46) # LSC_INIT_ADDRESS
     self.sdr(b"\x01", idle=(2,1.0E-2))
     self.sir(0x7A) # LSC_BITSTREAM_BURST
@@ -245,7 +245,7 @@ class tapwalk:
     self.sir(0xFF, idle=(2,1.0E-3)) # BYPASS
     self.sir(0x3C) # LSC_READ_STATUS
     self.sdr_print(b"\x00\x00\x00\x00")
-    print("00010000 mask 00210000 status");
+    print("00010000 mask 00210000 status check");
     self.reset_tap()
     self.led.off()
     self.pinout_jtag_off()

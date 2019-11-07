@@ -92,9 +92,10 @@ class tapwalk:
     for n in range(0,6):
       self.send_bit(0,1) # -> Test Logic Reset
 
-  def runtest_idle(self, duration):
+  def runtest_idle(self, count, duration):
     leave=time.ticks_ms() + int(duration*1000)
-    self.send_bit(0,0) # -> idle
+    for n in range(0,count):
+      self.send_bit(0,0) # -> idle
     while time.ticks_ms() < leave:
       self.send_bit(0,0) # -> idle
   
@@ -136,7 +137,7 @@ class tapwalk:
     print("idcode")
     self.led.on()
     self.reset_tap()
-    self.runtest_idle(0)
+    self.runtest_idle(1,0)
     self.sir(0xE0)
     self.sdr_print(b"\x00\x00\x00\x00")
     self.led.off()
@@ -145,19 +146,33 @@ class tapwalk:
     print("program")
     self.led.on()
     self.reset_tap()
-    self.runtest_idle(0)
+    self.runtest_idle(1,0)
     self.sir(0xE0)
     self.sdr_print(b"\x00\x00\x00\x00")
     self.sir(0x1C)
     self.sdr_print([0xFF for i in range(0,64)])
     self.sir(0xC6)
     self.sdr(b"\x00")
-    self.runtest_idle(1.0E-2)
+    self.runtest_idle(2,1.0E-2)
     self.sir(0x3C)
     self.sdr_print(b"\x00\x00\x00\x00")
     self.sir(0x46)
     self.sdr(b"\x01")
-    self.runtest_idle(1.0E-2)
+    self.runtest_idle(2,1.0E-2)
     self.sir(0x7A)
-    self.runtest_idle(1.0E-2)
+    self.runtest_idle(2,1.0E-2)
+    # bitstream begin
+    # bitstream end
+    self.sir(0xFF)
+    self.runtest_idle(100,1.0E-2)
+    self.sir(0xC0)
+    self.runtest_idle(2,1.0E-2)
+    self.sdr_print(b"\x00\x00\x00\x00")
+    self.sir(0x26)
+    self.runtest_idle(2,2.0E-1)
+    self.sir(0xFF)
+    self.runtest_idle(2,1.0E-3)
+    self.sir(0x3C)
+    self.sdr_print(b"\x00\x00\x00\x00")
+
     self.led.off()

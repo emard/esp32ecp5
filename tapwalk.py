@@ -130,7 +130,7 @@ class tapwalk:
     self.send_bit(0,1) # -> exit 2 IR
     self.send_bit(0,1) # -> update IR
     if idle:
-      self.send_bit(0,0) # -> idle
+      self.runtest_idle(idle[0], idle[1])
     else:
       self.send_bit(0,1) # -> select DR scan
 
@@ -148,7 +148,7 @@ class tapwalk:
     self.send_bit(0,1) # -> exit 2 DR
     self.send_bit(0,1) # -> update DR
     if idle:
-      self.send_bit(0,0) # -> idle
+      self.runtest_idle(idle[0], idle[1])
     else:
       self.send_bit(0,1) # -> select DR scan
   
@@ -166,7 +166,7 @@ class tapwalk:
     self.send_bit(0,1) # -> exit 2 DR
     self.send_bit(0,1) # -> update DR
     if idle:
-      self.send_bit(0,0) # -> idle
+      self.runtest_idle(idle[0], idle[1])
     else:
       self.send_bit(0,1) # -> select DR scan
 
@@ -187,18 +187,14 @@ class tapwalk:
     self.sir(0x1C)
     self.sdr_print([0xFF for i in range(64)])
     self.sir(0xC6)
-    self.sdr(b"\x00", idle=True)
-    self.runtest_idle(2,1.0E-2)
+    self.sdr(b"\x00", idle=(2,1.0E-2))
     self.sir(0x0E) # ISC erase RAM
-    self.sdr(b"\x01", idle=True)
-    self.runtest_idle(2,1.0E-2)
-    self.sir(0x3C, idle=True) # LSC_READ_STATUS
-    self.runtest_idle(2,1.0E-3)
+    self.sdr(b"\x01", idle=(2,1.0E-2))
+    self.sir(0x3C, idle=(2,1.0E-3)) # LSC_READ_STATUS
     self.sdr_print(b"\x00\x00\x00\x00")
     print("00000000 mask 00B00000 status");
     self.sir(0x46) # LSC_INIT_ADDRESS
-    self.sdr(b"\x01", idle=True)
-    self.runtest_idle(2,1.0E-2)
+    self.sdr(b"\x01", idle=(2,1.0E-2))
     self.sir(0x7A) # LSC_BITSTREAM_BURST
     # bitstream begin
     with open(filename, "rb") as filedata:
@@ -206,24 +202,22 @@ class tapwalk:
         block = filedata.read(1024)
         if block:
           block = bytes([self.bitreverse(x) for x in block])
+          if len(block) < 1024:
+            print(block)
           self.sdr(block)
           print(".",end="")
         else:
           print("*")
           break
     # bitstream end
-    self.sdr(b"\x00\x00\x00\xFF\xFF\xFF\xFF", idle=True)
-    self.runtest_idle(100,1.0E-2)
-    self.sir(0xC0, idle=True) # read usercode
-    self.runtest_idle(2,1.0E-3)
+    self.sdr(b"\xFF", idle=(100,1.0E-2))
+    self.sir(0xC0, idle=(2,1.0E-3)) # read usercode
     self.sdr_print(b"\x00\x00\x00\x00")
     print("00000000 mask FFFFFFFF usercode");
-    self.sir(0x26, idle=True) # ISC DISABLE
-    self.runtest_idle(2,2.0E-1)
-    self.sir(0xFF, idle=True) # BYPASS
-    self.runtest_idle(2,1.0E-3)
+    self.sir(0x26, idle=(2,2.0E-1)) # ISC DISABLE
+    self.sir(0xFF, idle=(2,1.0E-3)) # BYPASS
     self.sir(0x3C) # LSC_READ_STATUS
     self.sdr_print(b"\x00\x00\x00\x00")
     print("00010000 mask 00210000 status");
-
+    self.reset_tap()
     self.led.off()

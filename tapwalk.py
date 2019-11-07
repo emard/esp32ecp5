@@ -96,10 +96,12 @@ class tapwalk:
       byte |= self.tdo.value() << nf
     return byte
     
+  # TAP to "reset" state
   def reset_tap(self):
     for n in range(6):
       self.send_bit(0,1) # -> Test Logic Reset
 
+  # TAP should be in "idle" state and will return to "idle" state
   def runtest_idle(self, count, duration):
     leave=time.ticks_ms() + int(duration*1000)
     for n in range(count):
@@ -108,18 +110,18 @@ class tapwalk:
       self.send_bit(0,0) # -> idle
   
   # send SIR command (byte integer)
-  # TAP should be in "idle" state and will return to the same state
+  # TAP should be in "idle" state and will return to "idle" state
   def sir(self, sir):
     self.send_bit(0,1) # -> select DR scan
     self.send_bit(0,1) # -> select IR scan
     self.send_bit(0,0) # -> capture IR
     self.send_bit(0,0) # -> shift IR
-    # IDCODE Instruction
     self.read_data_byte(sir,1) # -> exit IR
     self.send_bit(0,1) # -> update IR
     self.send_bit(0,0) # -> idle
 
   # send SDR data (byte string)
+  # TAP should be in "idle" state and will return to "idle" state
   def sdr(self, sdr):
     self.send_bit(0,1) # -> select DR scan
     self.send_bit(0,0) # -> capture DR
@@ -131,6 +133,7 @@ class tapwalk:
     self.send_bit(0,0) # -> idle
   
   # send SDR data (byte string) and print result
+  # TAP should be in "idle" state and will return to "idle" state
   def sdr_print(self, sdr):
     self.send_bit(0,1) # -> select DR scan
     self.send_bit(0,0) # -> capture DR

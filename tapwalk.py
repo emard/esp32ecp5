@@ -2,10 +2,10 @@
 
 # usage
 # >>> import tapwalk
-# >>> t=tapwalk.tapwalk()
-# >>> t.idcode()
+# >>> tap=tapwalk.tapwalk()
+# >>> tap.idcode()
 # 41111043
-# >>> t.program("blink.bit")
+# >>> tap.program("blink.bit")
 
 import time
 from machine import SPI, Pin
@@ -94,14 +94,14 @@ class tapwalk:
     self.tck.off()
     self.tck.on()
 
-  def read_data_byte(self, val, last):
+  def send_read_data_byte(self, val, last):
     byte = 0
     for nf in range(8):
       self.send_bit((val >> nf) & 1, (last & int((nf == 7) == True)))
       byte |= self.tdo.value() << nf
     return byte
 
-  def read_data_byte_reverse(self, val, last):
+  def send_read_data_byte_reverse(self, val, last):
     byte = 0
     for nf in range(8):
       self.send_bit((val >> (7-nf)) & 1, (last & int((nf == 7) == True)))
@@ -132,8 +132,8 @@ class tapwalk:
     self.send_bit(0,0) # -> capture IR
     self.send_bit(0,0) # -> shift IR
     for byte in sir[:-1]:
-      self.read_data_byte(byte,0) # not last
-    self.read_data_byte(sir[-1],1) # last, exit 1 DR
+      self.send_read_data_byte(byte,0) # not last
+    self.send_read_data_byte(sir[-1],1) # last, exit 1 DR
     self.send_bit(0,0) # -> pause IR
     self.send_bit(0,1) # -> exit 2 IR
     self.send_bit(0,1) # -> update IR
@@ -156,16 +156,16 @@ class tapwalk:
       print("%02X send" % sdr[-1])
       response = b""
       for byte in sdr[:-1]:
-        response += bytes([self.read_data_byte(byte,0)]) # not last
-      response += bytes([self.read_data_byte(sdr[-1],1)]) # last, exit 1 DR
+        response += bytes([self.send_read_data_byte(byte,0)]) # not last
+      response += bytes([self.send_read_data_byte(sdr[-1],1)]) # last, exit 1 DR
       # print byte reverse - notation same as in SVF file
       for n in range(len(response)):
         print("%02X" % response[len(response)-n-1], end="")
       print(" response")
     else: # no print, faster
       for byte in sdr[:-1]:
-        self.read_data_byte(byte,0) # not last
-      self.read_data_byte(sdr[-1],1) # last, exit 1 DR
+        self.send_read_data_byte(byte,0) # not last
+      self.send_read_data_byte(sdr[-1],1) # last, exit 1 DR
     self.send_bit(0,0) # -> pause DR
     self.send_bit(0,1) # -> exit 2 DR
     self.send_bit(0,1) # -> update DR
@@ -222,7 +222,7 @@ class tapwalk:
         block = filedata.read(blocksize)
         if block:
           #for byte in block:
-          #  self.read_data_byte_reverse(byte,0)
+          #  self.send_read_data_byte_reverse(byte,0)
           self.spi.write(block) # same as above but faster
           print(".",end="")
           size += len(block)
@@ -231,7 +231,7 @@ class tapwalk:
           print("%d bytes uploaded" % size)
           break
       self.spi_jtag_off()
-      self.read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
+      self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
       self.send_bit(0,0) # -> pause DR
       self.send_bit(0,1) # -> exit 2 DR
       self.send_bit(0,1) # -> update DR
@@ -250,7 +250,7 @@ class tapwalk:
     self.bitbang_jtag_off()
 
 print("usage:")
-print("tap = tapwalk.tapwalk()")
+print("tap=tapwalk.tapwalk()")
 print("tap.program(\"blink.bit\")")
 tap = tapwalk()
 tap.program("blink.bit")

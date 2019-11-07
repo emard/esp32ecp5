@@ -130,7 +130,7 @@ class tapwalk:
     self.send_bit(0,0) # -> shift DR
     for byte in sdr[:-1]:
       self.read_data_byte(byte,0) # not last
-    self.read_data_byte(sdr[-1],1) # last
+    self.read_data_byte(sdr[-1],1) # last, exit 1 DR
     self.send_bit(0,0) # -> pause DR
     self.send_bit(0,1) # -> exit 2 DR
     self.send_bit(0,1) # -> update DR
@@ -144,7 +144,7 @@ class tapwalk:
     self.send_bit(0,0) # -> shift DR
     for byte in sdr[:-1]:
       print("%02X" % self.read_data_byte(byte,0),end="") # not last
-    print("%02X" % self.read_data_byte(sdr[-1],1)) # last
+    print("%02X" % self.read_data_byte(sdr[-1],1)) # last, exit 1 DR
     self.send_bit(0,0) # -> pause DR
     self.send_bit(0,1) # -> exit 2 DR
     self.send_bit(0,1) # -> update DR

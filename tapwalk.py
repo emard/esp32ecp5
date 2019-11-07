@@ -116,7 +116,9 @@ class tapwalk:
     self.send_bit(0,1) # -> select IR scan
     self.send_bit(0,0) # -> capture IR
     self.send_bit(0,0) # -> shift IR
-    self.read_data_byte(sir,1) # -> exit IR
+    self.read_data_byte(sir,1) # -> exit 1 IR
+    self.send_bit(0,0) # -> pause IR
+    self.send_bit(0,1) # -> exit 2 IR
     self.send_bit(0,1) # -> update IR
     self.send_bit(0,0) # -> idle
 
@@ -128,7 +130,9 @@ class tapwalk:
     self.send_bit(0,0) # -> shift DR
     for byte in sdr[:-1]:
       self.read_data_byte(byte,0) # not last
-    self.read_data_byte(sdr[-1],1)
+    self.read_data_byte(sdr[-1],1) # last
+    self.send_bit(0,0) # -> pause DR
+    self.send_bit(0,1) # -> exit 2 DR
     self.send_bit(0,1) # -> update DR
     self.send_bit(0,0) # -> idle
   
@@ -141,6 +145,8 @@ class tapwalk:
     for byte in sdr[:-1]:
       print("%02X" % self.read_data_byte(byte,0),end="") # not last
     print("%02X" % self.read_data_byte(sdr[-1],1)) # last
+    self.send_bit(0,0) # -> pause DR
+    self.send_bit(0,1) # -> exit 2 DR
     self.send_bit(0,1) # -> update DR
     self.send_bit(0,0) # -> idle
 

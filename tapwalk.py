@@ -12,28 +12,20 @@ from machine import SPI, Pin
 
 class tapwalk:
 
-  # debugging with OLED to see bus state
-  def pinout_oled(self):
-    self.led=Pin( 5,Pin.OUT)
-    self.tms=Pin(15,Pin.OUT)
-    self.tck=Pin(14,Pin.OUT)
-    self.tdi=Pin(13,Pin.OUT)
-    self.tdo=Pin(12,Pin.IN)
+  # debugging JTAG
+  def bitbang_jtag_on(self):
+    self.led=Pin(self.gpio_led,Pin.OUT)
+    self.tms=Pin(self.gpio_tms,Pin.OUT)
+    self.tck=Pin(self.gpio_tck,Pin.OUT)
+    self.tdi=Pin(self.gpio_tdi,Pin.OUT)
+    self.tdo=Pin(self.gpio_tdo,Pin.IN)
 
-  # actual JTAG
-  def pinout_jtag_on(self):
-    self.led=Pin( 5,Pin.OUT)
-    self.tms=Pin(21,Pin.OUT)
-    self.tck=Pin(18,Pin.OUT)
-    self.tdi=Pin(23,Pin.OUT)
-    self.tdo=Pin(19,Pin.IN)
-
-  def pinout_jtag_off(self):
-    self.led=Pin( 5,Pin.IN)
-    self.tms=Pin(21,Pin.IN)
-    self.tck=Pin(18,Pin.IN)
-    self.tdi=Pin(23,Pin.IN)
-    self.tdo=Pin(19,Pin.IN)
+  def bitbang_jtag_off(self):
+    self.led=Pin(self.gpio_led,Pin.IN)
+    self.tms=Pin(self.gpio_tms,Pin.IN)
+    self.tck=Pin(self.gpio_tck,Pin.IN)
+    self.tdi=Pin(self.gpio_tdi,Pin.IN)
+    self.tdo=Pin(self.gpio_tdo,Pin.IN)
     a = self.led.value()
     a = self.tms.value()
     a = self.tck.value()
@@ -45,56 +37,40 @@ class tapwalk:
     del self.tdi
     del self.tdo
 
-  # software SPI
+  # accelerated SPI 
   def spi_jtag_on(self):
-    self.spi=SPI(-1, baudrate=10000000, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(18), mosi=Pin(23), miso=Pin(19))
+    self.spi=SPI(self.spi_channel, baudrate=30000000, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(self.gpio_tck), mosi=Pin(self.gpio_tdi), miso=Pin(self.gpio_tdo))
 
   def spi_jtag_off(self):
     del self.spi
 
-#  def spi_jtag_tdi(self):
-#    self.spi.init(mosi=Pin(23))
-  
-#  def spi_jtag_tms(self):
-#    self.spi.init(mosi=Pin(21))
+  def spi_jtag_tdi(self):
+    self.spi.init(mosi=Pin(self.gpio_tdi))
+    #  problem with init: glitch
 
-#  def swspi_oled(self):
-#    # software SPI -1 currently can't have firstbit=SPI.LSB
-#    self.spi=SPI(-1, baudrate=10000000, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(14), mosi=Pin(13), miso=Pin(12))
+  def spi_jtag_tms(self):
+    self.spi.init(mosi=Pin(self.gpio_tms))
+    
+  def init_pinout_jtag(self):
+    self.gpio_tms = 21
+    self.gpio_tck = 18
+    self.gpio_tdi = 23
+    self.gpio_tdo = 19
 
-  # hardware SPI (oled debug)
-
-#  def hwspi_oled(self):
-#    self.spi=SPI(1, baudrate=10000000, polarity=1, phase=1, bits=8, firstbit=SPI.LSB, sck=Pin(14), mosi=Pin(13), miso=Pin(12))
-
-#  # HW spi problem: glitch
-#  def spi_tdi(self):
-#    self.spi.init(mosi=Pin(13))
-  
-#  # HW spi problem: glitch
-#  def spi_tms(self):
-#    self.spi.init(mosi=Pin(15))
-
-  # hardware SPI (real jtag)
-
-#  def hwspi_jtag(self):
-#    self.spi=SPI(2, baudrate=10000000, polarity=1, phase=1, bits=8, firstbit=SPI.LSB, sck=Pin(18), mosi=Pin(23), miso=Pin(19))
-
-#  # HW spi problem: glitch
-#  def hwspi_tdi(self):
-#    self.spi.init(mosi=Pin(23))
-  
-#  # HW spi problem: glitch
-#  def hwspi_tms(self):
-#    self.spi.init(mosi=Pin(21))
+  def init_pinout_oled(self):
+    self.gpio_tms = 21
+    self.gpio_tck = 18
+    self.gpio_tdi = 23
+    self.gpio_tdo = 19
 
   def __init__(self):
-    print("init")
-#    self.pinout_oled()
-#    self.pinout_jtag()
+    self.gpio_led = 5
+    self.spi_channel = -1 # -1 soft, 1:oled, 2:jtag
+    self.init_pinout_jtag()
+    #self.init_pinout_oled()
 
   def __call__(self):
-    print("call")
+    some_variable = 0
 
   def bitreverse(self,x):
     y = 0
@@ -162,6 +138,7 @@ class tapwalk:
     self.send_bit(0,1) # -> exit 2 IR
     self.send_bit(0,1) # -> update IR
     if idle:
+      #self.send_bit(0,0) # -> idle, disabled here as runtest_idle does it
       self.runtest_idle(idle[0]+1, idle[1])
     else:
       self.send_bit(0,1) # -> select DR scan
@@ -185,7 +162,7 @@ class tapwalk:
       for n in range(len(response)):
         print("%02X" % response[len(response)-n-1], end="")
       print(" response")
-    else: # no print
+    else: # no print, faster
       for byte in sdr[:-1]:
         self.read_data_byte(byte,0) # not last
       self.read_data_byte(sdr[-1],1) # last, exit 1 DR
@@ -193,24 +170,25 @@ class tapwalk:
     self.send_bit(0,1) # -> exit 2 DR
     self.send_bit(0,1) # -> update DR
     if idle:
+      #self.send_bit(0,0) # -> idle, disabled here as runtest_idle does it
       self.runtest_idle(idle[0]+1, idle[1])
     else:
       self.send_bit(0,1) # -> select DR scan
 
   def idcode(self):
     print("idcode")
-    self.pinout_jtag_on()
+    self.bitbang_jtag_on()
     self.led.on()
     self.reset_tap()
     self.runtest_idle(1,0)
     self.sir(b"\xE0")
     self.sdr(b"\x00\x00\x00\x00", verbose=True)
     self.led.off()
-    self.pinout_jtag_off()
+    self.bitbang_jtag_off()
   
   def program(self, filename):
-    print("program")
-    self.pinout_jtag_on()
+    print("program \"%s\"" % filename)
+    self.bitbang_jtag_on()
     self.led.on()
     self.reset_tap()
     self.runtest_idle(1,0)
@@ -238,7 +216,6 @@ class tapwalk:
       self.send_bit(0,0) # -> capture DR
       self.send_bit(0,0) # -> shift DR
       size = 0
-      first = 1
       blocksize = 16384
       self.spi_jtag_on()
       while True:
@@ -246,7 +223,7 @@ class tapwalk:
         if block:
           #for byte in block:
           #  self.read_data_byte_reverse(byte,0)
-          self.spi.write(block)
+          self.spi.write(block) # same as above but faster
           print(".",end="")
           size += len(block)
         else:
@@ -258,7 +235,7 @@ class tapwalk:
       self.send_bit(0,0) # -> pause DR
       self.send_bit(0,1) # -> exit 2 DR
       self.send_bit(0,1) # -> update DR
-      self.runtest_idle(101, 1.0E-2)
+      self.runtest_idle(100, 1.0E-2)
     # bitstream end
     self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
     self.sdr(b"\x00\x00\x00\x00", verbose=False)
@@ -270,4 +247,10 @@ class tapwalk:
     print("00002100 &= 00000100 ? status");
     self.reset_tap()
     self.led.off()
-    self.pinout_jtag_off()
+    self.bitbang_jtag_off()
+
+print("usage:")
+print("tap = tapwalk.tapwalk()")
+print("tap.program(\"blink.bit\")")
+tap = tapwalk()
+tap.program("blink.bit")

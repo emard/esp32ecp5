@@ -201,7 +201,7 @@ class tapwalk:
     with open(filename, "rb") as filedata:
       while True:
         block = filedata.read(1024)
-        #block = bytes([self.bitreverse(x) for x in block])
+        block = bytes([self.bitreverse(x) for x in block])
         if block:
           print(".",end="")
           self.sdr(block)

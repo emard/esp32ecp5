@@ -44,9 +44,9 @@ class tapwalk:
   def spi_jtag_off(self):
     del self.spi
 
+  #  problem with spi init: glitch
   def spi_jtag_tdi(self):
     self.spi.init(mosi=Pin(self.gpio_tdi))
-    #  problem with init: glitch
 
   def spi_jtag_tms(self):
     self.spi.init(mosi=Pin(self.gpio_tms))
@@ -58,10 +58,10 @@ class tapwalk:
     self.gpio_tdo = 19
 
   def init_pinout_oled(self):
-    self.gpio_tms = 21
-    self.gpio_tck = 18
-    self.gpio_tdi = 23
-    self.gpio_tdo = 19
+    self.gpio_tms = 15
+    self.gpio_tck = 14
+    self.gpio_tdi = 13
+    self.gpio_tdo = 12
 
   def __init__(self):
     self.gpio_led = 5
@@ -230,12 +230,20 @@ class tapwalk:
           print("*")
           print("%d bytes uploaded" % bytes_uploaded)
           break
-      self.spi_jtag_off()
-      self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
-      self.send_bit(0,0) # -> pause DR
-      self.send_bit(0,1) # -> exit 2 DR
-      self.send_bit(0,1) # -> update DR
+      spi_trick = False
+      if spi_trick:
+        self.spi.init(mosi=Pin(self.gpio_tms))
+        self.spi.write(b"\xB0") # 0xB = exit 1 DR, pause DR, exit 2 DR, update DR, 0x0 = 4xidle
+        self.spi_jtag_off()
+      else:
+        self.spi_jtag_off()
+        self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
+        self.send_bit(0,0) # -> pause DR
+        self.send_bit(0,1) # -> exit 2 DR
+        self.send_bit(0,1) # -> update DR
       self.runtest_idle(100, 1.0E-2)
+      #self.reset_tap()
+      #self.runtest_idle(100, 1.0E-2)
       # ---------- bitstream end -----------
       self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
       self.sdr(b"\x00\x00\x00\x00", verbose=False)

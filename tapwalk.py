@@ -203,7 +203,7 @@ class tapwalk:
         if block:
           block = bytes([self.bitreverse(x) for x in block])
           if len(block) < 1024:
-            print(block)
+            print("".join("{:02x}".format(x) for x in block))
           self.sdr(block)
           print(".",end="")
         else:

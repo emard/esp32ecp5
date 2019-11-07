@@ -188,34 +188,34 @@ class tapwalk:
   
   def program(self, filename):
     print("program \"%s\"" % filename)
-    self.bitbang_jtag_on()
-    self.led.on()
-    self.reset_tap()
-    self.runtest_idle(1,0)
-    self.sir(b"\xE0") # read IDCODE
-    self.sdr(b"\x00\x00\x00\x00", verbose=True)
-    self.sir(b"\x1C")
-    self.sdr([0xFF for i in range(64)])
-    self.sir(b"\xC6")
-    self.sdr(b"\x00", idle=(2,1.0E-2))
-    self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
-    self.sdr(b"\x00\x00\x00\x00", verbose=False)
-    #print("00024040 &= 00000000 ? status");
-    self.sir(b"\x0E") # ISC erase RAM
-    self.sdr(b"\x01", idle=(2,1.0E-2))
-    self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
-    self.sdr(b"\x00\x00\x00\x00", verbose=False)
-    #print("0000B000 &= 00000000 ? status");
-    self.sir(b"\x46") # LSC_INIT_ADDRESS
-    self.sdr(b"\x01", idle=(2,1.0E-2))
-    self.sir(b"\x7A") # LSC_BITSTREAM_BURST
-    # bitstream begin
     with open(filename, "rb") as filedata:
+      self.bitbang_jtag_on()
+      self.led.on()
+      self.reset_tap()
+      self.runtest_idle(1,0)
+      self.sir(b"\xE0") # read IDCODE
+      self.sdr(b"\x00\x00\x00\x00", verbose=True)
+      self.sir(b"\x1C")
+      self.sdr([0xFF for i in range(64)])
+      self.sir(b"\xC6")
+      self.sdr(b"\x00", idle=(2,1.0E-2))
+      self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
+      self.sdr(b"\x00\x00\x00\x00", verbose=False)
+      #print("00024040 &= 00000000 ? status");
+      self.sir(b"\x0E") # ISC erase RAM
+      self.sdr(b"\x01", idle=(2,1.0E-2))
+      self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
+      self.sdr(b"\x00\x00\x00\x00", verbose=False)
+      #print("0000B000 &= 00000000 ? status");
+      self.sir(b"\x46") # LSC_INIT_ADDRESS
+      self.sdr(b"\x01", idle=(2,1.0E-2))
+      self.sir(b"\x7A") # LSC_BITSTREAM_BURST
+      # ---------- bitstream begin -----------
       # manually walk the TAP
       # we will be sending one long DR command
       self.send_bit(0,0) # -> capture DR
       self.send_bit(0,0) # -> shift DR
-      size = 0
+      bytes_uploaded = 0
       blocksize = 16384
       self.spi_jtag_on()
       while True:
@@ -225,10 +225,10 @@ class tapwalk:
           #  self.send_read_data_byte_reverse(byte,0)
           self.spi.write(block) # same as above but faster
           print(".",end="")
-          size += len(block)
+          bytes_uploaded += len(block)
         else:
           print("*")
-          print("%d bytes uploaded" % size)
+          print("%d bytes uploaded" % bytes_uploaded)
           break
       self.spi_jtag_off()
       self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
@@ -236,23 +236,23 @@ class tapwalk:
       self.send_bit(0,1) # -> exit 2 DR
       self.send_bit(0,1) # -> update DR
       self.runtest_idle(100, 1.0E-2)
-    # bitstream end
-    self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
-    self.sdr(b"\x00\x00\x00\x00", verbose=False)
-    #print("FFFFFFFF &= 00000000 ? usercode");
-    self.sir(b"\x26", idle=(2,2.0E-1)) # ISC DISABLE
-    self.sir(b"\xFF", idle=(2,1.0E-3)) # BYPASS
-    self.sir(b"\x3C") # LSC_READ_STATUS
-    self.sdr(b"\x00\x00\x00\x00", verbose=True)
-    print("00002100 &= 00000100 ? status");
-    self.reset_tap()
-    self.led.off()
-    self.bitbang_jtag_off()
+      # ---------- bitstream end -----------
+      self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
+      self.sdr(b"\x00\x00\x00\x00", verbose=False)
+      #print("FFFFFFFF &= 00000000 ? usercode");
+      self.sir(b"\x26", idle=(2,2.0E-1)) # ISC DISABLE
+      self.sir(b"\xFF", idle=(2,1.0E-3)) # BYPASS
+      self.sir(b"\x3C") # LSC_READ_STATUS
+      self.sdr(b"\x00\x00\x00\x00", verbose=True)
+      print("00002100 &= 00000100 ? status");
+      self.reset_tap()
+      self.led.off()
+      self.bitbang_jtag_off()
 
 print("usage:")
 print("tap=tapwalk.tapwalk()")
-print("tap.idcode()")
 print("tap.program(\"blink.bit\")")
+print("tap.idcode()")
 tap = tapwalk()
 tap.idcode()
 #tap.program("blink.bit")

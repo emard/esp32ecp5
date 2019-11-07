@@ -23,12 +23,29 @@ class tapwalk:
     self.tdo=Pin(12,Pin.IN)
 
   # actual JTAG
-  def pinout_jtag(self):
+  def pinout_jtag_on(self):
     self.led=Pin( 5,Pin.OUT)
     self.tms=Pin(21,Pin.OUT)
     self.tck=Pin(18,Pin.OUT)
     self.tdi=Pin(23,Pin.OUT)
     self.tdo=Pin(19,Pin.IN)
+
+  def pinout_jtag_off(self):
+    self.led=Pin( 5,Pin.IN)
+    self.tms=Pin(21,Pin.IN)
+    self.tck=Pin(18,Pin.IN)
+    self.tdi=Pin(23,Pin.IN)
+    self.tdo=Pin(19,Pin.IN)
+    print(self.led.value(),end="")
+    print(self.tms.value(),end="")
+    print(self.tck.value(),end="")
+    print(self.tdo.value(),end="")
+    print(self.tdi.value())
+    del self.led
+    del self.tms
+    del self.tck
+    del self.tdi
+    del self.tdo
 
   # software SPI
 
@@ -63,8 +80,9 @@ class tapwalk:
 #    self.spi.init(mosi=Pin(21))
 
   def __init__(self):
+    print("init")
 #    self.pinout_oled()
-    self.pinout_jtag()
+#    self.pinout_jtag()
 
   def __call__(self):
     print("call")
@@ -172,14 +190,17 @@ class tapwalk:
 
   def idcode(self):
     print("idcode")
+    self.pinout_jtag_on()
     self.led.on()
     self.reset_tap()
     self.sir(0xE0)
     self.sdr_print(b"\x00\x00\x00\x00")
     self.led.off()
+    self.pinout_jtag_off()
   
   def program(self, filename):
     print("program")
+    self.pinout_jtag_on()
     self.led.on()
     self.reset_tap()
     self.sir(0xE0) # read IDCODE
@@ -221,3 +242,4 @@ class tapwalk:
     print("00010000 mask 00210000 status");
     self.reset_tap()
     self.led.off()
+    self.pinout_jtag_off()

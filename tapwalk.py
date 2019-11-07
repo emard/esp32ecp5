@@ -218,12 +218,15 @@ class tapwalk:
     # bitstream begin
     with open(filename, "rb") as filedata:
       size = 0
+      first = 1
+      blocksize = 1000
       while True:
-        block = filedata.read(1024)
+        block = filedata.read(blocksize)
         if block:
           block = bytes([self.bitreverse(x) for x in block])
           self.sdr(block)
-          if len(block) < 1024:
+          if len(block) < blocksize or first == 1:
+            first = 0
             # print byte reverse - notation same as in SVF file
             for n in range(len(block)):
               print("%02X" % block[len(block)-n-1], end="")

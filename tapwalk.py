@@ -202,9 +202,9 @@ class tapwalk:
         block = filedata.read(1024)
         if block:
           block = bytes([self.bitreverse(x) for x in block])
-          if len(block) < 1024:
-            print("".join("{:02x}".format(x) for x in block))
           self.sdr(block)
+          if len(block) < 1024:
+            print("".join("{:02X}".format(x) for x in block))
           print(".",end="")
         else:
           print("*")

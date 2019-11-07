@@ -1,13 +1,11 @@
 # micropython ESP32
 
 # usage
-# >>> import tapwalk                                                              
-# >>> t=tapwalk.tapwalk()                                                         
-# >>> t.idcode()                                                                    
-# 43                                                                              
-# 10                                                                              
-# 11                                                                              
-# 41                                                                              
+# >>> import tapwalk
+# >>> t=tapwalk.tapwalk()
+# >>> t.idcode()
+# 41111043
+# >>> t.program("blink.bit")
 
 import time
 from machine import SPI, Pin

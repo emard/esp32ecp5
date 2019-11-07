@@ -46,6 +46,17 @@ class tapwalk:
     del self.tdo
 
   # software SPI
+  def spi_jtag_on(self):
+    self.spi=SPI(-1, baudrate=10000000, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(18), mosi=Pin(23), miso=Pin(19))
+
+  def spi_jtag_off(self):
+    del self.spi
+
+#  def spi_jtag_tdi(self):
+#    self.spi.init(mosi=Pin(23))
+  
+#  def spi_jtag_tms(self):
+#    self.spi.init(mosi=Pin(21))
 
 #  def swspi_oled(self):
 #    # software SPI -1 currently can't have firstbit=SPI.LSB
@@ -229,17 +240,20 @@ class tapwalk:
       size = 0
       first = 1
       blocksize = 1000
+      self.spi_jtag_on()
       while True:
         block = filedata.read(blocksize)
         if block:
-          for byte in block:
-            self.read_data_byte_reverse(byte,0)
+          #for byte in block:
+          #  self.read_data_byte_reverse(byte,0)
+          self.spi.write(block)
           print(".",end="")
           size += len(block)
         else:
           print("*")
           print("%d bytes uploaded" % size)
           break
+      self.spi_jtag_off()
       self.read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
       self.send_bit(0,0) # -> pause DR
       self.send_bit(0,1) # -> exit 2 DR

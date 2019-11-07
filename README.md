@@ -13,6 +13,7 @@ reboot ESP32 and login to your wifi router
 
     help()
     ... follow instructions for wifi
+    ... for convenience put autostart commands in "main.py"
 
 upload tapwalk.py to root of ESP32 python FLASH filesystem
 using webrepl.

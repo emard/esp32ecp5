@@ -29,7 +29,9 @@ Setup webrepl
 
     import webrepl_setup
 
-Let it reboot ESP32 and setup ESP32 as access point
+Enable it and let it reboot ESP32.
+
+setup ESP32 as access point
 or as client that logs in to your wifi router
 
     help()

@@ -176,7 +176,7 @@ class tapwalk:
       while True:
         block = filedata.read(1024)
         if block:
-          print(len(block))
+          print(".",end="")
           self.sdr(block)
         else:
           break

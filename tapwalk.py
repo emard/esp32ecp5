@@ -251,6 +251,8 @@ class tapwalk:
 
 print("usage:")
 print("tap=tapwalk.tapwalk()")
+print("tap.idcode()")
 print("tap.program(\"blink.bit\")")
 tap = tapwalk()
-tap.program("blink.bit")
+tap.idcode()
+#tap.program("blink.bit")

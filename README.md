@@ -1,7 +1,6 @@
 # ESP32 JTAG tap walker for ECP5
 
 ESP32 micropython demo for accessing ECP5 JTAG tap, a simple way.
-Currently it can only read ECP5 IDCODE:
 
 # Usage
 
@@ -31,7 +30,7 @@ Run the demo code:
     t.idcode()
     43101141
 
-This does't work yet
+Upload the bitstream:
 
     t.program("blink.bit")
 

@@ -69,6 +69,13 @@ class tapwalk:
   def __call__(self):
     print("call")
 
+  def bitreverse(self,x):
+    y = 0
+    for i in range(8):
+        if (x >> (7 - i)) & 1 == 1:
+            y |= (1 << i)
+    return y
+
   def send_bit(self, tdi, tms):
     if tdi:
       self.tdi.on()
@@ -80,21 +87,22 @@ class tapwalk:
       self.tms.off()
     self.tck.off()
     self.tck.on()
+
     
   def read_data_byte(self, val, last):
     byte = 0
-    for nf in range(0, 8):
+    for nf in range(8):
       self.send_bit((val >> nf) & 1, (last & int((nf == 7) == True)))
       byte |= self.tdo.value() << nf
     return byte
     
   def reset_tap(self):
-    for n in range(0,6):
+    for n in range(6):
       self.send_bit(0,1) # -> Test Logic Reset
 
   def runtest_idle(self, count, duration):
     leave=time.ticks_ms() + int(duration*1000)
-    for n in range(0,count):
+    for n in range(count):
       self.send_bit(0,0) # -> idle
     while time.ticks_ms() < leave:
       self.send_bit(0,0) # -> idle
@@ -142,16 +150,6 @@ class tapwalk:
     self.sdr_print(b"\x00\x00\x00\x00")
     self.led.off()
   
-  def blockread(self, filename):
-    with open(filename, "rb") as f:
-      while True:
-        block = f.read(512)
-        if block:
-          print(len(block))
-          print(block)
-        else:
-          break
-  
   def program(self, filename):
     print("program")
     self.led.on()
@@ -160,7 +158,7 @@ class tapwalk:
     self.sir(0xE0)
     self.sdr_print(b"\x00\x00\x00\x00")
     self.sir(0x1C)
-    self.sdr_print([0xFF for i in range(0,64)])
+    self.sdr_print([0xFF for i in range(64)])
     self.sir(0xC6)
     self.sdr(b"\x00")
     self.runtest_idle(2,1.0E-2)
@@ -175,10 +173,12 @@ class tapwalk:
     with open(filename, "rb") as filedata:
       while True:
         block = filedata.read(1024)
+        block = bytes([self.bitreverse(x) for x in block])
         if block:
           print(".",end="")
           self.sdr(block)
         else:
+          print("*")
           break
     # bitstream end
     self.sir(0xFF)

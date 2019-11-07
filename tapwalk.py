@@ -142,7 +142,17 @@ class tapwalk:
     self.sdr_print(b"\x00\x00\x00\x00")
     self.led.off()
   
-  def program(self):
+  def blockread(self, filename):
+    with open(filename, "rb") as f:
+      while True:
+        block = f.read(512)
+        if block:
+          print(len(block))
+          print(block)
+        else:
+          break
+  
+  def program(self, filename):
     print("program")
     self.led.on()
     self.reset_tap()
@@ -162,6 +172,14 @@ class tapwalk:
     self.sir(0x7A)
     self.runtest_idle(2,1.0E-2)
     # bitstream begin
+    with open(filename, "rb") as filedata:
+      while True:
+        block = filedata.read(1024)
+        if block:
+          print(len(block))
+          self.sdr(block)
+        else:
+          break
     # bitstream end
     self.sir(0xFF)
     self.runtest_idle(100,1.0E-2)

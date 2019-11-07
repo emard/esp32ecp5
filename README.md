@@ -10,7 +10,7 @@ Choose appropriate for your board and upload passthru bitstream to flash
 
     ujprog -j flash passthru.bit
 
-Download [micropython for ESP32](https://micropython.org/resources/firmware/esp32-idf3-20191103-v1.11-549-gf2ecfe8b8.bin)
+Download [micropython for ESP32](https://micropython.org/download#esp32)
 
     wget https://micropython.org/resources/firmware/esp32-idf3-20191103-v1.11-549-gf2ecfe8b8.bin
 

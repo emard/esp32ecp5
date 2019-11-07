@@ -180,10 +180,15 @@ class tapwalk:
     for byte in sdr[:-1]:
       print("%02X" % byte,end="")
     print("%02X send" % sdr[-1])
+    response = b""
     for byte in sdr[:-1]:
-      print("%02X" % self.read_data_byte(byte,0),end="") # not last
-    print("%02X read" % self.read_data_byte(sdr[-1],1)) # last, exit 1 DR
+      response += bytes([self.read_data_byte(byte,0)])
+    response += bytes([self.read_data_byte(sdr[-1],1)])
     self.send_bit(0,0) # -> pause DR
+    # print byte reverse - notation same as in SVF file
+    for n in range(len(response)):
+      print("%02X" % response[len(response)-n-1], end="")
+    print(" response")
     self.send_bit(0,1) # -> exit 2 DR
     self.send_bit(0,1) # -> update DR
     if idle:
@@ -209,43 +214,49 @@ class tapwalk:
     self.sir(0xE0) # read IDCODE
     self.sdr_print(b"\x00\x00\x00\x00")
     self.sir(0x1C)
-    self.sdr_print([0xFF for i in range(64)])
+    self.sdr([0xFF for i in range(64)])
     self.sir(0xC6)
     self.sdr(b"\x00", idle=(2,1.0E-2))
     self.sir(0x3C, idle=(2,1.0E-3)) # LSC_READ_STATUS
     self.sdr_print(b"\x00\x00\x00\x00")
-    print("00000000 mask 40402000 status check");
+    print("00024040 &= 00000000 ? status");
     self.sir(0x0E) # ISC erase RAM
     self.sdr(b"\x01", idle=(2,1.0E-2))
     self.sir(0x3C, idle=(2,1.0E-3)) # LSC_READ_STATUS
     self.sdr_print(b"\x00\x00\x00\x00")
-    print("00000000 mask 00B00000 status check");
+    print("0000B000 &= 00000000 ? status");
     self.sir(0x46) # LSC_INIT_ADDRESS
     self.sdr(b"\x01", idle=(2,1.0E-2))
     self.sir(0x7A) # LSC_BITSTREAM_BURST
     # bitstream begin
     with open(filename, "rb") as filedata:
+      size = 0
       while True:
         block = filedata.read(1024)
         if block:
+          size += len(block)
           block = bytes([self.bitreverse(x) for x in block])
           self.sdr(block)
           if len(block) < 1024:
-            print("".join("{:02X}".format(x) for x in block))
+            # print byte reverse - notation same as in SVF file
+            for n in range(len(block)):
+              print("%02X" % block[len(block)-n-1], end="")
+            print("")
           print(".",end="")
         else:
           print("*")
+          print("%d bytes uploaded" % size)
           break
     # bitstream end
-    self.sdr(b"\xFF", idle=(100,1.0E-2))
+    #self.sdr(b"\xFF", idle=(100,1.0E-2))
     self.sir(0xC0, idle=(2,1.0E-3)) # read usercode
     self.sdr_print(b"\x00\x00\x00\x00")
-    print("00000000 mask FFFFFFFF usercode");
+    print("FFFFFFFF &= 00000000 ? usercode");
     self.sir(0x26, idle=(2,2.0E-1)) # ISC DISABLE
     self.sir(0xFF, idle=(2,1.0E-3)) # BYPASS
     self.sir(0x3C) # LSC_READ_STATUS
     self.sdr_print(b"\x00\x00\x00\x00")
-    print("00010000 mask 00210000 status check");
+    print("00002100 &= 00000100 ? status");
     self.reset_tap()
     self.led.off()
     self.pinout_jtag_off()

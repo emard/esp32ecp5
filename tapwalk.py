@@ -111,7 +111,7 @@ class tapwalk:
     self.send_bit(0,0) # -> idle
 
   # send SDR data (byte string)
-  def sdr_print(self, sdr):
+  def sdr(self, sdr):
     self.send_bit(0,1) # -> select DR scan
     self.send_bit(0,0) # -> capture DR
     self.send_bit(0,0) # -> shift DR
@@ -127,7 +127,7 @@ class tapwalk:
     self.send_bit(0,0) # -> capture DR
     self.send_bit(0,0) # -> shift DR
     for byte in sdr[:-1]:
-      print("%02X" % self.read_data_byte(byte,0)) # not last
+      print("%02X" % self.read_data_byte(byte,0),end="") # not last
     print("%02X" % self.read_data_byte(sdr[-1],1)) # last
     self.send_bit(0,1) # -> update DR
     self.send_bit(0,0) # -> idle
@@ -139,4 +139,25 @@ class tapwalk:
     self.runtest_idle(0)
     self.sir(0xE0)
     self.sdr_print(b"\x00\x00\x00\x00")
+    self.led.off()
+  
+  def program(self):
+    print("program")
+    self.led.on()
+    self.reset_tap()
+    self.runtest_idle(0)
+    self.sir(0xE0)
+    self.sdr_print(b"\x00\x00\x00\x00")
+    self.sir(0x1C)
+    self.sdr_print([0xFF for i in range(0,64)])
+    self.sir(0xC6)
+    self.sdr(b"\x00")
+    self.runtest_idle(1.0E-2)
+    self.sir(0x3C)
+    self.sdr_print(b"\x00\x00\x00\x00")
+    self.sir(0x46)
+    self.sdr(b"\x01")
+    self.runtest_idle(1.0E-2)
+    self.sir(0x7A)
+    self.runtest_idle(1.0E-2)
     self.led.off()

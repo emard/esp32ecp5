@@ -178,8 +178,11 @@ class tapwalk:
     self.send_bit(0,0) # -> capture DR
     self.send_bit(0,0) # -> shift DR
     for byte in sdr[:-1]:
+      print("%02X" % byte,end="")
+    print("%02X send" % sdr[-1])
+    for byte in sdr[:-1]:
       print("%02X" % self.read_data_byte(byte,0),end="") # not last
-    print("%02X" % self.read_data_byte(sdr[-1],1)) # last, exit 1 DR
+    print("%02X read" % self.read_data_byte(sdr[-1],1)) # last, exit 1 DR
     self.send_bit(0,0) # -> pause DR
     self.send_bit(0,1) # -> exit 2 DR
     self.send_bit(0,1) # -> update DR
@@ -194,7 +197,7 @@ class tapwalk:
     self.led.on()
     self.reset_tap()
     self.sir(0xE0)
-    self.sdr_print(b"\x00\x00\x00\x00")
+    self.sdr_print(b"\x01\x00\x00\x00")
     self.led.off()
     self.pinout_jtag_off()
   
@@ -209,6 +212,9 @@ class tapwalk:
     self.sdr_print([0xFF for i in range(64)])
     self.sir(0xC6)
     self.sdr(b"\x00", idle=(2,1.0E-2))
+    self.sir(0x3C, idle=(2,1.0E-3)) # LSC_READ_STATUS
+    self.sdr_print(b"\x00\x00\x00\x00")
+    print("00000000 mask 40402000 status");
     self.sir(0x0E) # ISC erase RAM
     self.sdr(b"\x01", idle=(2,1.0E-2))
     self.sir(0x3C, idle=(2,1.0E-3)) # LSC_READ_STATUS

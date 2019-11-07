@@ -161,10 +161,9 @@ class tapwalk:
   # TAP should be in "select DR scan" state
   # TAP returns to "select DR scan" state by default
   # TAP returns to "idle" state if specified 
-  def sdr(self, sdr, walk=True, verbose=False, idle=False):
-    if walk:
-      self.send_bit(0,0) # -> capture DR
-      self.send_bit(0,0) # -> shift DR
+  def sdr(self, sdr, verbose=False, idle=False):
+    self.send_bit(0,0) # -> capture DR
+    self.send_bit(0,0) # -> shift DR
     if verbose:
       for byte in sdr[:-1]:
         print("%02X" % byte,end="")
@@ -181,14 +180,13 @@ class tapwalk:
       for byte in sdr[:-1]:
         self.read_data_byte(byte,0) # not last
       self.read_data_byte(sdr[-1],1) # last, exit 1 DR
-    if walk:
-      self.send_bit(0,0) # -> pause DR
-      self.send_bit(0,1) # -> exit 2 DR
-      self.send_bit(0,1) # -> update DR
-      if idle:
-        self.runtest_idle(idle[0]+1, idle[1])
-      else:
-        self.send_bit(0,1) # -> select DR scan
+    self.send_bit(0,0) # -> pause DR
+    self.send_bit(0,1) # -> exit 2 DR
+    self.send_bit(0,1) # -> update DR
+    if idle:
+      self.runtest_idle(idle[0]+1, idle[1])
+    else:
+      self.send_bit(0,1) # -> select DR scan
 
   def idcode(self):
     print("idcode")
@@ -214,18 +212,20 @@ class tapwalk:
     self.sir(b"\xC6")
     self.sdr(b"\x00", idle=(2,1.0E-2))
     self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
-    self.sdr(b"\x00\x00\x00\x00", verbose=True)
-    print("00024040 &= 00000000 ? status");
+    self.sdr(b"\x00\x00\x00\x00", verbose=False)
+    #print("00024040 &= 00000000 ? status");
     self.sir(b"\x0E") # ISC erase RAM
     self.sdr(b"\x01", idle=(2,1.0E-2))
     self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
-    self.sdr(b"\x00\x00\x00\x00", verbose=True)
-    print("0000B000 &= 00000000 ? status");
+    self.sdr(b"\x00\x00\x00\x00", verbose=False)
+    #print("0000B000 &= 00000000 ? status");
     self.sir(b"\x46") # LSC_INIT_ADDRESS
     self.sdr(b"\x01", idle=(2,1.0E-2))
     self.sir(b"\x7A") # LSC_BITSTREAM_BURST
     # bitstream begin
     with open(filename, "rb") as filedata:
+      # manually walk the TAP
+      # we will be sending one long DR command
       self.send_bit(0,0) # -> capture DR
       self.send_bit(0,0) # -> shift DR
       size = 0
@@ -234,30 +234,23 @@ class tapwalk:
       while True:
         block = filedata.read(blocksize)
         if block:
-          #block = bytes([self.bitreverse(x) for x in block])
           for byte in block:
             self.read_data_byte_reverse(byte,0)
-          #if len(block) < blocksize or first == 1:
-          #  first = 0
-          #  # print byte reverse - notation same as in SVF file
-          #  for n in range(len(block)):
-          #    print("%02X" % block[len(block)-n-1], end="")
-          #  print("")
           print(".",end="")
           size += len(block)
         else:
           print("*")
           print("%d bytes uploaded" % size)
           break
-      self.read_data_byte(0xFF,1) # last exit 1 DR
+      self.read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
       self.send_bit(0,0) # -> pause DR
       self.send_bit(0,1) # -> exit 2 DR
       self.send_bit(0,1) # -> update DR
       self.runtest_idle(101, 1.0E-2)
     # bitstream end
     self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
-    self.sdr(b"\x00\x00\x00\x00", verbose=True)
-    print("FFFFFFFF &= 00000000 ? usercode");
+    self.sdr(b"\x00\x00\x00\x00", verbose=False)
+    #print("FFFFFFFF &= 00000000 ? usercode");
     self.sir(b"\x26", idle=(2,2.0E-1)) # ISC DISABLE
     self.sir(b"\xFF", idle=(2,1.0E-3)) # BYPASS
     self.sir(b"\x3C") # LSC_READ_STATUS

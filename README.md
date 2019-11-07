@@ -21,17 +21,18 @@ List directory to check is it uploaded:
 
     import os
     os.listdir()
-    ['boot.py', 'tapwalk.py']
+    ['boot.py', 'tapwalk.py', 'blink.bit']
 
 Run the demo code:
 
     import tapwalk
     t=tapwalk.tapwalk()
     t.idcode()
-    43
-    10
-    11
-    41
+    43101141
+
+This does't work yet
+
+    t.program("blink.bit")
 
 # JTAG info
 

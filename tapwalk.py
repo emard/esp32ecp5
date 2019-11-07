@@ -115,6 +115,13 @@ class tapwalk:
       self.send_bit((val >> nf) & 1, (last & int((nf == 7) == True)))
       byte |= self.tdo.value() << nf
     return byte
+
+  def read_data_byte_reverse(self, val, last):
+    byte = 0
+    for nf in range(8):
+      self.send_bit((val >> (7-nf)) & 1, (last & int((nf == 7) == True)))
+      byte |= self.tdo.value() << nf
+    return byte
     
   # TAP to "reset" state
   def reset_tap(self):
@@ -154,9 +161,10 @@ class tapwalk:
   # TAP should be in "select DR scan" state
   # TAP returns to "select DR scan" state by default
   # TAP returns to "idle" state if specified 
-  def sdr(self, sdr, verbose=False, idle=False):
-    self.send_bit(0,0) # -> capture DR
-    self.send_bit(0,0) # -> shift DR
+  def sdr(self, sdr, walk=True, verbose=False, idle=False):
+    if walk:
+      self.send_bit(0,0) # -> capture DR
+      self.send_bit(0,0) # -> shift DR
     if verbose:
       for byte in sdr[:-1]:
         print("%02X" % byte,end="")
@@ -173,13 +181,14 @@ class tapwalk:
       for byte in sdr[:-1]:
         self.read_data_byte(byte,0) # not last
       self.read_data_byte(sdr[-1],1) # last, exit 1 DR
-    self.send_bit(0,0) # -> pause DR
-    self.send_bit(0,1) # -> exit 2 DR
-    self.send_bit(0,1) # -> update DR
-    if idle:
-      self.runtest_idle(idle[0]+1, idle[1])
-    else:
-      self.send_bit(0,1) # -> select DR scan
+    if walk:
+      self.send_bit(0,0) # -> pause DR
+      self.send_bit(0,1) # -> exit 2 DR
+      self.send_bit(0,1) # -> update DR
+      if idle:
+        self.runtest_idle(idle[0]+1, idle[1])
+      else:
+        self.send_bit(0,1) # -> select DR scan
 
   def idcode(self):
     print("idcode")
@@ -217,28 +226,35 @@ class tapwalk:
     self.sir(b"\x7A") # LSC_BITSTREAM_BURST
     # bitstream begin
     with open(filename, "rb") as filedata:
+      self.send_bit(0,0) # -> capture DR
+      self.send_bit(0,0) # -> shift DR
       size = 0
       first = 1
       blocksize = 1000
       while True:
         block = filedata.read(blocksize)
         if block:
-          block = bytes([self.bitreverse(x) for x in block])
-          self.sdr(block)
-          if len(block) < blocksize or first == 1:
-            first = 0
-            # print byte reverse - notation same as in SVF file
-            for n in range(len(block)):
-              print("%02X" % block[len(block)-n-1], end="")
-            print("")
+          #block = bytes([self.bitreverse(x) for x in block])
+          for byte in block:
+            self.read_data_byte_reverse(byte,0)
+          #if len(block) < blocksize or first == 1:
+          #  first = 0
+          #  # print byte reverse - notation same as in SVF file
+          #  for n in range(len(block)):
+          #    print("%02X" % block[len(block)-n-1], end="")
+          #  print("")
           print(".",end="")
           size += len(block)
         else:
           print("*")
           print("%d bytes uploaded" % size)
           break
+      self.read_data_byte(0xFF,1) # last exit 1 DR
+      self.send_bit(0,0) # -> pause DR
+      self.send_bit(0,1) # -> exit 2 DR
+      self.send_bit(0,1) # -> update DR
+      self.runtest_idle(101, 1.0E-2)
     # bitstream end
-    #self.sdr(b"\xFF", idle=(100,1.0E-2))
     self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
     self.sdr(b"\x00\x00\x00\x00", verbose=True)
     print("FFFFFFFF &= 00000000 ? usercode");

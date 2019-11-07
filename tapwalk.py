@@ -97,22 +97,28 @@ class tapwalk:
     return byte
     
   # TAP to "reset" state
+  # and TAP returned to "select DR scan" state
   def reset_tap(self):
     for n in range(6):
       self.send_bit(0,1) # -> Test Logic Reset
+    self.send_bit(0,0) # -> idle
+    self.send_bit(0,1) # -> select DR scan
 
-  # TAP should be in "idle" state and will return to "idle" state
+  # TAP should be in "idle" state
+  # TAP returns to "select DR scan" state
   def runtest_idle(self, count, duration):
     leave=time.ticks_ms() + int(duration*1000)
     for n in range(count):
       self.send_bit(0,0) # -> idle
     while time.ticks_ms() < leave:
       self.send_bit(0,0) # -> idle
+    self.send_bit(0,1) # -> select DR scan
   
   # send SIR command (byte integer)
-  # TAP should be in "idle" state and will return to "idle" state
-  def sir(self, sir):
-    self.send_bit(0,1) # -> select DR scan
+  # TAP should be in "select DR scan" state
+  # TAP returns to "select DR scan" state by default
+  # TAP returns to "idle" state if specified 
+  def sir(self, sir, idle=False):
     self.send_bit(0,1) # -> select IR scan
     self.send_bit(0,0) # -> capture IR
     self.send_bit(0,0) # -> shift IR
@@ -120,12 +126,16 @@ class tapwalk:
     self.send_bit(0,0) # -> pause IR
     self.send_bit(0,1) # -> exit 2 IR
     self.send_bit(0,1) # -> update IR
-    self.send_bit(0,0) # -> idle
+    if idle:
+      self.send_bit(0,0) # -> idle
+    else:
+      self.send_bit(0,1) # -> select DR scan
 
   # send SDR data (byte string)
-  # TAP should be in "idle" state and will return to "idle" state
-  def sdr(self, sdr):
-    self.send_bit(0,1) # -> select DR scan
+  # TAP should be in "select DR scan" state
+  # TAP returns to "select DR scan" state by default
+  # TAP returns to "idle" state if specified 
+  def sdr(self, sdr, idle=False):
     self.send_bit(0,0) # -> capture DR
     self.send_bit(0,0) # -> shift DR
     for byte in sdr[:-1]:
@@ -134,12 +144,16 @@ class tapwalk:
     self.send_bit(0,0) # -> pause DR
     self.send_bit(0,1) # -> exit 2 DR
     self.send_bit(0,1) # -> update DR
-    self.send_bit(0,0) # -> idle
+    if idle:
+      self.send_bit(0,0) # -> idle
+    else:
+      self.send_bit(0,1) # -> select DR scan
   
   # send SDR data (byte string) and print result
-  # TAP should be in "idle" state and will return to "idle" state
-  def sdr_print(self, sdr):
-    self.send_bit(0,1) # -> select DR scan
+  # TAP should be in "select DR scan" state
+  # TAP returns to "select DR scan" state by default
+  # TAP returns to "idle" state if specified 
+  def sdr_print(self, sdr, idle=False):
     self.send_bit(0,0) # -> capture DR
     self.send_bit(0,0) # -> shift DR
     for byte in sdr[:-1]:
@@ -148,13 +162,15 @@ class tapwalk:
     self.send_bit(0,0) # -> pause DR
     self.send_bit(0,1) # -> exit 2 DR
     self.send_bit(0,1) # -> update DR
-    self.send_bit(0,0) # -> idle
+    if idle:
+      self.send_bit(0,0) # -> idle
+    else:
+      self.send_bit(0,1) # -> select DR scan
 
   def idcode(self):
     print("idcode")
     self.led.on()
     self.reset_tap()
-    self.runtest_idle(1,0)
     self.sir(0xE0)
     self.sdr_print(b"\x00\x00\x00\x00")
     self.led.off()
@@ -163,26 +179,29 @@ class tapwalk:
     print("program")
     self.led.on()
     self.reset_tap()
-    self.runtest_idle(1,0)
     self.sir(0xE0)
     self.sdr_print(b"\x00\x00\x00\x00")
     self.sir(0x1C)
     self.sdr_print([0xFF for i in range(64)])
     self.sir(0xC6)
-    self.sdr(b"\x00")
+    self.sdr(b"\x00", idle=True)
+    self.runtest_idle(2,1.0E-2)
+    self.sir(0x0E)
+    self.sdr(b"\x01", idle=True)
     self.runtest_idle(2,1.0E-2)
     self.sir(0x3C)
     self.sdr_print(b"\x00\x00\x00\x00")
+    print("00000000 mask 00B00000");
     self.sir(0x46)
-    self.sdr(b"\x01")
+    self.sdr(b"\x01", idle=True)
     self.runtest_idle(2,1.0E-2)
-    self.sir(0x7A)
+    self.sir(0x7A, idle=True)
     self.runtest_idle(2,1.0E-2)
     # bitstream begin
     with open(filename, "rb") as filedata:
       while True:
         block = filedata.read(1024)
-        block = bytes([self.bitreverse(x) for x in block])
+        #block = bytes([self.bitreverse(x) for x in block])
         if block:
           print(".",end="")
           self.sdr(block)
@@ -190,16 +209,18 @@ class tapwalk:
           print("*")
           break
     # bitstream end
-    self.sir(0xFF)
+    self.sir(0xFF, idle=True)
     self.runtest_idle(100,1.0E-2)
-    self.sir(0xC0)
+    self.sir(0xC0, idle=True)
     self.runtest_idle(2,1.0E-2)
     self.sdr_print(b"\x00\x00\x00\x00")
-    self.sir(0x26)
+    print("00000000 mask FFFFFFFF");
+    self.sir(0x26, idle=True)
     self.runtest_idle(2,2.0E-1)
-    self.sir(0xFF)
+    self.sir(0xFF, idle=True)
     self.runtest_idle(2,1.0E-3)
     self.sir(0x3C)
     self.sdr_print(b"\x00\x00\x00\x00")
+    print("00010000 mask 00210000");
 
     self.led.off()

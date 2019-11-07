@@ -34,11 +34,11 @@ class tapwalk:
     self.tck=Pin(18,Pin.IN)
     self.tdi=Pin(23,Pin.IN)
     self.tdo=Pin(19,Pin.IN)
-    print(self.led.value(),end="")
-    print(self.tms.value(),end="")
-    print(self.tck.value(),end="")
-    print(self.tdo.value(),end="")
-    print(self.tdi.value())
+    a = self.led.value()
+    a = self.tms.value()
+    a = self.tck.value()
+    a = self.tdo.value()
+    a = self.tdi.value()
     del self.led
     del self.tms
     del self.tck

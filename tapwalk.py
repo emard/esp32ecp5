@@ -239,7 +239,7 @@ class tapwalk:
       self.send_bit(0,0) # -> shift DR
       size = 0
       first = 1
-      blocksize = 1000
+      blocksize = 16384
       self.spi_jtag_on()
       while True:
         block = filedata.read(blocksize)

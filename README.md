@@ -28,7 +28,7 @@ Run the demo code:
     import tapwalk
     t=tapwalk.tapwalk()
     t.idcode()
-    43101141
+    41111043
 
 Upload the bitstream:
 

@@ -109,7 +109,6 @@ class tapwalk:
     self.tck.off()
     self.tck.on()
 
-    
   def read_data_byte(self, val, last):
     byte = 0
     for nf in range(8):
@@ -118,12 +117,9 @@ class tapwalk:
     return byte
     
   # TAP to "reset" state
-  # and TAP returned to "select DR scan" state
   def reset_tap(self):
     for n in range(6):
       self.send_bit(0,1) # -> Test Logic Reset
-    self.send_bit(0,0) # -> idle
-    self.send_bit(0,1) # -> select DR scan
 
   # TAP should be in "idle" state
   # TAP returns to "select DR scan" state
@@ -135,7 +131,7 @@ class tapwalk:
       self.send_bit(0,0) # -> idle
     self.send_bit(0,1) # -> select DR scan
   
-  # send SIR command (byte integer)
+  # send SIR command (bytes)
   # TAP should be in "select DR scan" state
   # TAP returns to "select DR scan" state by default
   # TAP returns to "idle" state if specified 
@@ -143,56 +139,45 @@ class tapwalk:
     self.send_bit(0,1) # -> select IR scan
     self.send_bit(0,0) # -> capture IR
     self.send_bit(0,0) # -> shift IR
-    self.read_data_byte(sir,1) # -> exit 1 IR
+    for byte in sir[:-1]:
+      self.read_data_byte(byte,0) # not last
+    self.read_data_byte(sir[-1],1) # last, exit 1 DR
     self.send_bit(0,0) # -> pause IR
     self.send_bit(0,1) # -> exit 2 IR
     self.send_bit(0,1) # -> update IR
     if idle:
-      self.runtest_idle(idle[0], idle[1])
+      self.runtest_idle(idle[0]+1, idle[1])
     else:
       self.send_bit(0,1) # -> select DR scan
 
-  # send SDR data (byte string)
+  # send SDR data (bytes) and print result
   # TAP should be in "select DR scan" state
   # TAP returns to "select DR scan" state by default
   # TAP returns to "idle" state if specified 
-  def sdr(self, sdr, idle=False):
+  def sdr(self, sdr, verbose=False, idle=False):
     self.send_bit(0,0) # -> capture DR
     self.send_bit(0,0) # -> shift DR
-    for byte in sdr[:-1]:
-      self.read_data_byte(byte,0) # not last
-    self.read_data_byte(sdr[-1],1) # last, exit 1 DR
+    if verbose:
+      for byte in sdr[:-1]:
+        print("%02X" % byte,end="")
+      print("%02X send" % sdr[-1])
+      response = b""
+      for byte in sdr[:-1]:
+        response += bytes([self.read_data_byte(byte,0)]) # not last
+      response += bytes([self.read_data_byte(sdr[-1],1)]) # last, exit 1 DR
+      # print byte reverse - notation same as in SVF file
+      for n in range(len(response)):
+        print("%02X" % response[len(response)-n-1], end="")
+      print(" response")
+    else: # no print
+      for byte in sdr[:-1]:
+        self.read_data_byte(byte,0) # not last
+      self.read_data_byte(sdr[-1],1) # last, exit 1 DR
     self.send_bit(0,0) # -> pause DR
     self.send_bit(0,1) # -> exit 2 DR
     self.send_bit(0,1) # -> update DR
     if idle:
-      self.runtest_idle(idle[0], idle[1])
-    else:
-      self.send_bit(0,1) # -> select DR scan
-  
-  # send SDR data (byte string) and print result
-  # TAP should be in "select DR scan" state
-  # TAP returns to "select DR scan" state by default
-  # TAP returns to "idle" state if specified 
-  def sdr_print(self, sdr, idle=False):
-    self.send_bit(0,0) # -> capture DR
-    self.send_bit(0,0) # -> shift DR
-    for byte in sdr[:-1]:
-      print("%02X" % byte,end="")
-    print("%02X send" % sdr[-1])
-    response = b""
-    for byte in sdr[:-1]:
-      response += bytes([self.read_data_byte(byte,0)])
-    response += bytes([self.read_data_byte(sdr[-1],1)])
-    self.send_bit(0,0) # -> pause DR
-    # print byte reverse - notation same as in SVF file
-    for n in range(len(response)):
-      print("%02X" % response[len(response)-n-1], end="")
-    print(" response")
-    self.send_bit(0,1) # -> exit 2 DR
-    self.send_bit(0,1) # -> update DR
-    if idle:
-      self.runtest_idle(idle[0], idle[1])
+      self.runtest_idle(idle[0]+1, idle[1])
     else:
       self.send_bit(0,1) # -> select DR scan
 
@@ -201,8 +186,9 @@ class tapwalk:
     self.pinout_jtag_on()
     self.led.on()
     self.reset_tap()
-    self.sir(0xE0)
-    self.sdr_print(b"\x00\x00\x00\x00")
+    self.runtest_idle(1,0)
+    self.sir(b"\xE0")
+    self.sdr(b"\x00\x00\x00\x00", verbose=True)
     self.led.off()
     self.pinout_jtag_off()
   
@@ -211,30 +197,30 @@ class tapwalk:
     self.pinout_jtag_on()
     self.led.on()
     self.reset_tap()
-    self.sir(0xE0) # read IDCODE
-    self.sdr_print(b"\x00\x00\x00\x00")
-    self.sir(0x1C)
+    self.runtest_idle(1,0)
+    self.sir(b"\xE0") # read IDCODE
+    self.sdr(b"\x00\x00\x00\x00", verbose=True)
+    self.sir(b"\x1C")
     self.sdr([0xFF for i in range(64)])
-    self.sir(0xC6)
+    self.sir(b"\xC6")
     self.sdr(b"\x00", idle=(2,1.0E-2))
-    self.sir(0x3C, idle=(2,1.0E-3)) # LSC_READ_STATUS
-    self.sdr_print(b"\x00\x00\x00\x00")
+    self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
+    self.sdr(b"\x00\x00\x00\x00", verbose=True)
     print("00024040 &= 00000000 ? status");
-    self.sir(0x0E) # ISC erase RAM
+    self.sir(b"\x0E") # ISC erase RAM
     self.sdr(b"\x01", idle=(2,1.0E-2))
-    self.sir(0x3C, idle=(2,1.0E-3)) # LSC_READ_STATUS
-    self.sdr_print(b"\x00\x00\x00\x00")
+    self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
+    self.sdr(b"\x00\x00\x00\x00", verbose=True)
     print("0000B000 &= 00000000 ? status");
-    self.sir(0x46) # LSC_INIT_ADDRESS
+    self.sir(b"\x46") # LSC_INIT_ADDRESS
     self.sdr(b"\x01", idle=(2,1.0E-2))
-    self.sir(0x7A) # LSC_BITSTREAM_BURST
+    self.sir(b"\x7A") # LSC_BITSTREAM_BURST
     # bitstream begin
     with open(filename, "rb") as filedata:
       size = 0
       while True:
         block = filedata.read(1024)
         if block:
-          size += len(block)
           block = bytes([self.bitreverse(x) for x in block])
           self.sdr(block)
           if len(block) < 1024:
@@ -243,19 +229,20 @@ class tapwalk:
               print("%02X" % block[len(block)-n-1], end="")
             print("")
           print(".",end="")
+          size += len(block)
         else:
           print("*")
           print("%d bytes uploaded" % size)
           break
     # bitstream end
     #self.sdr(b"\xFF", idle=(100,1.0E-2))
-    self.sir(0xC0, idle=(2,1.0E-3)) # read usercode
-    self.sdr_print(b"\x00\x00\x00\x00")
+    self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
+    self.sdr(b"\x00\x00\x00\x00", verbose=True)
     print("FFFFFFFF &= 00000000 ? usercode");
-    self.sir(0x26, idle=(2,2.0E-1)) # ISC DISABLE
-    self.sir(0xFF, idle=(2,1.0E-3)) # BYPASS
-    self.sir(0x3C) # LSC_READ_STATUS
-    self.sdr_print(b"\x00\x00\x00\x00")
+    self.sir(b"\x26", idle=(2,2.0E-1)) # ISC DISABLE
+    self.sir(b"\xFF", idle=(2,1.0E-3)) # BYPASS
+    self.sir(b"\x3C") # LSC_READ_STATUS
+    self.sdr(b"\x00\x00\x00\x00", verbose=True)
     print("00002100 &= 00000100 ? status");
     self.reset_tap()
     self.led.off()

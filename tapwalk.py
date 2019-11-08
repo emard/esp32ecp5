@@ -262,13 +262,23 @@ class tapwalk:
       self.reset_tap()
       self.led.off()
       self.bitbang_jtag_off()
+      
+  def stopwatch_start(self):
+    self.stopwatch_ms = time.ticks_ms()
+  
+  def stopwatch_stop(self, bytes_uploaded):
+    elapsed_ms = time.ticks_ms() - self.stopwatch_ms
+    transfer_rate_MBps = 0
+    if elapsed_ms > 0:
+      transfer_rate_MBps = bytes_uploaded / elapsed_ms / 1024
+    print("%d bytes uploaded in %.3f s (%.3f MB/s)" % (bytes_uploaded, elapsed_ms/1000, transfer_rate_MBps))
 
-  def program(self, filename, blocksize=16384, progress=False):
+  def program_file(self, filename, blocksize=16384, progress=False):
     print("program \"%s\"" % filename)
     with open(filename, "rb") as filedata:
       self.prog_open()
       bytes_uploaded = 0
-      stopwatch_ms = time.ticks_ms()
+      self.stopwatch_start()
       while True:
         block = filedata.read(blocksize)
         if block:
@@ -280,17 +290,43 @@ class tapwalk:
           if progress:
             print("*")
           break
-      elapsed_ms = time.ticks_ms() - stopwatch_ms
-      transfer_rate_MBps = 9999.999
-      if elapsed_ms > 0:
-        transfer_rate_MBps = bytes_uploaded / elapsed_ms / 1024
-      print("%d bytes uploaded in %.3f s (%.3f MB/s)" % (bytes_uploaded, elapsed_ms/1000, transfer_rate_MBps))
+      self.stopwatch_stop(bytes_uploaded)
       self.prog_close()
+
+  def program_web(self,url,blocksize=16384):
+    import socket
+    print("program \"%s\"" % url)
+    _, _, host, path = url.split('/', 3)
+    addr = socket.getaddrinfo(host, 80)[0][-1]
+    s = socket.socket()
+    s.connect(addr)
+    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path, host), 'utf8'))
+    self.prog_open()
+    bytes_uploaded = 0
+    self.stopwatch_start()
+    while True:
+        data = s.recv(blocksize)
+        if data:
+            self.spi.write(data)
+            bytes_uploaded += len(data)
+        else:
+            break
+    self.stopwatch_stop(bytes_uploaded)
+    self.prog_close()
+    s.close()
+
+  def program(self, filepath):
+    if filepath.startswith("http://"):
+      self.program_web(filepath)
+    else:
+      self.program_file(filepath)
 
 print("usage:")
 print("tap=tapwalk.tapwalk()")
 print("tap.program(\"blink.bit\")")
+print("tap.program(\"http://192.168.4.2/blink.bit\")")
 print("tap.idcode()")
 tap = tapwalk()
 tap.idcode()
 #tap.program("blink.bit")
+#tap.program("http://192.168.4.2/blink.bit")

@@ -60,7 +60,8 @@ class tapwalk:
     some_variable = 0
     
   # print bytes reverse - appears the same as in SVF file
-  def print_hex_reverse(self, block, tail="\n"):
+  def print_hex_reverse(self, block, head="", tail="\n"):
+    print(head, end="")
     for n in range(len(block)):
       print("%02X" % block[len(block)-n-1], end="")
     print(tail, end="")
@@ -171,11 +172,11 @@ class tapwalk:
             tdo_mismatch = True
       if tdo_mismatch:
         if mask:
-          self.print_hex_reverse(response, tail=" & ")
-          self.print_hex_reverse(mask, tail=" != ")
+          self.print_hex_reverse(response, head="0x", tail=" & ")
+          self.print_hex_reverse(mask, head="0x", tail=" != ")
         else:
-          self.print_hex_reverse(response, tail=" != ")
-        self.print_hex_reverse(expected, tail="")
+          self.print_hex_reverse(response, head="0x", tail=" != ")
+        self.print_hex_reverse(expected, head="0x", tail="")
         print(" ("+message+")")
     else: # no print, faster
       for byte in sdr[:-1]:

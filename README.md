@@ -4,9 +4,10 @@ ESP32 micropython demo for accessing ECP5 JTAG tap, a simple way.
 
 # Usage
 
-Download [passthru
-bitstream](https://github.com/emard/ulx3s-bin/tree/master/fpga/passthru),
-Choose appropriate for your board and upload passthru bitstream to flash
+Skip this step if you have ESP32 on some development board with USB-serial module.
+If you have ESP32 on [ULX3S board](https://github.com/emard/ulx3s), you need to 
+download [passthru bitstream for ULX3S](https://github.com/emard/ulx3s-bin/tree/master/fpga/passthru),
+Choose appropriate for your board and ECP5 chip and upload passthru bitstream to flash
 
     ujprog -j flash passthru.bit
 
@@ -61,7 +62,7 @@ Yes there it is, run the demo code:
     tap=tapwalk.tapwalk()
     tap.program("blink.bit")
 
-SD card usage:
+SD card usage (SPI at gpio 12-15):
 
     import os,machine
     os.mount(machine.SDCard(slot=3),"/sd")

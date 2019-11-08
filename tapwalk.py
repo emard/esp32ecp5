@@ -129,7 +129,7 @@ class tapwalk:
     self.send_tms(1) # -> exit 2 IR
     self.send_tms(1) # -> update IR
     if idle:
-      #self.send_tms(0) # -> idle, disabled here as runtest_idle does it
+      #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
       self.runtest_idle(idle[0]+1, idle[1])
     else:
       self.send_tms(1) # -> select DR scan
@@ -160,7 +160,7 @@ class tapwalk:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     if idle:
-      #self.send_tms(0) # -> idle, disabled here as runtest_idle does it
+      #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
       self.runtest_idle(idle[0]+1, idle[1])
     else:
       self.send_tms(1) # -> select DR scan
@@ -176,7 +176,7 @@ class tapwalk:
     self.led.off()
     self.bitbang_jtag_off()
   
-  def program(self, filename):
+  def program(self, filename, progress=False):
     print("program \"%s\"" % filename)
     with open(filename, "rb") as filedata:
       self.spi_jtag_on()
@@ -209,33 +209,29 @@ class tapwalk:
       self.send_tms(0) # -> shift DR
       bytes_uploaded = 0
       blocksize = 16384
-      # switch from bitbanging to SPI mode must be glitchless at TCK line
-      self.spi.init(baudrate=self.spi_freq)
+      # switch from bitbanging to SPI mode
+      self.spi.init(baudrate=self.spi_freq) # TCK-glitchless
       while True:
         block = filedata.read(blocksize)
         if block:
           #for byte in block:
           #  self.send_read_data_byte_reverse(byte,0)
           self.spi.write(block) # same as above but faster
-          print(".",end="")
+          if progress:
+            print(".",end="")
           bytes_uploaded += len(block)
         else:
-          print("*")
+          if progress:
+            print("*")
           print("%d bytes uploaded" % bytes_uploaded)
           break
-      spi_trick = False
-      if spi_trick:
-        self.spi.init(mosi=Pin(self.gpio_tms))
-        self.spi.write(b"\xB0") # 0xB = exit 1 DR, pause DR, exit 2 DR, update DR, 0x0 = 4xidle
-        # switch from SPI to bitbanging must be glitchless at TCK line
-        self.bitbang_jtag_on()
-      else:
-        # switch from SPI to bitbanging must be glitchless at TCK line
-        self.bitbang_jtag_on()
-        self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
-        self.send_tms(0) # -> pause DR
-        self.send_tms(1) # -> exit 2 DR
-        self.send_tms(1) # -> update DR
+      # switch from SPI to bitbanging
+      self.bitbang_jtag_on() # TCK-glitchless
+      self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
+      self.send_tms(0) # -> pause DR
+      self.send_tms(1) # -> exit 2 DR
+      self.send_tms(1) # -> update DR
+      #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
       self.runtest_idle(100, 1.0E-2)
       # ---------- bitstream end -----------
       self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
@@ -256,5 +252,5 @@ print("tap=tapwalk.tapwalk()")
 print("tap.program(\"blink.bit\")")
 print("tap.idcode()")
 tap = tapwalk()
-#tap.idcode()
-tap.program("blink.bit")
+tap.idcode()
+#tap.program("blink.bit")

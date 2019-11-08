@@ -44,14 +44,15 @@ class tapwalk:
 
   # accelerated SPI 
   def spi_jtag_on(self):
-    self.spi=SPI(self.spi_channel, baudrate=30000000, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(self.gpio_tck), mosi=Pin(self.gpio_tdi), miso=Pin(self.gpio_tdo))
+    self.spi=SPI(self.spi_channel, baudrate=self.spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(self.gpio_tck), mosi=Pin(self.gpio_tdi), miso=Pin(self.gpio_tdo))
 
   def spi_jtag_off(self):
     del self.spi
 
   def __init__(self):
     self.gpio_led = 5
-    self.spi_channel = -1 # -1 soft, 1:oled, 2:jtag
+    self.spi_channel = 2 # -1 soft, 1:oled, 2:jtag
+    self.spi_freq = 30000000 # Hz
     self.init_pinout_jtag()
     #self.init_pinout_oled()
 
@@ -178,6 +179,8 @@ class tapwalk:
   def program(self, filename):
     print("program \"%s\"" % filename)
     with open(filename, "rb") as filedata:
+      self.spi_jtag_on()
+      self.spi.init(baudrate=self.spi_freq//2) # workarounds ESP32 micropython SPI bugs
       self.bitbang_jtag_on()
       self.led.on()
       self.reset_tap()
@@ -206,7 +209,8 @@ class tapwalk:
       self.send_tms(0) # -> shift DR
       bytes_uploaded = 0
       blocksize = 16384
-      self.spi_jtag_on()
+      # switch from bitbanging to SPI mode must be glitchless at TCK line
+      self.spi.init(baudrate=self.spi_freq)
       while True:
         block = filedata.read(blocksize)
         if block:
@@ -225,9 +229,11 @@ class tapwalk:
         # SW SPI -1: changes MOSI without a glich
         self.spi.init(mosi=Pin(self.gpio_tms))
         self.spi.write(b"\xB0") # 0xB = exit 1 DR, pause DR, exit 2 DR, update DR, 0x0 = 4xidle
-        self.spi_jtag_off()
+        # switch from SPI to bitbanging must be glitchless at TCK line
+        self.bitbang_jtag_on()
       else:
-        self.spi_jtag_off()
+        # switch from SPI to bitbanging must be glitchless at TCK line
+        self.bitbang_jtag_on()
         self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
         self.send_tms(0) # -> pause DR
         self.send_tms(1) # -> exit 2 DR
@@ -242,6 +248,7 @@ class tapwalk:
       self.sir(b"\x3C") # LSC_READ_STATUS
       self.sdr(b"\x00\x00\x00\x00", verbose=True)
       print("00002100 &= 00000100 ? status");
+      self.spi_jtag_off()
       self.reset_tap()
       self.led.off()
       self.bitbang_jtag_off()
@@ -251,5 +258,5 @@ print("tap=tapwalk.tapwalk()")
 print("tap.program(\"blink.bit\")")
 print("tap.idcode()")
 tap = tapwalk()
-tap.idcode()
-#tap.program("blink.bit")
+#tap.idcode()
+tap.program("blink.bit")

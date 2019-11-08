@@ -233,8 +233,6 @@ class tapwalk:
         self.send_tms(1) # -> exit 2 DR
         self.send_tms(1) # -> update DR
       self.runtest_idle(100, 1.0E-2)
-      #self.reset_tap()
-      #self.runtest_idle(100, 1.0E-2)
       # ---------- bitstream end -----------
       self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
       self.sdr(b"\x00\x00\x00\x00", verbose=False)

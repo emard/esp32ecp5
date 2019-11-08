@@ -201,9 +201,10 @@ class tapwalk:
     self.led.off()
     self.bitbang_jtag_off()
   
-  def program(self, filename, progress=False):
-    print("program \"%s\"" % filename)
-    with open(filename, "rb") as filedata:
+  # call this before sending the bitstram
+  # FPGA will enter programming mode
+  # after this TAP will be in "shift DR" state
+  def prog_open(self):
       self.spi_jtag_on()
       self.spi.init(baudrate=self.spi_freq//2) # workarounds ESP32 micropython SPI bugs
       self.bitbang_jtag_on()
@@ -230,29 +231,18 @@ class tapwalk:
       # we will be sending one long DR command
       self.send_tms(0) # -> capture DR
       self.send_tms(0) # -> shift DR
-      bytes_uploaded = 0
-      blocksize = 16384
-      stopwatch_ms = time.ticks_ms()
       # switch from bitbanging to SPI mode
       self.spi.init(baudrate=self.spi_freq) # TCK-glitchless
-      while True:
-        block = filedata.read(blocksize)
-        if block:
-          #for byte in block:
-          #  self.send_read_data_byte_reverse(byte,0)
-          self.spi.write(block) # same as above but faster
-          if progress:
-            print(".",end="")
-          bytes_uploaded += len(block)
-        else:
-          if progress:
-            print("*")
-          break
-      elapsed_ms = time.ticks_ms() - stopwatch_ms
-      transfer_rate_MBps = 9999
-      if elapsed_ms > 0:
-        transfer_rate_MBps = bytes_uploaded / elapsed_ms / 1024
-      print("%d bytes uploaded in %.2f s (%.2f MB/s)" % (bytes_uploaded, elapsed_ms/1000, transfer_rate_MBps))
+      # to upload the bitstream:
+      # FAST SPI mode
+      #self.spi.write(block)
+      # SLOW bitbanging mode
+      #for byte in block:
+      #  self.send_read_data_byte_reverse(byte,0)
+
+  # call this after uploading all of the bitstream blocks,
+  # this will exit FPGA programming mode and start the bitstream
+  def prog_close(self):
       # switch from SPI to bitbanging
       self.bitbang_jtag_on() # TCK-glitchless
       self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
@@ -272,6 +262,30 @@ class tapwalk:
       self.reset_tap()
       self.led.off()
       self.bitbang_jtag_off()
+
+  def program(self, filename, blocksize=16384, progress=False):
+    print("program \"%s\"" % filename)
+    with open(filename, "rb") as filedata:
+      self.prog_open()
+      bytes_uploaded = 0
+      stopwatch_ms = time.ticks_ms()
+      while True:
+        block = filedata.read(blocksize)
+        if block:
+          self.spi.write(block)
+          if progress:
+            print(".",end="")
+          bytes_uploaded += len(block)
+        else:
+          if progress:
+            print("*")
+          break
+      elapsed_ms = time.ticks_ms() - stopwatch_ms
+      transfer_rate_MBps = 9999.999
+      if elapsed_ms > 0:
+        transfer_rate_MBps = bytes_uploaded / elapsed_ms / 1024
+      print("%d bytes uploaded in %.3f s (%.3f MB/s)" % (bytes_uploaded, elapsed_ms/1000, transfer_rate_MBps))
+      self.prog_close()
 
 print("usage:")
 print("tap=tapwalk.tapwalk()")

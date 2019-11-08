@@ -225,8 +225,6 @@ class tapwalk:
           break
       spi_trick = False
       if spi_trick:
-        # problem with HW SPI 1 and 2: change of MOSI line makes a TCK glitch
-        # SW SPI -1: changes MOSI without a glich
         self.spi.init(mosi=Pin(self.gpio_tms))
         self.spi.write(b"\xB0") # 0xB = exit 1 DR, pause DR, exit 2 DR, update DR, 0x0 = 4xidle
         # switch from SPI to bitbanging must be glitchless at TCK line

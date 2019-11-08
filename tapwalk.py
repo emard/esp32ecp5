@@ -65,11 +65,7 @@ class tapwalk:
             y |= (1 << i)
     return y
 
-  def send_bit(self, tdi, tms):
-    if tdi:
-      self.tdi.on()
-    else:
-      self.tdi.off()
+  def send_tms(self, tms):
     if tms:
       self.tms.on()
     else:
@@ -77,7 +73,11 @@ class tapwalk:
     self.tck.off()
     self.tck.on()
 
-  def send_tms(self, tms):
+  def send_bit(self, tdi, tms):
+    if tdi:
+      self.tdi.on()
+    else:
+      self.tdi.off()
     if tms:
       self.tms.on()
     else:
@@ -102,45 +102,43 @@ class tapwalk:
   # TAP to "reset" state
   def reset_tap(self):
     for n in range(6):
-      self.send_bit(0,1) # -> Test Logic Reset
+      self.send_tms(1) # -> Test Logic Reset
 
   # TAP should be in "idle" state
   # TAP returns to "select DR scan" state
   def runtest_idle(self, count, duration):
     leave=time.ticks_ms() + int(duration*1000)
     for n in range(count):
-      self.send_bit(0,0) # -> idle
+      self.send_tms(0) # -> idle
     while time.ticks_ms() < leave:
-      self.send_bit(0,0) # -> idle
-    self.send_bit(0,1) # -> select DR scan
+      self.send_tms(0) # -> idle
+    self.send_tms(1) # -> select DR scan
   
   # send SIR command (bytes)
   # TAP should be in "select DR scan" state
-  # TAP returns to "select DR scan" state by default
-  # TAP returns to "idle" state if specified 
+  # TAP returns to "select DR scan" state
   def sir(self, sir, idle=False):
-    self.send_bit(0,1) # -> select IR scan
-    self.send_bit(0,0) # -> capture IR
-    self.send_bit(0,0) # -> shift IR
+    self.send_tms(1) # -> select IR scan
+    self.send_tms(0) # -> capture IR
+    self.send_tms(0) # -> shift IR
     for byte in sir[:-1]:
       self.send_read_data_byte(byte,0) # not last
     self.send_read_data_byte(sir[-1],1) # last, exit 1 DR
-    self.send_bit(0,0) # -> pause IR
-    self.send_bit(0,1) # -> exit 2 IR
-    self.send_bit(0,1) # -> update IR
+    self.send_tms(0) # -> pause IR
+    self.send_tms(1) # -> exit 2 IR
+    self.send_tms(1) # -> update IR
     if idle:
-      #self.send_bit(0,0) # -> idle, disabled here as runtest_idle does it
+      #self.send_tms(0) # -> idle, disabled here as runtest_idle does it
       self.runtest_idle(idle[0]+1, idle[1])
     else:
-      self.send_bit(0,1) # -> select DR scan
+      self.send_tms(1) # -> select DR scan
 
   # send SDR data (bytes) and print result
   # TAP should be in "select DR scan" state
-  # TAP returns to "select DR scan" state by default
-  # TAP returns to "idle" state if specified 
+  # TAP returns to "select DR scan" state
   def sdr(self, sdr, verbose=False, idle=False):
-    self.send_bit(0,0) # -> capture DR
-    self.send_bit(0,0) # -> shift DR
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
     if verbose:
       for byte in sdr[:-1]:
         print("%02X" % byte,end="")
@@ -157,14 +155,14 @@ class tapwalk:
       for byte in sdr[:-1]:
         self.send_read_data_byte(byte,0) # not last
       self.send_read_data_byte(sdr[-1],1) # last, exit 1 DR
-    self.send_bit(0,0) # -> pause DR
-    self.send_bit(0,1) # -> exit 2 DR
-    self.send_bit(0,1) # -> update DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
     if idle:
-      #self.send_bit(0,0) # -> idle, disabled here as runtest_idle does it
+      #self.send_tms(0) # -> idle, disabled here as runtest_idle does it
       self.runtest_idle(idle[0]+1, idle[1])
     else:
-      self.send_bit(0,1) # -> select DR scan
+      self.send_tms(1) # -> select DR scan
 
   def idcode(self):
     print("idcode")
@@ -204,8 +202,8 @@ class tapwalk:
       # ---------- bitstream begin -----------
       # manually walk the TAP
       # we will be sending one long DR command
-      self.send_bit(0,0) # -> capture DR
-      self.send_bit(0,0) # -> shift DR
+      self.send_tms(0) # -> capture DR
+      self.send_tms(0) # -> shift DR
       bytes_uploaded = 0
       blocksize = 16384
       self.spi_jtag_on()
@@ -231,9 +229,9 @@ class tapwalk:
       else:
         self.spi_jtag_off()
         self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
-        self.send_bit(0,0) # -> pause DR
-        self.send_bit(0,1) # -> exit 2 DR
-        self.send_bit(0,1) # -> update DR
+        self.send_tms(0) # -> pause DR
+        self.send_tms(1) # -> exit 2 DR
+        self.send_tms(1) # -> update DR
       self.runtest_idle(100, 1.0E-2)
       #self.reset_tap()
       #self.runtest_idle(100, 1.0E-2)
@@ -256,4 +254,4 @@ print("tap.program(\"blink.bit\")")
 print("tap.idcode()")
 tap = tapwalk()
 tap.idcode()
-#tap.program("blink.bit")
+tap.program("blink.bit")

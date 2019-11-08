@@ -50,14 +50,28 @@ class tapwalk:
     del self.spi
 
   def __init__(self):
-    self.gpio_led = 5
+    self.spi_freq = 30000000 # Hz JTAG clk frequency
     self.spi_channel = 2 # -1 soft, 1:oled, 2:jtag
-    self.spi_freq = 30000000 # Hz
+    self.gpio_led = 5
     self.init_pinout_jtag()
     #self.init_pinout_oled()
 
   def __call__(self):
     some_variable = 0
+    
+  # print bytes reverse - appears the same as in SVF file
+  def print_hex_reverse(self, block, tail="\n"):
+    for n in range(len(block)):
+      print("%02X" % block[len(block)-n-1], end="")
+    print(tail, end="")
+  
+  # convert 32-bit unsigned integer to 4-bytes
+  def uint32(self, u):
+    r = b""
+    for i in range(4):
+      r += bytes([u & 0xFF])
+      u >>= 8
+    return r
 
   def bitreverse(self,x):
     y = 0
@@ -65,7 +79,7 @@ class tapwalk:
         if (x >> (7 - i)) & 1 == 1:
             y |= (1 << i)
     return y
-
+  
   def send_tms(self, tms):
     if tms:
       self.tms.on()
@@ -135,23 +149,34 @@ class tapwalk:
       self.send_tms(1) # -> select DR scan
 
   # send SDR data (bytes) and print result
+  # if (response & mask)!=expected then report TDO mismatch
   # TAP should be in "select DR scan" state
   # TAP returns to "select DR scan" state
-  def sdr(self, sdr, verbose=False, idle=False):
+  def sdr(self, sdr, mask=False, expected=False, message="", idle=False):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    if verbose:
-      for byte in sdr[:-1]:
-        print("%02X" % byte,end="")
-      print("%02X send" % sdr[-1])
+    if expected:
       response = b""
       for byte in sdr[:-1]:
         response += bytes([self.send_read_data_byte(byte,0)]) # not last
       response += bytes([self.send_read_data_byte(sdr[-1],1)]) # last, exit 1 DR
-      # print byte reverse - notation same as in SVF file
-      for n in range(len(response)):
-        print("%02X" % response[len(response)-n-1], end="")
-      print(" response")
+      tdo_mismatch = False
+      if mask:
+        for i in range(len(expected)):
+          if (response[i] & mask[i]) != expected[i]:
+            tdo_mismatch = True
+      else:
+        for i in range(len(expected)):
+          if response[i] != expected[i]:
+            tdo_mismatch = True
+      if tdo_mismatch:
+        if mask:
+          self.print_hex_reverse(response, tail=" & ")
+          self.print_hex_reverse(mask, tail=" != ")
+        else:
+          self.print_hex_reverse(response, tail=" != ")
+        self.print_hex_reverse(expected, tail="")
+        print(" ("+message+")")
     else: # no print, faster
       for byte in sdr[:-1]:
         self.send_read_data_byte(byte,0) # not last
@@ -172,7 +197,7 @@ class tapwalk:
     self.reset_tap()
     self.runtest_idle(1,0)
     self.sir(b"\xE0")
-    self.sdr(b"\x00\x00\x00\x00", verbose=True)
+    self.sdr(self.uint32(0), expected=self.uint32(0), message="IDCODE")
     self.led.off()
     self.bitbang_jtag_off()
   
@@ -186,19 +211,17 @@ class tapwalk:
       self.reset_tap()
       self.runtest_idle(1,0)
       self.sir(b"\xE0") # read IDCODE
-      self.sdr(b"\x00\x00\x00\x00", verbose=True)
+      self.sdr(self.uint32(0), expected=self.uint32(0), message="IDCODE")
       self.sir(b"\x1C")
       self.sdr([0xFF for i in range(64)])
       self.sir(b"\xC6")
       self.sdr(b"\x00", idle=(2,1.0E-2))
       self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
-      self.sdr(b"\x00\x00\x00\x00", verbose=False)
-      #print("00024040 &= 00000000 ? status");
+      self.sdr(self.uint32(0), mask=self.uint32(0x00024040), expected=self.uint32(0), message="FAIL status")
       self.sir(b"\x0E") # ISC erase RAM
       self.sdr(b"\x01", idle=(2,1.0E-2))
       self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
-      self.sdr(b"\x00\x00\x00\x00", verbose=False)
-      #print("0000B000 &= 00000000 ? status");
+      self.sdr(self.uint32(0), mask=self.uint32(0x0000B000), expected=self.uint32(0), message="FAIL status")
       self.sir(b"\x46") # LSC_INIT_ADDRESS
       self.sdr(b"\x01", idle=(2,1.0E-2))
       self.sir(b"\x7A") # LSC_BITSTREAM_BURST
@@ -209,6 +232,7 @@ class tapwalk:
       self.send_tms(0) # -> shift DR
       bytes_uploaded = 0
       blocksize = 16384
+      stopwatch_ms = time.ticks_ms()
       # switch from bitbanging to SPI mode
       self.spi.init(baudrate=self.spi_freq) # TCK-glitchless
       while True:
@@ -223,8 +247,12 @@ class tapwalk:
         else:
           if progress:
             print("*")
-          print("%d bytes uploaded" % bytes_uploaded)
           break
+      elapsed_ms = time.ticks_ms() - stopwatch_ms
+      transfer_rate_MBps = 9999
+      if elapsed_ms > 0:
+        transfer_rate_MBps = bytes_uploaded / elapsed_ms / 1024
+      print("%d bytes uploaded in %.2f s (%.2f MB/s)" % (bytes_uploaded, elapsed_ms/1000, transfer_rate_MBps))
       # switch from SPI to bitbanging
       self.bitbang_jtag_on() # TCK-glitchless
       self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
@@ -235,13 +263,12 @@ class tapwalk:
       self.runtest_idle(100, 1.0E-2)
       # ---------- bitstream end -----------
       self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
-      self.sdr(b"\x00\x00\x00\x00", verbose=False)
+      self.sdr(self.uint32(0), mask=self.uint32(0xFFFFFFFF), expected=self.uint32(0), message="FAIL usercode")
       #print("FFFFFFFF &= 00000000 ? usercode");
       self.sir(b"\x26", idle=(2,2.0E-1)) # ISC DISABLE
       self.sir(b"\xFF", idle=(2,1.0E-3)) # BYPASS
       self.sir(b"\x3C") # LSC_READ_STATUS
-      self.sdr(b"\x00\x00\x00\x00", verbose=True)
-      print("00002100 &= 00000100 ? status");
+      self.sdr(self.uint32(0), mask=self.uint32(0x00002100), expected=self.uint32(0x00000100), message="FAIL bitstream")
       self.spi_jtag_off()
       self.reset_tap()
       self.led.off()

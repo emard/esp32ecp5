@@ -1,18 +1,23 @@
 # micropython ESP32
 
-# usage
-# >>> import tapwalk
-# >>> tap=tapwalk.tapwalk()
-# >>> tap.idcode()
-# 41111043
-# >>> tap.program("blink.bit")
-
 import time
 from machine import SPI, Pin
 
 class tapwalk:
 
-  # debugging JTAG
+  def init_pinout_jtag(self):
+    self.gpio_tms = 21
+    self.gpio_tck = 18
+    self.gpio_tdi = 23
+    self.gpio_tdo = 19
+
+#  def init_pinout_oled(self):
+#    self.gpio_tms = 15
+#    self.gpio_tck = 14
+#    self.gpio_tdi = 13
+#    self.gpio_tdo = 12
+
+
   def bitbang_jtag_on(self):
     self.led=Pin(self.gpio_led,Pin.OUT)
     self.tms=Pin(self.gpio_tms,Pin.OUT)
@@ -44,25 +49,6 @@ class tapwalk:
   def spi_jtag_off(self):
     del self.spi
 
-  #  problem with spi init: glitch
-  def spi_jtag_tdi(self):
-    self.spi.init(mosi=Pin(self.gpio_tdi))
-
-  def spi_jtag_tms(self):
-    self.spi.init(mosi=Pin(self.gpio_tms))
-    
-  def init_pinout_jtag(self):
-    self.gpio_tms = 21
-    self.gpio_tck = 18
-    self.gpio_tdi = 23
-    self.gpio_tdo = 19
-
-  def init_pinout_oled(self):
-    self.gpio_tms = 15
-    self.gpio_tck = 14
-    self.gpio_tdi = 13
-    self.gpio_tdo = 12
-
   def __init__(self):
     self.gpio_led = 5
     self.spi_channel = -1 # -1 soft, 1:oled, 2:jtag
@@ -79,14 +65,19 @@ class tapwalk:
             y |= (1 << i)
     return y
 
-  def nibblereverse(self,x):
-    return ((x << 4) & 0xF0) | ((x >> 4) & 0x0F)
-
   def send_bit(self, tdi, tms):
     if tdi:
       self.tdi.on()
     else:
       self.tdi.off()
+    if tms:
+      self.tms.on()
+    else:
+      self.tms.off()
+    self.tck.off()
+    self.tck.on()
+
+  def send_tms(self, tms):
     if tms:
       self.tms.on()
     else:
@@ -232,6 +223,8 @@ class tapwalk:
           break
       spi_trick = False
       if spi_trick:
+        # problem with HW SPI 1 and 2: change of MOSI line makes a TCK glitch
+        # SW SPI -1: changes MOSI without a glich
         self.spi.init(mosi=Pin(self.gpio_tms))
         self.spi.write(b"\xB0") # 0xB = exit 1 DR, pause DR, exit 2 DR, update DR, 0x0 = 4xidle
         self.spi_jtag_off()

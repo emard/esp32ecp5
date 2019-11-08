@@ -263,8 +263,7 @@ class tapwalk:
       self.runtest_idle(100, 1.0E-2)
       # ---------- bitstream end -----------
       self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
-      self.sdr(self.uint32(0), mask=self.uint32(0xFFFFFFFF), expected=self.uint32(0), message="FAIL usercode")
-      #print("FFFFFFFF &= 00000000 ? usercode");
+      self.sdr(self.uint32(0), expected=self.uint32(0), message="FAIL usercode")
       self.sir(b"\x26", idle=(2,2.0E-1)) # ISC DISABLE
       self.sir(b"\xFF", idle=(2,1.0E-3)) # BYPASS
       self.sir(b"\x3C") # LSC_READ_STATUS

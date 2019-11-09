@@ -471,8 +471,6 @@ class ecp5:
           if (bytes_uploaded % erasesize) == 0:
             self.flash_erase_block(erasesize, addr=addr+bytes_uploaded)
           self.flash_write_block(block, addr=addr+bytes_uploaded)
-          if len(block) != blocksize:
-            print("256?")
           if progress:
             print(".",end="")
           bytes_uploaded += len(block)

@@ -5,7 +5,7 @@
 # LICENSE=BSD
 
 import time
-#import struct
+import struct
 from machine import SPI, Pin
 
 class ecp5:
@@ -60,6 +60,9 @@ class ecp5:
 
   def __init__(self):
     self.spi_freq = 30000000 # Hz JTAG clk frequency
+    # -1 for JTAG over SOFT SPI slow, compatibility
+    #  1 or 2 for JTAG over HARD SPI fast
+    #  2 is preferred as it has default pinout wired
     self.spi_channel = 2 # -1 soft, 1:sd, 2:jtag
     self.gpio_led = 5
     self.init_pinout_jtag()
@@ -307,7 +310,7 @@ class ecp5:
       # ---------- flashing begin -----------
 
   def flash_erase_block(self, length, addr=0, erasesize=65536):
-      print("from 0x%06X erase %d bytes" % (addr, length))
+      #print("from 0x%06X erase %d bytes" % (addr, length))
       self.sdr(b"\x60") # SPI WRITE ENABLE
       # some chips won't clear WIP without this:
       self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x4000)) # READ STATUS REGISTER
@@ -316,14 +319,37 @@ class ecp5:
 
   def flash_write_block(self, block, addr=0, blocksize=256):
     #print("from 0x%06X write %d bytes" % (addr, len(block)))
-    #self.spi.init(baudrate=self.spi_freq//2) # workarounds ESP32 micropython SPI bugs
-    #self.bitbang_jtag_on()
     self.sdr(b"\x60") # SPI WRITE ENABLE
-    #send = self.uint(32, (self.bitreverse(addr & 0xFF)<<24) | (self.bitreverse((addr>>8) & 0xFF)<<16) | (self.bitreverse((addr>>16) & 0xFF)<<8) | 0x40)
-    send = bytes([0x40, self.bitreverse((addr>>16) & 0xFF), self.bitreverse((addr>>8) & 0xFF), self.bitreverse(addr & 0xFF)])
-    for x in block:
-      send += bytes([self.bitreverse(x)])
-    self.sdr(send, drpause=2.0E-3)
+    fast = True
+    if fast:
+      sdr = struct.pack(">I", 0x02000000 | (addr & 0xFFFFFF)) + block
+      # can't use hardware SPI - too much switching SPI/GPIO
+      spi=SPI(-1, baudrate=self.spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(self.gpio_tck), mosi=Pin(self.gpio_tdi), miso=Pin(self.gpio_tdo))
+      #self.spi.init(baudrate=self.spi_freq//2) # TCK-glitchless ?
+      #self.bitbang_jtag_on() # TCK-glitchless ?
+      # self.bitreverse(0x40) = 0x02 -> 0x02000000
+      # sdr normally contains 260 bytes for 256 block flash,
+      # send first 259 bytes fast using SPI mode
+      # switch to bitbanging and send last (260th) byte
+      # because at last bit of last byte,
+      # TAP state must change from "shift DR" to "exit 1 DR"
+      self.send_tms(0) # -> capture DR
+      self.send_tms(0) # -> shift DR
+      # switch from bitbanging to SPI mode
+      #self.spi.init(baudrate=self.spi_freq) # TCK-glitchless ?
+      spi.write(sdr[:-1]) # whole block except last byte
+      #self.bitbang_jtag_on() # TCK-glitchless ?
+      self.send_read_data_byte(tap.bitreverse(sdr[-1]),1) # last byte -> exit 1 DR
+      self.send_tms(0) # -> pause DR
+      time.sleep(2.0E-3) # DRPAUSE
+      self.send_tms(1) # -> exit 2 DR
+      self.send_tms(1) # -> update DR
+      self.send_tms(1) # -> select DR scan
+    else: # slow
+      sdr = bytes([0x40, self.bitreverse((addr>>16) & 0xFF), self.bitreverse((addr>>8) & 0xFF), self.bitreverse(addr & 0xFF)])
+      for x in block:
+       sdr += bytes([self.bitreverse(x)])
+      self.sdr(sdr, drpause=2.0E-3)
     self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x0000)) # READ STATUS REGISTER
 
   # call this after uploading all of the flash blocks,
@@ -373,7 +399,7 @@ class ecp5:
       self.stopwatch_stop(bytes_uploaded)
       self.prog_close()
 
-  def program_web(self,url,blocksize=16384):
+  def program_web(self,url,blocksize=16384,progress=False):
     import socket
     print("program \"%s\"" % url)
     _, _, host, path = url.split('/', 3)
@@ -387,10 +413,14 @@ class ecp5:
     while True:
         data = s.recv(blocksize)
         if data:
-            self.spi.write(data)
-            bytes_uploaded += len(data)
+          self.spi.write(data)
+          bytes_uploaded += len(data)
+          if progress:
+            print(".",end="")
         else:
-            break
+          if progress:
+            print("*")
+          break
     self.stopwatch_stop(bytes_uploaded)
     self.prog_close()
     s.close()
@@ -423,18 +453,51 @@ class ecp5:
           break
       self.stopwatch_stop(bytes_uploaded)
       self.flash_close()
+
+  def flash_web(self, url, addr=0, blocksize=256, erasesize=65536, progress=False):
+    import socket
+    print("program \"%s\"" % url)
+    _, _, host, path = url.split('/', 3)
+    iaddr = socket.getaddrinfo(host, 80)[0][-1]
+    s = socket.socket()
+    s.connect(iaddr)
+    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path, host), 'utf8'))
+    self.flash_open()
+    bytes_uploaded = 0
+    self.stopwatch_start()
+    while True:
+        block = s.read(blocksize)
+        if block:
+          if (bytes_uploaded % erasesize) == 0:
+            self.flash_erase_block(erasesize, addr=addr+bytes_uploaded)
+          self.flash_write_block(block, addr=addr+bytes_uploaded)
+          if len(block) != blocksize:
+            print("256?")
+          if progress:
+            print(".",end="")
+          bytes_uploaded += len(block)
+        else:
+          if progress:
+            print("*")
+          break
+    self.stopwatch_stop(bytes_uploaded)
+    self.flash_close()
+    s.close()
   
-  def flash(self, filepath):
-    self.flash_file(filepath, progress=True)
+  def flash(self, filepath, addr=0):
+    if filepath.startswith("http://"):
+      self.flash_web(filepath, addr=addr, progress=True)
+    else:
+      self.flash_file(filepath, addr=addr, progress=True)
 
 print("usage:")
 print("tap=ecp5.ecp5()")
-print("tap.flash(\"blink.bit\")")
+print("tap.flash(\"blink.bit\", addr=0x000000)")
 print("tap.program(\"blink.bit\")")
 print("tap.program(\"http://192.168.4.2/blink.bit\")")
 print("tap.idcode()")
 tap = ecp5()
 tap.idcode()
-tap.flash("blink.bit")
+#tap.flash("blink.bit")
 #tap.program("blink.bit")
 #tap.program("http://192.168.4.2/blink.bit")

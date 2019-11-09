@@ -46,7 +46,7 @@ example autostart file "main.py"
     sta_if.active(True)
     sta_if.connect("accesspoint", "password")
 
-upload "tapwalk.py", "main.py" and some bitstream file "blink.bit" to
+upload "ecp5.py", "main.py" and some bitstream file "blink.bit" to
 the root of ESP32 python FLASH filesystem
 using [micropython webrepl](http://micropython.org/webrepl).
 
@@ -54,12 +54,12 @@ List directory to see if the files are uploaded:
 
     import os
     os.listdir()
-    ['boot.py', 'tapwalk.py', 'main.py', 'blink.bit']
+    ['boot.py', 'ecp5.py', 'main.py', 'blink.bit']
 
 Yes there it is, run the demo code:
 
-    import tapwalk
-    tap=tapwalk.tapwalk()
+    import ecp5
+    tap=ecp5.ecp5()
     tap.program("blink.bit")
 
 SD card usage (SPI at gpio 12-15):

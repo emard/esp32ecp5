@@ -277,7 +277,7 @@ class ecp5:
     elapsed_ms = time.ticks_ms() - self.stopwatch_ms
     transfer_rate_MBps = 0
     if elapsed_ms > 0:
-      transfer_rate_MBps = bytes_uploaded / elapsed_ms / 1024
+      transfer_rate_MBps = bytes_uploaded / (elapsed_ms * 1024 * 1.024)
     print("%d bytes uploaded in %.3f s (%.3f MB/s)" % (bytes_uploaded, elapsed_ms/1000, transfer_rate_MBps))
 
   def program_file(self, filename, blocksize=16384, progress=False):

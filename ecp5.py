@@ -162,7 +162,7 @@ class ecp5:
   # TAP should be in "select DR scan" state
   # TAP returns to "select DR scan" state
   # return value "True" if error, "False" if no error
-  def sdr(self, sdr, mask=False, expected=False, message="", idle=False):
+  def sdr(self, sdr, mask=False, expected=False, message="", drpause=False, idle=False):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     tdo_mismatch = False
@@ -192,6 +192,8 @@ class ecp5:
         self.send_read_data_byte(byte,0) # not last
       self.send_read_data_byte(sdr[-1],1) # last, exit 1 DR
     self.send_tms(0) # -> pause DR
+    if drpause:
+      time.sleep(drpause)
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     if idle:
@@ -224,13 +226,13 @@ class ecp5:
       self.runtest_idle(1,0)
       self.sir(b"\xE0") # read IDCODE
       self.sdr(self.uint32(0), expected=self.uint32(0), message="IDCODE")
-      self.sir(b"\x1C")
+      self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
       self.sdr([0xFF for i in range(64)])
-      self.sir(b"\xC6")
+      self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
       self.sdr(b"\x00", idle=(2,1.0E-2))
       self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
       self.sdr(self.uint32(0), mask=self.uint32(0x00024040), expected=self.uint32(0), message="FAIL status")
-      self.sir(b"\x0E") # ISC erase RAM
+      self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
       self.sdr(b"\x01", idle=(2,1.0E-2))
       self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
       self.sdr(self.uint32(0), mask=self.uint32(0x0000B000), expected=self.uint32(0), message="FAIL status")

@@ -1,9 +1,13 @@
 # micropython ESP32
+# ECP5 JTAG programmer
+
+# AUTHOR=EMARD
+# LICENSE=BSD
 
 import time
 from machine import SPI, Pin
 
-class tapwalk:
+class ecp5:
 
   def init_pinout_jtag(self):
     self.gpio_tms = 21
@@ -153,15 +157,16 @@ class tapwalk:
   # if (response & mask)!=expected then report TDO mismatch
   # TAP should be in "select DR scan" state
   # TAP returns to "select DR scan" state
+  # return value "True" if error, "False" if no error
   def sdr(self, sdr, mask=False, expected=False, message="", idle=False):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
+    tdo_mismatch = False
     if expected:
       response = b""
       for byte in sdr[:-1]:
         response += bytes([self.send_read_data_byte(byte,0)]) # not last
       response += bytes([self.send_read_data_byte(sdr[-1],1)]) # last, exit 1 DR
-      tdo_mismatch = False
       if mask:
         for i in range(len(expected)):
           if (response[i] & mask[i]) != expected[i]:
@@ -190,6 +195,7 @@ class tapwalk:
       self.runtest_idle(idle[0]+1, idle[1])
     else:
       self.send_tms(1) # -> select DR scan
+    return tdo_mismatch
 
   def idcode(self):
     print("idcode")
@@ -323,11 +329,11 @@ class tapwalk:
       self.program_file(filepath)
 
 print("usage:")
-print("tap=tapwalk.tapwalk()")
+print("tap=ecp5.ecp5()")
 print("tap.program(\"blink.bit\")")
 print("tap.program(\"http://192.168.4.2/blink.bit\")")
 print("tap.idcode()")
-tap = tapwalk()
+tap = ecp5()
 tap.idcode()
 #tap.program("blink.bit")
 #tap.program("http://192.168.4.2/blink.bit")

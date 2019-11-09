@@ -315,9 +315,12 @@ class ecp5:
       self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x0000)) # READ STATUS REGISTER
 
   def flash_write_block(self, block, addr=0, blocksize=256):
-    print("from 0x%06X write %d bytes" % (addr, len(block)))
+    #print("from 0x%06X write %d bytes" % (addr, len(block)))
+    #self.spi.init(baudrate=self.spi_freq//2) # workarounds ESP32 micropython SPI bugs
+    #self.bitbang_jtag_on()
     self.sdr(b"\x60") # SPI WRITE ENABLE
-    send = self.uint(32, (self.bitreverse(addr & 0xFF)<<24) | (self.bitreverse((addr>>8) & 0xFF)<<16) | (self.bitreverse((addr>>16) & 0xFF)<<8) | 0x40)
+    #send = self.uint(32, (self.bitreverse(addr & 0xFF)<<24) | (self.bitreverse((addr>>8) & 0xFF)<<16) | (self.bitreverse((addr>>16) & 0xFF)<<8) | 0x40)
+    send = bytes([0x40, self.bitreverse((addr>>16) & 0xFF), self.bitreverse((addr>>8) & 0xFF), self.bitreverse(addr & 0xFF)])
     for x in block:
       send += bytes([self.bitreverse(x)])
     self.sdr(send, drpause=2.0E-3)
@@ -422,7 +425,7 @@ class ecp5:
       self.flash_close()
   
   def flash(self, filepath):
-    self.flash_file(filepath)
+    self.flash_file(filepath, progress=True)
 
 print("usage:")
 print("tap=ecp5.ecp5()")

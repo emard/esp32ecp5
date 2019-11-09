@@ -15,11 +15,15 @@ class ecp5:
     self.gpio_tdi = 23
     self.gpio_tdo = 19
 
-#  def init_pinout_oled(self):
-#    self.gpio_tms = 15
-#    self.gpio_tck = 14
-#    self.gpio_tdi = 13
-#    self.gpio_tdo = 12
+  # if JTAG is directed to SD card pins
+  # then bus traffic can be monitored using
+  # JTAG slave OLED HEX decoder:
+  # https://github.com/emard/ulx3s-misc/tree/master/examples/jtag_slave/proj/ulx3s_jtag_hex_passthru_v
+  #def init_pinout_sd(self):
+  #  self.gpio_tms = 15
+  #  self.gpio_tck = 14
+  #  self.gpio_tdi = 13
+  #  self.gpio_tdo = 12
 
 
   def bitbang_jtag_on(self):
@@ -55,10 +59,10 @@ class ecp5:
 
   def __init__(self):
     self.spi_freq = 30000000 # Hz JTAG clk frequency
-    self.spi_channel = 2 # -1 soft, 1:oled, 2:jtag
+    self.spi_channel = 2 # -1 soft, 1:sd, 2:jtag
     self.gpio_led = 5
     self.init_pinout_jtag()
-    #self.init_pinout_oled()
+    #self.init_pinout_sd()
 
   def __call__(self):
     some_variable = 0

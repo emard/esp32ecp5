@@ -308,6 +308,9 @@ class ecp5:
       self.sir(b"\x3A") # LSC_PROG_SPI
       self.sdr(self.uint(16,0x68FE), idle=(32,0))
       # ---------- flashing begin -----------
+      # 0x60 and other SPI flash commands here are bitreverse() values
+      # of flash commands found in SPI FLASH datasheet.
+      # e.g. 0x1B here is actually 0xD8 in datasheet, 0x60 is is 0x06 etc.
       # only software SPI works for flashing
       self.spi_bscan=SPI(-1, baudrate=self.spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(self.gpio_tck), mosi=Pin(self.gpio_tdi), miso=Pin(self.gpio_tdo))
 
@@ -331,15 +334,9 @@ class ecp5:
       self.flash_wait_status()
 
   def flash_write_block(self, block, addr=0, blocksize=256):
-    #print("from 0x%06X write %d bytes" % (addr, len(block)))
     self.sdr(b"\x60") # SPI WRITE ENABLE
     # self.bitreverse(0x40) = 0x02 -> 0x02000000
     sdr = struct.pack(">I", 0x02000000 | (addr & 0xFFFFFF)) + block
-    # sdr normally contains 260 bytes for 256 block flash,
-    # send first 259 bytes fast using SPI mode
-    # switch to bitbanging and send last (260th) byte
-    # because at last bit of last byte,
-    # TAP state must change from "shift DR" to "exit 1 DR"
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.spi_bscan.write(sdr[:-1]) # whole block except last byte

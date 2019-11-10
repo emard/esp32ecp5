@@ -87,5 +87,4 @@ SD card usage (SPI at gpio 12-15):
 
     [ ] on-the-fly zlib decompression
     [ ] read flash content and decide if block has to be erased
-
- 
+    [ ] write disk image to SD card

@@ -66,8 +66,10 @@ class ecp5:
     # -1 for JTAG over SOFT SPI slow, compatibility
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
-    self.flash_erase_size = 65536
     self.flash_write_size = 256
+    self.flash_erase_size = 65536
+    flash_erase_cmd  = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
+    self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     self.spi_channel = 2 # -1 soft, 1:sd, 2:jtag
     self.gpio_led = 5
     self.init_pinout_jtag()
@@ -327,15 +329,15 @@ class ecp5:
     if retry <= 0:
       self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x0000)) # READ STATUS REGISTER
 
-  def flash_erase_block(self, length, addr=0, erasesize=65536):
+  def flash_erase_block(self, length, addr=0):
     print("from 0x%06X erase %d bytes" % (addr, length))
     self.sdr(b"\x60") # SPI WRITE ENABLE
     # some chips won't clear WIP without this:
     self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x4000)) # READ STATUS REGISTER
-    self.sdr(self.uint(32, (self.bitreverse(addr//erasesize)<<8) | 0x1B))
+    self.sdr(self.uint(32, (self.bitreverse(addr//self.flash_erase_size)<<8) | self.bitreverse(self.flash_erase_cmd)))
     self.flash_wait_status()
 
-  def flash_write_block(self, block, addr=0, blocksize=256):
+  def flash_write_block(self, block, addr=0):
     self.sdr(b"\x60") # SPI WRITE ENABLE
     # self.bitreverse(0x40) = 0x02 -> 0x02000000
     sdr = struct.pack(">I", 0x02000000 | (addr & 0xFFFFFF)) + block
@@ -417,10 +419,11 @@ class ecp5:
       self.program_file(filepath)
 
   def flash_loop(self, filedata, addr=0):
-      if addr & 0xFFFF:
-        print("addr must be rounded to 64KB, lower 16-bit = 0x0000")
+      addr_mask = self.flash_erase_size-1
+      if addr & addr_mask:
+        print("addr must be rounded to %d bytes (& 0x%X)" % (self.flash_erase_size, addr_mask))
         return
-      addr = addr & 0xFF0000 # rounded to even 64K (erase block)
+      addr = addr & 0xFFFFFF & ~addr_mask # rounded to even 64K (erase block)
       self.flash_open()
       bytes_uploaded = 0
       self.stopwatch_start()

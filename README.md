@@ -61,7 +61,7 @@ Yes there it is, let's try:
 
     import ecp5
     tap=ecp5.ecp5()
-    tap.program("blink1.bit")
+    tap.flash("blink1.bit")
     99262 bytes uploaded in 0.069 s (1.405 MB/s)
     tap.program("http://192.168.4.2/blink2.bit")
     173895 bytes uploaded in 0.171 s (0.993 MB/s)

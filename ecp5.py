@@ -267,8 +267,13 @@ class ecp5:
   # call this after uploading all of the bitstream blocks,
   # this will exit FPGA programming mode and start the bitstream
   def prog_close(self):
-    # switch from SPI to bitbanging
-    self.bitbang_jtag_on() # TCK-glitch tolerated here
+    # switch from hardware SPI to bitbanging
+    # can have TCK-glitches but luckily,
+    # format of the bitstream tolerates junk
+    # bytes before and after the bitstream,
+    # so even if we have glitching after the bitstream,
+    # it should still work.
+    self.bitbang_jtag_on() # TCK-glitch expected here can be tolerated.
     self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR

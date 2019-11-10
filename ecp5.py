@@ -51,12 +51,15 @@ class ecp5:
     del self.tdi
     del self.tdo
 
-  # accelerated SPI 
+  # initialize both hardware accelerated SPI
+  # software SPI on the same pins
   def spi_jtag_on(self):
-    self.spi=SPI(self.spi_channel, baudrate=self.spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(self.gpio_tck), mosi=Pin(self.gpio_tdi), miso=Pin(self.gpio_tdo))
+    self.hwspi=SPI(self.spi_channel, baudrate=self.spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(self.gpio_tck), mosi=Pin(self.gpio_tdi), miso=Pin(self.gpio_tdo))
+    self.swspi=SPI(-1, baudrate=self.spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(self.gpio_tck), mosi=Pin(self.gpio_tdi), miso=Pin(self.gpio_tdo))
 
   def spi_jtag_off(self):
-    del self.spi
+    del self.hwspi
+    del self.swspi
 
   def __init__(self):
     self.spi_freq = 30000000 # Hz JTAG clk frequency
@@ -225,7 +228,7 @@ class ecp5:
   # after this TAP will be in "shift DR" state
   def prog_open(self):
       self.spi_jtag_on()
-      self.spi.init(baudrate=self.spi_freq//2) # workarounds ESP32 micropython SPI bugs
+      self.hwspi.init(baudrate=self.spi_freq//2) # workarounds ESP32 micropython SPI bugs
       self.bitbang_jtag_on()
       self.led.on()
       self.reset_tap()
@@ -251,10 +254,10 @@ class ecp5:
       self.send_tms(0) # -> capture DR
       self.send_tms(0) # -> shift DR
       # switch from bitbanging to SPI mode
-      self.spi.init(baudrate=self.spi_freq) # TCK-glitchless
+      self.hwspi.init(baudrate=self.spi_freq) # TCK-glitchless
       # to upload the bitstream:
       # FAST SPI mode
-      #self.spi.write(block)
+      #self.hwspi.write(block)
       # SLOW bitbanging mode
       #for byte in block:
       #  self.send_read_data_byte_reverse(byte,0)
@@ -263,7 +266,7 @@ class ecp5:
   # this will exit FPGA programming mode and start the bitstream
   def prog_close(self):
       # switch from SPI to bitbanging
-      self.bitbang_jtag_on() # TCK-glitchless
+      self.bitbang_jtag_on() # TCK-glitch tolerated here
       self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
       self.send_tms(0) # -> pause DR
       self.send_tms(1) # -> exit 2 DR
@@ -286,6 +289,7 @@ class ecp5:
   # FPGA will enter flashing mode
   # TAP should be in "select DR scan" state
   def flash_open(self):
+      self.spi_jtag_on()
       self.bitbang_jtag_on()
       self.led.on()
       self.reset_tap()
@@ -311,27 +315,25 @@ class ecp5:
       # 0x60 and other SPI flash commands here are bitreverse() values
       # of flash commands found in SPI FLASH datasheet.
       # e.g. 0x1B here is actually 0xD8 in datasheet, 0x60 is is 0x06 etc.
-      # only software SPI works for flashing
-      self.spi_bscan=SPI(-1, baudrate=self.spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(self.gpio_tck), mosi=Pin(self.gpio_tdi), miso=Pin(self.gpio_tdo))
 
   def flash_wait_status(self):
-      retry=10
-      while retry > 0:
-        status = self.sdr(self.uint(16, 0x00A0)) # READ STATUS REGISTER
-        if (status[1] & 0xC1) == 0:
-          break
-        time.sleep(0.1)
-        retry -= 1
-      if retry <= 0:
-        self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x0000)) # READ STATUS REGISTER
+    retry=10
+    while retry > 0:
+      status = self.sdr(self.uint(16, 0x00A0)) # READ STATUS REGISTER
+      if (status[1] & 0xC1) == 0:
+        break
+      time.sleep(0.1)
+      retry -= 1
+    if retry <= 0:
+      self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x0000)) # READ STATUS REGISTER
 
   def flash_erase_block(self, length, addr=0, erasesize=65536):
-      print("from 0x%06X erase %d bytes" % (addr, length))
-      self.sdr(b"\x60") # SPI WRITE ENABLE
-      # some chips won't clear WIP without this:
-      self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x4000)) # READ STATUS REGISTER
-      self.sdr(self.uint(32, (self.bitreverse(addr//erasesize)<<8) | 0x1B))
-      self.flash_wait_status()
+    print("from 0x%06X erase %d bytes" % (addr, length))
+    self.sdr(b"\x60") # SPI WRITE ENABLE
+    # some chips won't clear WIP without this:
+    self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x4000)) # READ STATUS REGISTER
+    self.sdr(self.uint(32, (self.bitreverse(addr//erasesize)<<8) | 0x1B))
+    self.flash_wait_status()
 
   def flash_write_block(self, block, addr=0, blocksize=256):
     self.sdr(b"\x60") # SPI WRITE ENABLE
@@ -339,7 +341,7 @@ class ecp5:
     sdr = struct.pack(">I", 0x02000000 | (addr & 0xFFFFFF)) + block
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.spi_bscan.write(sdr[:-1]) # whole block except last byte
+    self.swspi.write(sdr[:-1]) # whole block except last byte
     self.send_read_data_byte_reverse(sdr[-1],1) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
@@ -350,18 +352,18 @@ class ecp5:
   # call this after uploading all of the flash blocks,
   # this will exit FPGA flashing mode and start the bitstream
   def flash_close(self):
-      del self.spi_bscan
-      # switch from SPI to bitbanging
-      # ---------- flashing end -----------
-      self.sdr(b"\x20") # SPI WRITE DISABLE
-      self.sir(b"\xFF", idle=(100,1.0E-3)) # BYPASS
-      self.sir(b"\x26", idle=(2,2.0E-1)) # ISC DISABLE
-      self.sir(b"\xFF", idle=(2,1.0E-3)) # BYPASS
-      self.sir(b"\x79") # LSC_REFRESH reload the bitstream from flash
-      self.sdr(b"\x00\x00\x00", idle=(2,1.0E-1))
-      self.reset_tap()
-      self.led.off()
-      self.bitbang_jtag_off()
+    # switch from SPI to bitbanging
+    # ---------- flashing end -----------
+    self.sdr(b"\x20") # SPI WRITE DISABLE
+    self.sir(b"\xFF", idle=(100,1.0E-3)) # BYPASS
+    self.sir(b"\x26", idle=(2,2.0E-1)) # ISC DISABLE
+    self.sir(b"\xFF", idle=(2,1.0E-3)) # BYPASS
+    self.sir(b"\x79") # LSC_REFRESH reload the bitstream from flash
+    self.sdr(b"\x00\x00\x00", idle=(2,1.0E-1))
+    self.spi_jtag_off()
+    self.reset_tap()
+    self.led.off()
+    self.bitbang_jtag_off()
       
   def stopwatch_start(self):
     self.stopwatch_ms = time.ticks_ms()
@@ -380,7 +382,7 @@ class ecp5:
       while True:
         block = filedata.read(blocksize)
         if block:
-          self.spi.write(block)
+          self.hwspi.write(block)
           if self.progress:
             print(".",end="")
           bytes_uploaded += len(block)
@@ -471,5 +473,5 @@ print("tap.idcode()")
 tap = ecp5()
 tap.idcode()
 #tap.flash("blink.bit")
-#tap.program("blink.bit")
+tap.program("blink.bit")
 #tap.program("http://192.168.4.2/blink.bit")

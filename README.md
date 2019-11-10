@@ -1,7 +1,7 @@
 # ESP32 JTAG tap walker for ECP5
 
 ESP32 micropython demo for accessing ECP5 JTAG tap, a simple way
-in about 300 lines of code.
+in about 500 lines of code.
 
 # Usage
 

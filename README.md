@@ -70,7 +70,7 @@ Yes there it is, let's try:
     tap.program("filepath_or_url") uploads to FPGA SRAM.
     tap.flash("filepath_or_url", addr=0x000000) uploads to SPI CONFIG FLASH 
 
-upload to FLASH will start ad address specified by "addr".
+upload to FLASH will start at byte address specified by "addr".
 which sould be 64K even - lower 16 bits must be 0x0000
 
 SD card usage (SPI at gpio 12-15):

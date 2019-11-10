@@ -418,6 +418,9 @@ class ecp5:
       self.program_file(filepath)
 
   def flash_loop(self, filedata, addr=0):
+      if addr & 0xFFFF:
+        print("addr must be rounded to 64KB, lower 16-bit = 0x0000")
+        return
       addr = addr & 0xFF0000 # rounded to even 64K (erase block)
       self.flash_open()
       bytes_uploaded = 0
@@ -460,6 +463,7 @@ class ecp5:
       self.flash_web(filepath, addr=addr)
     else:
       self.flash_file(filepath, addr=addr)
+      
 
 print("usage:")
 print("tap=ecp5.ecp5()")

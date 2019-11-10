@@ -68,7 +68,7 @@ class ecp5:
     #  2 is preferred as it has default pinout wired
     self.flash_write_size = 256
     self.flash_erase_size = 65536
-    flash_erase_cmd  = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
+    flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     self.spi_channel = 2 # -1 soft, 1:sd, 2:jtag
     self.gpio_led = 5
@@ -229,94 +229,94 @@ class ecp5:
   # FPGA will enter programming mode
   # after this TAP will be in "shift DR" state
   def prog_open(self):
-      self.spi_jtag_on()
-      self.hwspi.init(baudrate=self.spi_freq//2) # workarounds ESP32 micropython SPI bugs
-      self.bitbang_jtag_on()
-      self.led.on()
-      self.reset_tap()
-      self.runtest_idle(1,0)
-      self.sir(b"\xE0") # read IDCODE
-      self.sdr(self.uint(32,0), expected=self.uint(32,0), message="IDCODE")
-      self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
-      self.sdr([0xFF for i in range(64)])
-      self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
-      self.sdr(b"\x00", idle=(2,1.0E-2))
-      self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
-      self.sdr(self.uint(32,0), mask=self.uint(32,0x00024040), expected=self.uint(32,0), message="FAIL status")
-      self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
-      self.sdr(b"\x01", idle=(2,1.0E-2))
-      self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
-      self.sdr(self.uint(32,0), mask=self.uint(32,0x0000B000), expected=self.uint(32,0), message="FAIL status")
-      self.sir(b"\x46") # LSC_INIT_ADDRESS
-      self.sdr(b"\x01", idle=(2,1.0E-2))
-      self.sir(b"\x7A") # LSC_BITSTREAM_BURST
-      # ---------- bitstream begin -----------
-      # manually walk the TAP
-      # we will be sending one long DR command
-      self.send_tms(0) # -> capture DR
-      self.send_tms(0) # -> shift DR
-      # switch from bitbanging to SPI mode
-      self.hwspi.init(baudrate=self.spi_freq) # TCK-glitchless
-      # to upload the bitstream:
-      # FAST SPI mode
-      #self.hwspi.write(block)
-      # SLOW bitbanging mode
-      #for byte in block:
-      #  self.send_read_data_byte_reverse(byte,0)
+    self.spi_jtag_on()
+    self.hwspi.init(baudrate=self.spi_freq//2) # workarounds ESP32 micropython SPI bugs
+    self.bitbang_jtag_on()
+    self.led.on()
+    self.reset_tap()
+    self.runtest_idle(1,0)
+    self.sir(b"\xE0") # read IDCODE
+    self.sdr(self.uint(32,0), expected=self.uint(32,0), message="IDCODE")
+    self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
+    self.sdr([0xFF for i in range(64)])
+    self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
+    self.sdr(b"\x00", idle=(2,1.0E-2))
+    self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
+    self.sdr(self.uint(32,0), mask=self.uint(32,0x00024040), expected=self.uint(32,0), message="FAIL status")
+    self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
+    self.sdr(b"\x01", idle=(2,1.0E-2))
+    self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
+    self.sdr(self.uint(32,0), mask=self.uint(32,0x0000B000), expected=self.uint(32,0), message="FAIL status")
+    self.sir(b"\x46") # LSC_INIT_ADDRESS
+    self.sdr(b"\x01", idle=(2,1.0E-2))
+    self.sir(b"\x7A") # LSC_BITSTREAM_BURST
+    # ---------- bitstream begin -----------
+    # manually walk the TAP
+    # we will be sending one long DR command
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
+    # switch from bitbanging to SPI mode
+    self.hwspi.init(baudrate=self.spi_freq) # TCK-glitchless
+    # to upload the bitstream:
+    # FAST SPI mode
+    #self.hwspi.write(block)
+    # SLOW bitbanging mode
+    #for byte in block:
+    #  self.send_read_data_byte_reverse(byte,0)
 
   # call this after uploading all of the bitstream blocks,
   # this will exit FPGA programming mode and start the bitstream
   def prog_close(self):
-      # switch from SPI to bitbanging
-      self.bitbang_jtag_on() # TCK-glitch tolerated here
-      self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
-      self.send_tms(0) # -> pause DR
-      self.send_tms(1) # -> exit 2 DR
-      self.send_tms(1) # -> update DR
-      #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
-      self.runtest_idle(100, 1.0E-2)
-      # ---------- bitstream end -----------
-      self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
-      self.sdr(self.uint(32,0), expected=self.uint(32,0), message="FAIL usercode")
-      self.sir(b"\x26", idle=(2,2.0E-1)) # ISC DISABLE
-      self.sir(b"\xFF", idle=(2,1.0E-3)) # BYPASS
-      self.sir(b"\x3C") # LSC_READ_STATUS
-      self.sdr(self.uint(32,0), mask=self.uint(32,0x00002100), expected=self.uint(32,0x00000100), message="FAIL bitstream")
-      self.spi_jtag_off()
-      self.reset_tap()
-      self.led.off()
-      self.bitbang_jtag_off()
+    # switch from SPI to bitbanging
+    self.bitbang_jtag_on() # TCK-glitch tolerated here
+    self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
+    #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
+    self.runtest_idle(100, 1.0E-2)
+    # ---------- bitstream end -----------
+    self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
+    self.sdr(self.uint(32,0), expected=self.uint(32,0), message="FAIL usercode")
+    self.sir(b"\x26", idle=(2,2.0E-1)) # ISC DISABLE
+    self.sir(b"\xFF", idle=(2,1.0E-3)) # BYPASS
+    self.sir(b"\x3C") # LSC_READ_STATUS
+    self.sdr(self.uint(32,0), mask=self.uint(32,0x00002100), expected=self.uint(32,0x00000100), message="FAIL bitstream")
+    self.spi_jtag_off()
+    self.reset_tap()
+    self.led.off()
+    self.bitbang_jtag_off()
 
   # call this before sending the flash image
   # FPGA will enter flashing mode
   # TAP should be in "select DR scan" state
   def flash_open(self):
-      self.spi_jtag_on()
-      self.bitbang_jtag_on()
-      self.led.on()
-      self.reset_tap()
-      self.runtest_idle(1,0)
-      self.sir(b"\xE0") # read IDCODE
-      self.sdr(self.uint(32,0), expected=self.uint(32,0), message="IDCODE")
-      self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
-      self.sdr([0xFF for i in range(64)])
-      self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
-      self.sdr(b"\x00", idle=(2,1.0E-2))
-      self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
-      self.sdr(self.uint(32,0), mask=self.uint(32,0x00024040), expected=self.uint(32,0), message="FAIL status")
-      self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
-      self.sdr(b"\x01", idle=(2,1.0E-2))
-      self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
-      self.sdr(self.uint(32,0), mask=self.uint(32,0x0000B000), expected=self.uint(32,0), message="FAIL status")
-      self.reset_tap()
-      self.runtest_idle(1,0)
-      self.sir(b"\xFF", idle=(32,0)) # BYPASS
-      self.sir(b"\x3A") # LSC_PROG_SPI
-      self.sdr(self.uint(16,0x68FE), idle=(32,0))
-      # ---------- flashing begin -----------
-      # 0x60 and other SPI flash commands here are bitreverse() values
-      # of flash commands found in SPI FLASH datasheet.
-      # e.g. 0x1B here is actually 0xD8 in datasheet, 0x60 is is 0x06 etc.
+    self.spi_jtag_on()
+    self.bitbang_jtag_on()
+    self.led.on()
+    self.reset_tap()
+    self.runtest_idle(1,0)
+    self.sir(b"\xE0") # read IDCODE
+    self.sdr(self.uint(32,0), expected=self.uint(32,0), message="IDCODE")
+    self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
+    self.sdr([0xFF for i in range(64)])
+    self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
+    self.sdr(b"\x00", idle=(2,1.0E-2))
+    self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
+    self.sdr(self.uint(32,0), mask=self.uint(32,0x00024040), expected=self.uint(32,0), message="FAIL status")
+    self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
+    self.sdr(b"\x01", idle=(2,1.0E-2))
+    self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
+    self.sdr(self.uint(32,0), mask=self.uint(32,0x0000B000), expected=self.uint(32,0), message="FAIL status")
+    self.reset_tap()
+    self.runtest_idle(1,0)
+    self.sir(b"\xFF", idle=(32,0)) # BYPASS
+    self.sir(b"\x3A") # LSC_PROG_SPI
+    self.sdr(self.uint(16,0x68FE), idle=(32,0))
+    # ---------- flashing begin -----------
+    # 0x60 and other SPI flash commands here are bitreverse() values
+    # of flash commands found in SPI FLASH datasheet.
+    # e.g. 0x1B here is actually 0xD8 in datasheet, 0x60 is is 0x06 etc.
 
   def flash_wait_status(self):
     retry=10
@@ -378,22 +378,22 @@ class ecp5:
     print("%d bytes uploaded in %.3f s (%.3f MB/s)" % (bytes_uploaded, elapsed_ms/1000, transfer_rate_MBps))
 
   def program_loop(self, filedata, blocksize=16384):
-      self.prog_open()
-      bytes_uploaded = 0
-      self.stopwatch_start()
-      while True:
-        block = filedata.read(blocksize)
-        if block:
-          self.hwspi.write(block)
-          if self.progress:
-            print(".",end="")
-          bytes_uploaded += len(block)
-        else:
-          if self.progress:
-            print("*")
-          break
-      self.stopwatch_stop(bytes_uploaded)
-      self.prog_close()
+    self.prog_open()
+    bytes_uploaded = 0
+    self.stopwatch_start()
+    while True:
+      block = filedata.read(blocksize)
+      if block:
+        self.hwspi.write(block)
+        if self.progress:
+          print(".",end="")
+        bytes_uploaded += len(block)
+      else:
+        if self.progress:
+          print("*")
+        break
+    self.stopwatch_stop(bytes_uploaded)
+    self.prog_close()
 
   def program_file(self, filename):
     print("program \"%s\"" % filename)
@@ -419,29 +419,29 @@ class ecp5:
       self.program_file(filepath)
 
   def flash_loop(self, filedata, addr=0):
-      addr_mask = self.flash_erase_size-1
-      if addr & addr_mask:
-        print("addr must be rounded to %d bytes (& 0x%X)" % (self.flash_erase_size, addr_mask))
-        return
-      addr = addr & 0xFFFFFF & ~addr_mask # rounded to even 64K (erase block)
-      self.flash_open()
-      bytes_uploaded = 0
-      self.stopwatch_start()
-      while True:
-        block = filedata.read(self.flash_write_size)
-        if block:
-          if (bytes_uploaded % self.flash_erase_size) == 0:
-            self.flash_erase_block(self.flash_erase_size, addr=addr+bytes_uploaded)
-          self.flash_write_block(block, addr=addr+bytes_uploaded)
-          if self.progress:
-            print(".",end="")
-          bytes_uploaded += len(block)
-        else:
-          if self.progress:
-            print("*")
-          break
-      self.stopwatch_stop(bytes_uploaded)
-      self.flash_close()
+    addr_mask = self.flash_erase_size-1
+    if addr & addr_mask:
+      print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (self.flash_erase_size, 0xFFFFFF & ~addr_mask))
+      return
+    addr = addr & 0xFFFFFF & ~addr_mask # rounded to even 64K (erase block)
+    self.flash_open()
+    bytes_uploaded = 0
+    self.stopwatch_start()
+    while True:
+      block = filedata.read(self.flash_write_size)
+      if block:
+        if (bytes_uploaded % self.flash_erase_size) == 0:
+          self.flash_erase_block(self.flash_erase_size, addr=addr+bytes_uploaded)
+        self.flash_write_block(block, addr=addr+bytes_uploaded)
+        if self.progress:
+          print(".",end="")
+        bytes_uploaded += len(block)
+      else:
+        if self.progress:
+          print("*")
+        break
+    self.stopwatch_stop(bytes_uploaded)
+    self.flash_close()
 
   def flash_file(self, filename, addr=0):
     print("flash \"%s\"" % filename)

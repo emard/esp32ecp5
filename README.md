@@ -75,3 +75,8 @@ SD card usage (SPI at gpio 12-15):
 # JTAG info
 
 [JTAG STATE GRAPH](https://www.xjtag.com/about-jtag/jtag-a-technical-overview/tap_state_machine1)
+
+# TODO
+
+    [ ] on-the-fly zlib decompression
+ 

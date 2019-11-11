@@ -74,10 +74,11 @@ upload to FLASH will start at byte address specified by "addr".
 which should be 64K even - lower 16 bits must be 0x0000
 
 Bitstream can be compressed by gzip and stored to ESP32 filesystem
-(SD or FLASH). If file ends with "*.gz", it will be decompressed
-on-the-fly:
+(gzip on web not support yet).
+If file ends with "*.gz", it will be decompressed on-the-fly:
 
-    tap.program("blink.bit.gz") decompress on-the-fly
+    tap.program("blink.bit.gz")
+    tap.flash("blink.bit.gz")
 
 SD card usage (SPI at gpio 12-15):
 

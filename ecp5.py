@@ -5,7 +5,6 @@
 # LICENSE=BSD
 
 import time
-import struct
 from machine import SPI, Pin
 
 class ecp5:
@@ -400,10 +399,16 @@ class ecp5:
     self.stopwatch_stop(bytes_uploaded)
     self.prog_close()
 
-  def program_file(self, filename):
+  def program_file(self, filename, gz=False):
     print("program \"%s\"" % filename)
-    with open(filename, "rb") as filedata:
-      self.program_loop(filedata)
+    if gz:
+      import uzlib
+      bitgz = open(filename, "rb")
+      self.program_loop(uzlib.DecompIO(bitgz,31),blocksize=8192)
+      bitgz.close()
+    else:
+      with open(filename, "rb") as filedata:
+        self.program_loop(filedata)
 
   def program_web(self, url):
     import socket
@@ -418,12 +423,14 @@ class ecp5:
 
   def program(self, filepath):
     self.progress=False
+    gz=filepath.endswith(".gz")
     if filepath.startswith("http://"):
       self.program_web(filepath)
     else:
-      self.program_file(filepath)
+      self.program_file(filepath, gz=gz)
 
   def flash_loop(self, filedata, addr=0):
+    import struct
     addr_mask = self.flash_erase_size-1
     if addr & addr_mask:
       print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (self.flash_erase_size, 0xFFFFFF & ~addr_mask))
@@ -470,7 +477,7 @@ class ecp5:
       self.flash_web(filepath, addr=addr)
     else:
       self.flash_file(filepath, addr=addr)
-      
+
 
 print("usage:")
 print("tap=ecp5.ecp5()")

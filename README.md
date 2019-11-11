@@ -1,7 +1,8 @@
 # ESP32 JTAG tap walker for ECP5
 
-ESP32 micropython demo for accessing ECP5 JTAG tap, a simple way
-in about 500 lines of code.
+This is micropython running on ESP32 to allow
+JTAG programming and flashing of Lattice ECP5 FPGA JTAG.
+A simple way in about 500 lines of code.
 
 # Usage
 
@@ -47,7 +48,7 @@ example autostart file "main.py"
     sta_if.active(True)
     sta_if.connect("accesspoint", "password")
 
-upload "ecp5.py", "main.py" and some bitstream file "blink.bit" to
+upload "ecp5.py", "main.py" and some bitstream file "blink.bit.gz" to
 the root of ESP32 python FLASH filesystem
 using [micropython webrepl](http://micropython.org/webrepl).
 
@@ -60,8 +61,8 @@ List directory to see if the files are uploaded:
 Yes there it is, let's try:
 
     import ecp5
-    ecp5.program("blink1.bit")
-    99262 bytes uploaded in 0.069 s (1.405 MB/s)
+    ecp5.program("blink.bit") 
+    99262 bytes uploaded in 0.142 s (0.667 MB/s)
     ecp5.program("http://192.168.4.2/blink2.bit")
     173895 bytes uploaded in 0.171 s (0.993 MB/s)
 
@@ -71,12 +72,13 @@ Yes there it is, let's try:
 upload to FLASH will start at byte address specified by "addr".
 which should be 64K even - lower 16 bits must be 0x0000
 
-Bitstream can be compressed by gzip and stored to ESP32 filesystem
-(gzip on web not support yet).
+To save space on ESP32, bitstream can be compressed by gzip -9
+and stored to ESP32 filesystem (gzipped on web not support yet).
 If file ends with "*.gz", it will be decompressed on-the-fly:
 
-    ecp5.program("blink.bit.gz")
-    ecp5.flash("blink.bit.gz")
+    linux$ gzip -9 blink.bit
+    >>> ecp5.program("blink.bit.gz")
+    >>> ecp5.flash("blink.bit.gz")
 
 SD card usage (SPI at gpio 12-15):
 

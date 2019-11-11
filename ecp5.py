@@ -74,8 +74,8 @@ class ecp5:
     self.init_pinout_jtag()
     #self.init_pinout_sd()
 
-  def __call__(self):
-    some_variable = 0
+#  def __call__(self):
+#    some_variable = 0
     
   # print bytes reverse - appears the same as in SVF file
   def print_hex_reverse(self, block, head="", tail="\n"):
@@ -481,16 +481,23 @@ class ecp5:
     else:
       self.flash_file(filepath, addr=addr, gz=gz)
 
+# easier command typing
+def idcode():
+  ecp5().idcode()
+
+def program(filename):
+  ecp5().program(filename)
+
+def flash(filename, addr=0):
+  ecp5().flash(filename, addr=addr)
 
 print("usage:")
-print("tap=ecp5.ecp5()")
-print("tap.flash(\"blink.bit\", addr=0x000000)")
-print("tap.program(\"blink.bit\")")
-print("tap.program(\"blink.bit.gz\") # gzip blink.bit")
-print("tap.program(\"http://192.168.4.2/blink.bit\")")
-print("tap.idcode()")
-tap = ecp5()
-tap.idcode()
-#tap.flash("blink.bit")
-#tap.program("blink.bit")
-#tap.program("http://192.168.4.2/blink.bit")
+print("ecp5.flash(\"blink.bit\", addr=0x000000)")
+print("ecp5.program(\"blink.bit\")")
+print("ecp5.program(\"blink.bit.gz\") # gzip blink.bit")
+print("ecp5.program(\"http://192.168.4.2/blink.bit\")")
+print("ecp5.idcode()")
+idcode()
+#flash("blink.bit")
+#program("blink.bit")
+#program("http://192.168.4.2/blink.bit")

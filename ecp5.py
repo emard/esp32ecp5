@@ -356,6 +356,20 @@ class ecp5:
     self.send_tms(1) # -> select DR scan
     self.flash_wait_status()
 
+  def flash_read_block(self, addr=0, length=0):
+    import struct
+    sdr = struct.pack(">I", 0x03000000 | (addr & 0xFFFFFF))
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
+    self.swspi.write(sdr) # send SPI FLASH read command and adress
+    block = self.swspi.read(length) # retrieve whole block
+    self.send_read_data_byte_reverse(0,1) # dummy read byte -> exit 1 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
+    self.send_tms(1) # -> select DR scan
+    return block
+
   # call this after uploading all of the flash blocks,
   # this will exit FPGA flashing mode and start the bitstream
   def flash_close(self):
@@ -427,6 +441,12 @@ class ecp5:
       self.program_web(filepath)
     else:
       self.program_file(filepath, gz=gz)
+  
+  def flash_read(self, addr=0, length=0):
+    self.flash_open()
+    data = self.flash_read_block(addr=addr, length=length)
+    self.flash_close()
+    return data
 
   def flash_loop(self, filedata, addr=0):
     addr_mask = self.flash_erase_size-1
@@ -490,6 +510,9 @@ def program(filename):
 
 def flash(filename, addr=0):
   ecp5().flash(filename, addr=addr)
+
+def flash_read(addr=0, length=0):
+  return ecp5().flash_read(addr=addr, length=length)
 
 print("usage:")
 print("ecp5.flash(\"blink.bit\", addr=0x000000)")

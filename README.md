@@ -73,6 +73,12 @@ Yes there it is, let's try:
 upload to FLASH will start at byte address specified by "addr".
 which should be 64K even - lower 16 bits must be 0x0000
 
+Bitstream can be compressed by gzip and stored to ESP32 filesystem
+(SD or FLASH). If file ends with "*.gz", it will be decompressed
+on-the-fly:
+
+    tap.program("blink.bit.gz") decompress on-the-fly
+
 SD card usage (SPI at gpio 12-15):
 
     import os,machine
@@ -85,6 +91,6 @@ SD card usage (SPI at gpio 12-15):
 
 # TODO
 
-    [ ] on-the-fly zlib decompression
+    [x] on-the-fly gzip decompression
     [ ] read flash content and decide if block has to be erased
     [ ] write disk image to SD card

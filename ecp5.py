@@ -273,7 +273,7 @@ class ecp5:
     # so even if we have glitching after the bitstream,
     # it should still work.
     self.bitbang_jtag_on() # TCK-glitch expected here can be tolerated.
-    self.send_read_data_byte(0xFF,1) # last dummy byte 0xFF, exit 1 DR
+    self.send_read_data_byte_reverse(0xFF,1) # last dummy byte 0xFF, exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -486,7 +486,7 @@ print("usage:")
 print("tap=ecp5.ecp5()")
 print("tap.flash(\"blink.bit\", addr=0x000000)")
 print("tap.program(\"blink.bit\")")
-print("tap.program(\"blink.bit.gz\")")
+print("tap.program(\"blink.bit.gz\") # gzip blink.bit")
 print("tap.program(\"http://192.168.4.2/blink.bit\")")
 print("tap.idcode()")
 tap = ecp5()

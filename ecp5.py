@@ -342,6 +342,7 @@ class ecp5:
     self.flash_wait_status()
 
   def flash_write_block(self, block, addr=0):
+    import struct
     self.sdr(b"\x60") # SPI WRITE ENABLE
     # self.bitreverse(0x40) = 0x02 -> 0x02000000
     sdr = struct.pack(">I", 0x02000000 | (addr & 0xFFFFFF)) + block
@@ -408,7 +409,7 @@ class ecp5:
       else:
         self.program_loop(filedata,blocksize=16384)
 
-  def program_web(self, url, gz=False):
+  def program_web(self, url):
     import socket
     print("program \"%s\"" % url)
     _, _, host, path = url.split('/', 3)
@@ -423,12 +424,11 @@ class ecp5:
     self.progress=False
     gz=filepath.endswith(".gz")
     if filepath.startswith("http://"):
-      self.program_web(filepath, gz=gz)
+      self.program_web(filepath)
     else:
       self.program_file(filepath, gz=gz)
 
   def flash_loop(self, filedata, addr=0):
-    import struct
     addr_mask = self.flash_erase_size-1
     if addr & addr_mask:
       print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (self.flash_erase_size, 0xFFFFFF & ~addr_mask))
@@ -453,10 +453,14 @@ class ecp5:
     self.stopwatch_stop(bytes_uploaded)
     self.flash_close()
 
-  def flash_file(self, filename, addr=0):
+  def flash_file(self, filename, addr=0, gz=False):
     print("flash \"%s\"" % filename)
     with open(filename, "rb") as filedata:
-      self.flash_loop(filedata, addr=addr)
+      if gz:
+        import uzlib
+        self.flash_loop(uzlib.DecompIO(filedata,31),addr=addr)
+      else:
+        self.flash_loop(filedata,addr=addr)
 
   def flash_web(self, url, addr=0):
     import socket
@@ -471,10 +475,11 @@ class ecp5:
 
   def flash(self, filepath, addr=0):
     self.progress=False
+    gz=filepath.endswith(".gz")
     if filepath.startswith("http://"):
       self.flash_web(filepath, addr=addr)
     else:
-      self.flash_file(filepath, addr=addr)
+      self.flash_file(filepath, addr=addr, gz=gz)
 
 
 print("usage:")

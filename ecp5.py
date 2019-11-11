@@ -401,16 +401,14 @@ class ecp5:
 
   def program_file(self, filename, gz=False):
     print("program \"%s\"" % filename)
-    if gz:
-      import uzlib
-      bitgz = open(filename, "rb")
-      self.program_loop(uzlib.DecompIO(bitgz,31),blocksize=8192)
-      bitgz.close()
-    else:
-      with open(filename, "rb") as filedata:
-        self.program_loop(filedata)
+    with open(filename, "rb") as filedata:
+      if gz:
+        import uzlib
+        self.program_loop(uzlib.DecompIO(filedata,31),blocksize=4096)
+      else:
+        self.program_loop(filedata,blocksize=16384)
 
-  def program_web(self, url):
+  def program_web(self, url, gz=False):
     import socket
     print("program \"%s\"" % url)
     _, _, host, path = url.split('/', 3)
@@ -425,7 +423,7 @@ class ecp5:
     self.progress=False
     gz=filepath.endswith(".gz")
     if filepath.startswith("http://"):
-      self.program_web(filepath)
+      self.program_web(filepath, gz=gz)
     else:
       self.program_file(filepath, gz=gz)
 
@@ -483,6 +481,7 @@ print("usage:")
 print("tap=ecp5.ecp5()")
 print("tap.flash(\"blink.bit\", addr=0x000000)")
 print("tap.program(\"blink.bit\")")
+print("tap.program(\"blink.bit.gz\")")
 print("tap.program(\"http://192.168.4.2/blink.bit\")")
 print("tap.idcode()")
 tap = ecp5()

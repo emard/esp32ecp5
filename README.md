@@ -59,16 +59,14 @@ List directory to see if the files are uploaded:
 
 Yes there it is, let's try:
 
-
     import ecp5
-    tap=ecp5.ecp5()
-    tap.program("blink1.bit")
+    ecp5.program("blink1.bit")
     99262 bytes uploaded in 0.069 s (1.405 MB/s)
-    tap.program("http://192.168.4.2/blink2.bit")
+    ecp5.program("http://192.168.4.2/blink2.bit")
     173895 bytes uploaded in 0.171 s (0.993 MB/s)
 
-    tap.program("filepath_or_url") uploads to FPGA SRAM.
-    tap.flash("filepath_or_url", addr=0x000000) uploads to SPI CONFIG FLASH 
+    ecp5.program("filepath_or_url") uploads to FPGA SRAM.
+    ecp5.flash("filepath_or_url", addr=0x000000) uploads to SPI CONFIG FLASH 
 
 upload to FLASH will start at byte address specified by "addr".
 which should be 64K even - lower 16 bits must be 0x0000
@@ -77,8 +75,8 @@ Bitstream can be compressed by gzip and stored to ESP32 filesystem
 (gzip on web not support yet).
 If file ends with "*.gz", it will be decompressed on-the-fly:
 
-    tap.program("blink.bit.gz")
-    tap.flash("blink.bit.gz")
+    ecp5.program("blink.bit.gz")
+    ecp5.flash("blink.bit.gz")
 
 SD card usage (SPI at gpio 12-15):
 

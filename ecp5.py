@@ -214,7 +214,6 @@ class ecp5:
     return response
 
   def idcode(self):
-    print("idcode")
     self.bitbang_jtag_on()
     self.led.on()
     self.reset_tap()
@@ -234,8 +233,8 @@ class ecp5:
     self.led.on()
     self.reset_tap()
     self.runtest_idle(1,0)
-    self.sir(b"\xE0") # read IDCODE
-    self.sdr(self.uint(32,0), expected=self.uint(32,0), message="IDCODE")
+    #self.sir(b"\xE0") # read IDCODE
+    #self.sdr(self.uint(32,0), expected=self.uint(32,0), message="IDCODE")
     self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
     self.sdr([0xFF for i in range(64)])
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
@@ -255,7 +254,10 @@ class ecp5:
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     # switch from bitbanging to SPI mode
-    self.hwspi.init(baudrate=self.spi_freq) # TCK-glitchless
+    self.hwspi.init(baudrate=self.spi_freq) # 1 TCK-glitch
+    # we are lucky that format of the bitstream tolerates
+    # any leading and trailing junk bits. If it weren't so,
+    # HW SPI JTAG acceleration wouldn't work.
     # to upload the bitstream:
     # FAST SPI mode
     #self.hwspi.write(block)
@@ -267,13 +269,8 @@ class ecp5:
   # this will exit FPGA programming mode and start the bitstream
   def prog_close(self):
     # switch from hardware SPI to bitbanging
-    # can have TCK-glitches but luckily,
-    # format of the bitstream tolerates junk
-    # bytes before and after the bitstream,
-    # so even if we have glitching after the bitstream,
-    # it should still work.
-    self.bitbang_jtag_on() # TCK-glitch expected here can be tolerated.
-    self.send_read_data_byte_reverse(0xFF,1) # last dummy byte 0xFF, exit 1 DR
+    self.bitbang_jtag_on() # 1 TCK-glitch
+    self.send_tms(1) # -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -301,8 +298,8 @@ class ecp5:
     self.led.on()
     self.reset_tap()
     self.runtest_idle(1,0)
-    self.sir(b"\xE0") # read IDCODE
-    self.sdr(self.uint(32,0), expected=self.uint(32,0), message="IDCODE")
+    #self.sir(b"\xE0") # read IDCODE
+    #self.sdr(self.uint(32,0), expected=self.uint(32,0), message="IDCODE")
     self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
     self.sdr([0xFF for i in range(64)])
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
@@ -363,8 +360,8 @@ class ecp5:
     sdr = struct.pack(">I", 0x03000000 | (addr & 0xFFFFFF))
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.swspi.write(sdr) # send SPI FLASH read command and adress
-    block = self.swspi.read(length) # retrieve whole block
+    self.swspi.write(sdr) # send SPI FLASH read command and address
+    block = self.swspi.read(length) # read whole block
     self.send_read_data_byte_reverse(0,1) # dummy read byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
@@ -445,7 +442,6 @@ class ecp5:
     self.prog_close()
 
   def program_file(self, filename, gz=False):
-    print("program \"%s\"" % filename)
     with open(filename, "rb") as filedata:
       if gz:
         import uzlib
@@ -455,7 +451,6 @@ class ecp5:
 
   def program_web(self, url):
     import socket
-    print("program \"%s\"" % url)
     _, _, host, path = url.split('/', 3)
     addr = socket.getaddrinfo(host, 80)[0][-1]
     s = socket.socket()
@@ -504,7 +499,6 @@ class ecp5:
     self.flash_close()
 
   def flash_file(self, filename, addr=0, gz=False):
-    print("flash \"%s\"" % filename)
     with open(filename, "rb") as filedata:
       if gz:
         import uzlib
@@ -514,7 +508,6 @@ class ecp5:
 
   def flash_web(self, url, addr=0):
     import socket
-    print("flash \"%s\"" % url)
     _, _, host, path = url.split('/', 3)
     iaddr = socket.getaddrinfo(host, 80)[0][-1]
     s = socket.socket()
@@ -541,12 +534,12 @@ def program(filename):
 def flash(filename, addr=0):
   ecp5().flash(filename, addr=addr)
 
-def flash_read(addr=0, length=0):
+def flash_read(addr=0, length=1):
   return ecp5().flash_read(addr=addr, length=length)
 
 print("usage:")
 print("ecp5.flash(\"blink.bit\", addr=0x000000)")
-print("ecp5.flash_read(addr=0x000000, length=32)")
+print("ecp5.flash_read(addr=0x000000, length=1)")
 print("ecp5.program(\"blink.bit\")")
 print("ecp5.program(\"blink.bit.gz\") # gzip blink.bit")
 print("ecp5.program(\"http://192.168.4.2/blink.bit\")")

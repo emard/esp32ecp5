@@ -358,6 +358,7 @@ class ecp5:
 
   def flash_read_block(self, addr=0, length=0):
     import struct
+    # 0x03 is SPI flash read command
     sdr = struct.pack(">I", 0x03000000 | (addr & 0xFFFFFF))
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR

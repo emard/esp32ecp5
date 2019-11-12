@@ -539,7 +539,12 @@ def flash(filename, addr=0):
 def flash_read(addr=0, length=1):
   return ecp5().flash_read(addr=addr, length=length)
 
-#def passthru():
+def passthru():
+  idcode = ecp5().idcode()
+  if idcode != 0 and idcode != 0xFFFFFFFF:
+    filename = "passthru%08X.bit.gz" % idcode
+    print("program \"%s\"" % filename)
+    ecp5().program(filename)
 
 print("usage:")
 print("ecp5.flash(\"blink.bit\", addr=0x000000)")
@@ -547,8 +552,9 @@ print("ecp5.flash_read(addr=0x000000, length=1)")
 print("ecp5.program(\"blink.bit\")")
 print("ecp5.program(\"blink.bit.gz\") # gzip blink.bit")
 print("ecp5.program(\"http://192.168.4.2/blink.bit\")")
+print("ecp5.passthru()")
 print("\"0x%08X\" % ecp5.idcode()")
-print("%08X" % idcode())
+print("0x%08X" % idcode())
 #flash("blink.bit")
 #program("blink.bit")
 #program("http://192.168.4.2/blink.bit")

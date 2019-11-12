@@ -93,5 +93,6 @@ SD card usage (SPI at gpio 12-15):
 # TODO
 
     [x] on-the-fly gzip decompression
-    [ ] read flash content and decide if block has to be erased
+    [x] read flash content
+    [ ] from read, decide if block has to be erased
     [ ] write disk image to SD card

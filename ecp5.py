@@ -517,6 +517,7 @@ def flash_read(addr=0, length=0):
 
 print("usage:")
 print("ecp5.flash(\"blink.bit\", addr=0x000000)")
+print("ecp5.flash_read(addr=0x000000, length=32)")
 print("ecp5.program(\"blink.bit\")")
 print("ecp5.program(\"blink.bit.gz\") # gzip blink.bit")
 print("ecp5.program(\"http://192.168.4.2/blink.bit\")")

@@ -214,14 +214,16 @@ class ecp5:
     return response
 
   def idcode(self):
+    import struct
     self.bitbang_jtag_on()
     self.led.on()
     self.reset_tap()
     self.runtest_idle(1,0)
     self.sir(b"\xE0")
-    self.sdr(self.uint(32,0), expected=self.uint(32,0), message="IDCODE")
+    id_bytes = self.sdr(self.uint(32,0))
     self.led.off()
     self.bitbang_jtag_off()
+    return struct.unpack("<I", id_bytes)
   
   # call this before sending the bitstram
   # FPGA will enter programming mode
@@ -526,7 +528,7 @@ class ecp5:
 
 # easier command typing
 def idcode():
-  ecp5().idcode()
+  return ecp5().idcode()
 
 def program(filename):
   ecp5().program(filename)
@@ -537,14 +539,16 @@ def flash(filename, addr=0):
 def flash_read(addr=0, length=1):
   return ecp5().flash_read(addr=addr, length=length)
 
+#def passthru():
+
 print("usage:")
 print("ecp5.flash(\"blink.bit\", addr=0x000000)")
 print("ecp5.flash_read(addr=0x000000, length=1)")
 print("ecp5.program(\"blink.bit\")")
 print("ecp5.program(\"blink.bit.gz\") # gzip blink.bit")
 print("ecp5.program(\"http://192.168.4.2/blink.bit\")")
-print("ecp5.idcode()")
-idcode()
+print("\"0x%08X\" % ecp5.idcode()")
+print("%08X" % idcode())
 #flash("blink.bit")
 #program("blink.bit")
 #program("http://192.168.4.2/blink.bit")

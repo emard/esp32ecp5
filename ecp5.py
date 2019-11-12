@@ -71,6 +71,7 @@ class ecp5:
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     self.spi_channel = 2 # -1 soft, 1:sd, 2:jtag
     self.gpio_led = 5
+    self.progress = False
     self.init_pinout_jtag()
     #self.init_pinout_sd()
 
@@ -461,14 +462,6 @@ class ecp5:
     self.program_loop(s)
     s.close()
 
-  def program(self, filepath):
-    self.progress=False
-    gz=filepath.endswith(".gz")
-    if filepath.startswith("http://"):
-      self.program_web(filepath)
-    else:
-      self.program_file(filepath, gz=gz)
-  
   def flash_read(self, addr=0, length=0):
     self.flash_open()
     data = self.flash_fast_read_block(addr=addr, length=length)
@@ -518,23 +511,23 @@ class ecp5:
     self.flash_loop(s, addr=addr)
     s.close()
 
-  def flash(self, filepath, addr=0):
-    self.progress=False
-    gz=filepath.endswith(".gz")
-    if filepath.startswith("http://"):
-      self.flash_web(filepath, addr=addr)
-    else:
-      self.flash_file(filepath, addr=addr, gz=gz)
-
 # easier command typing
 def idcode():
   return ecp5().idcode()
 
-def program(filename):
-  ecp5().program(filename)
+def program(filepath):
+  gz=filepath.endswith(".gz")
+  if filepath.startswith("http://"):
+    ecp5().program_web(filepath)
+  else:
+    ecp5().program_file(filepath, gz=gz)
 
-def flash(filename, addr=0):
-  ecp5().flash(filename, addr=addr)
+def flash(filepath, addr=0):
+  gz=filepath.endswith(".gz")
+  if filepath.startswith("http://"):
+    ecp5().flash_web(filepath, addr=addr)
+  else:
+    ecp5().flash_file(filepath, addr=addr, gz=gz)
 
 def flash_read(addr=0, length=1):
   return ecp5().flash_read(addr=addr, length=length)
@@ -544,7 +537,7 @@ def passthru():
   if idcode != 0 and idcode != 0xFFFFFFFF:
     filename = "passthru%08X.bit.gz" % idcode
     print("program \"%s\"" % filename)
-    ecp5().program(filename)
+    ecp5().program_file(filename, gz=True)
 
 print("usage:")
 print("ecp5.flash(\"blink.bit\", addr=0x000000)")

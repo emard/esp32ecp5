@@ -474,7 +474,7 @@ class ecp5:
   
   def flash_read(self, addr=0, length=0):
     self.flash_open()
-    data = print(self.flash_fast_read_block(addr=addr, length=length))
+    data = self.flash_fast_read_block(addr=addr, length=length)
     self.flash_close()
     return data
 

@@ -296,6 +296,7 @@ class ecp5:
   # TAP should be in "select DR scan" state
   def flash_open(self):
     self.spi_jtag_on()
+    self.hwspi.init(baudrate=self.spi_freq//2) # workarounds ESP32 micropython SPI bugs
     self.bitbang_jtag_on()
     self.led.on()
     self.reset_tap()
@@ -364,6 +365,34 @@ class ecp5:
     self.send_tms(0) # -> shift DR
     self.swspi.write(sdr) # send SPI FLASH read command and adress
     block = self.swspi.read(length) # retrieve whole block
+    self.send_read_data_byte_reverse(0,1) # dummy read byte -> exit 1 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
+    self.send_tms(1) # -> select DR scan
+    return block
+
+  def flash_fast_read_block(self, addr=0, length=0):
+    import struct
+    # 0x0B is SPI flash fast read command
+    sdr = struct.pack(">I", 0x0B000000 | (addr & 0xFFFFFF))
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
+    self.swspi.write(sdr) # send SPI FLASH read command and address
+    # fast read after address, should read 8 dummy cycles
+    # this is a chance for TCK glitch workaround:
+    # first 7 cycles will be done in bitbang mode
+    # then switch to hardware SPI mode
+    # will add 1 more TCK-glitch cycle
+    for i in range(7):
+      self.tck.off()
+      self.tck.on()
+    # switch from bitbanging to SPI mode
+    self.hwspi.init(baudrate=self.spi_freq) # 1 TCK-glitch
+    block = self.hwspi.read(length) # retrieve whole block
+    # switch from SPI to bitbanging mode
+    self.hwspi.init(baudrate=self.spi_freq//2) # TCK-glitch
+    self.bitbang_jtag_on()
     self.send_read_data_byte_reverse(0,1) # dummy read byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
@@ -445,7 +474,7 @@ class ecp5:
   
   def flash_read(self, addr=0, length=0):
     self.flash_open()
-    data = self.flash_read_block(addr=addr, length=length)
+    data = print(self.flash_fast_read_block(addr=addr, length=length))
     self.flash_close()
     return data
 

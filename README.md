@@ -63,11 +63,9 @@ Yes there it is, let's try:
     import ecp5
     ecp5.program("blink.bit") 
     99262 bytes uploaded in 0.142 s (0.667 MB/s)
-    ecp5.program("http://192.168.4.2/blink2.bit")
-    173895 bytes uploaded in 0.171 s (0.993 MB/s)
 
-    ecp5.program("filepath_or_url") uploads to FPGA SRAM.
-    ecp5.flash("filepath_or_url", addr=0x000000) uploads to SPI CONFIG FLASH 
+    ecp5.program("filepath") uploads to FPGA SRAM.
+    ecp5.flash("filepath", addr=0x000000) uploads to SPI CONFIG FLASH
 
 upload to FLASH will start at byte address specified by "addr".
 which should be 64K even - lower 16 bits must be 0x0000
@@ -94,5 +92,6 @@ SD card usage (SPI at gpio 12-15):
 
     [x] on-the-fly gzip decompression
     [x] read flash content
+    [ ] fix HTTP GET for binary file
     [ ] from read, decide if block has to be erased
     [ ] write disk image to SD card

@@ -334,9 +334,9 @@ class ecp5:
     if retry <= 0:
       self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x0000)) # READ STATUS REGISTER
 
-  def flash_erase_block(self, length, addr=0):
+  def flash_erase_block(self, addr=0):
     import struct
-    print("from 0x%06X erase %d bytes" % (addr, length))
+    print("from 0x%06X erase %d bytes" % (addr, self.flash_erase_size))
     self.sdr(b"\x60") # SPI WRITE ENABLE
     # some chips won't clear WIP without this:
     self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x4000)) # READ STATUS REGISTER
@@ -491,7 +491,7 @@ class ecp5:
       block = filedata.read(self.flash_write_size)
       if block:
         if (bytes_uploaded % self.flash_erase_size) == 0:
-          self.flash_erase_block(self.flash_erase_size, addr=addr+bytes_uploaded)
+          self.flash_erase_block(addr=addr+bytes_uploaded)
         self.flash_write_block(block, addr=addr+bytes_uploaded)
         if self.progress:
           print(".",end="")
@@ -516,7 +516,7 @@ class ecp5:
     while True:
       file_block = filedata.read(self.flash_erase_size)
       if file_block:
-        flash_block = self.flash_read(addr=addr+bytes_uploaded, length=len(file_block))
+        flash_block = self.flash_fast_read_block(addr=addr+bytes_uploaded, length=len(file_block))
         must_erase = False
         must_write = False
         for i in range(len(file_block)):
@@ -525,7 +525,7 @@ class ecp5:
           if flash_block[i] != file_block[i] and file_block[i] != 0xFF:
             must_write = True
         if must_erase:
-          self.flash_erase_block(self.flash_erase_size, addr=addr+bytes_uploaded)
+          self.flash_erase_block(addr=addr+bytes_uploaded)
         if must_write:
           write_addr = addr+bytes_uploaded
           block_addr = 0
@@ -549,7 +549,7 @@ class ecp5:
     with open(filename, "rb") as filedata:
       if gz:
         import uzlib
-        self.flash_loop(uzlib.DecompIO(filedata,31),addr=addr)
+        self.flash_loop_clever(uzlib.DecompIO(filedata,31),addr=addr)
       else:
         self.flash_loop(filedata,addr=addr)
 

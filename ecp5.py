@@ -66,7 +66,7 @@ class ecp5:
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
     self.flash_write_size = 256
-    self.flash_erase_size = 4096
+    self.flash_erase_size = 4096 # no ESP32 memory for more at flash_loop_clever()
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     self.spi_channel = 2 # -1 soft, 1:sd, 2:jtag
@@ -478,7 +478,10 @@ class ecp5:
     self.flash_close()
     return data
 
-  def flash_loop(self, filedata, addr=0):
+  # force erase and write
+  # wears flash even if overwriting the same data
+  # needs less buffering, can use 64K erase block
+  def flash_loop_force(self, filedata, addr=0):
     addr_mask = self.flash_erase_size-1
     if addr & addr_mask:
       print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (self.flash_erase_size, 0xFFFFFF & ~addr_mask))
@@ -504,6 +507,9 @@ class ecp5:
     self.flash_close()
 
   # clever = read-compare-erase-write
+  # prevents flash wear when overwriting the same data
+  # needs more buffers: 4K erase block is max that fits on ESP32
+  # TODO reduce buffer usage
   def flash_loop_clever(self, filedata, addr=0):
     addr_mask = self.flash_erase_size-1
     if addr & addr_mask:
@@ -557,7 +563,7 @@ class ecp5:
         import uzlib
         self.flash_loop_clever(uzlib.DecompIO(filedata,31),addr=addr)
       else:
-        self.flash_loop(filedata,addr=addr)
+        self.flash_loop_clever(filedata,addr=addr)
 
   def flash_web(self, url, addr=0):
     import socket
@@ -566,7 +572,8 @@ class ecp5:
     s = socket.socket()
     s.connect(iaddr)
     s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path, host), 'utf8'))
-    self.flash_loop(s, addr=addr)
+    # FIXME this simple GET request won't trasparently download binary file
+    self.flash_loop_clever(s, addr=addr)
     s.close()
 
 # easier command typing

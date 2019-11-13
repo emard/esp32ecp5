@@ -66,7 +66,7 @@ class ecp5:
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
     self.flash_write_size = 256
-    self.flash_erase_size = 65536
+    self.flash_erase_size = 4096
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     self.spi_channel = 2 # -1 soft, 1:sd, 2:jtag
@@ -335,11 +335,21 @@ class ecp5:
       self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x0000)) # READ STATUS REGISTER
 
   def flash_erase_block(self, length, addr=0):
+    import struct
     print("from 0x%06X erase %d bytes" % (addr, length))
     self.sdr(b"\x60") # SPI WRITE ENABLE
     # some chips won't clear WIP without this:
     self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x4000)) # READ STATUS REGISTER
-    self.sdr(self.uint(32, (self.bitreverse(addr//self.flash_erase_size)<<8) | self.bitreverse(self.flash_erase_cmd)))
+    sdr = struct.pack(">I", (self.flash_erase_cmd << 24) | (addr & 0xFFFFFF))
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
+    self.swspi.write(sdr[:-1])
+    self.send_read_data_byte_reverse(sdr[-1],1) # last byte -> exit 1 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
+    self.send_tms(1) # -> select DR scan
+    #self.sdr(self.uint(32, (self.bitreverse(addr//self.flash_erase_size)<<8) | self.bitreverse(self.flash_erase_cmd)))
     self.flash_wait_status()
 
   def flash_write_block(self, block, addr=0):
@@ -486,6 +496,48 @@ class ecp5:
         if self.progress:
           print(".",end="")
         bytes_uploaded += len(block)
+      else:
+        if self.progress:
+          print("*")
+        break
+    self.stopwatch_stop(bytes_uploaded)
+    self.flash_close()
+
+  # clever = read-compare-erase-write
+  def flash_loop_clever(self, filedata, addr=0):
+    addr_mask = self.flash_erase_size-1
+    if addr & addr_mask:
+      print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (self.flash_erase_size, 0xFFFFFF & ~addr_mask))
+      return
+    addr = addr & 0xFFFFFF & ~addr_mask # rounded to even 64K (erase block)
+    self.flash_open()
+    bytes_uploaded = 0
+    self.stopwatch_start()
+    while True:
+      file_block = filedata.read(self.flash_erase_size)
+      if file_block:
+        flash_block = self.flash_read(addr=addr+bytes_uploaded, length=len(file_block))
+        must_erase = False
+        must_write = False
+        for i in range(len(file_block)):
+          if (flash_block[i] & file_block[i]) != file_block[i]:
+            must_erase = True
+          if flash_block[i] != file_block[i] and file_block[i] != 0xFF:
+            must_write = True
+        if must_erase:
+          self.flash_erase_block(self.flash_erase_size, addr=addr+bytes_uploaded)
+        if must_write:
+          write_addr = addr+bytes_uploaded
+          block_addr = 0
+          next_block_addr = 0
+          while next_block_addr < len(file_block):
+            next_block_addr = block_addr+self.flash_write_size
+            self.flash_write_block(file_block[block_addr:next_block_addr], addr=write_addr)
+            write_addr += self.flash_write_size
+            block_addr = next_block_addr
+        if self.progress:
+          print(".",end="")
+        bytes_uploaded += len(file_block)
       else:
         if self.progress:
           print("*")

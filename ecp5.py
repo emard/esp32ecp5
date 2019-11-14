@@ -355,12 +355,12 @@ class ecp5:
   def flash_write_block(self, block, addr=0):
     import struct
     self.sdr(b"\x60") # SPI WRITE ENABLE
-    # self.bitreverse(0x40) = 0x02 -> 0x02000000
-    sdr = struct.pack(">I", 0x02000000 | (addr & 0xFFFFFF)) + block
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.swspi.write(sdr[:-1]) # whole block except last byte
-    self.send_read_data_byte_reverse(sdr[-1],1) # last byte -> exit 1 DR
+    # self.bitreverse(0x40) = 0x02 -> 0x02000000
+    self.swspi.write(struct.pack(">I", 0x02000000 | (addr & 0xFFFFFF)))
+    self.swspi.write(block[:-1]) # whole block except last byte
+    self.send_read_data_byte_reverse(block[-1],1) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -490,9 +490,9 @@ class ecp5:
     self.flash_open()
     bytes_uploaded = 0
     self.stopwatch_start()
+    block = bytearray(self.flash_write_size)
     while True:
-      block = filedata.read(self.flash_write_size)
-      if block:
+      if filedata.readinto(block):
         if (bytes_uploaded % self.flash_erase_size) == 0:
           self.flash_erase_block(addr=addr+bytes_uploaded)
         self.flash_write_block(block, addr=addr+bytes_uploaded)
@@ -519,9 +519,9 @@ class ecp5:
     self.flash_open()
     bytes_uploaded = 0
     self.stopwatch_start()
+    file_block = bytearray(self.flash_erase_size)
     while True:
-      file_block = filedata.read(self.flash_erase_size)
-      if file_block:
+      if filedata.readinto(file_block):
         flash_block = self.flash_fast_read_block(addr=addr+bytes_uploaded, length=len(file_block))
         must_erase = False
         for i in range(len(file_block)):

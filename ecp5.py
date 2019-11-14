@@ -141,8 +141,8 @@ class ecp5:
 
   # TAP should be in "idle" state
   # TAP returns to "select DR scan" state
-  def runtest_idle(self, count, duration):
-    leave=time.ticks_ms() + int(duration*1000)
+  def runtest_idle(self, count, duration_ms):
+    leave=time.ticks_ms() + duration_ms
     for n in range(count):
       self.send_tms(0) # -> idle
     while time.ticks_ms() < leave:
@@ -173,7 +173,7 @@ class ecp5:
   # TAP should be in "select DR scan" state
   # TAP returns to "select DR scan" state
   # return value "True" if error, "False" if no error
-  def sdr(self, sdr, mask=False, expected=False, message="", drpause=False, idle=False):
+  def sdr(self, sdr, mask=False, expected=False, message="", drpause_ms=False, idle=False):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     tdo_mismatch = False
@@ -203,8 +203,8 @@ class ecp5:
         response += bytes([self.send_read_data_byte(byte,0)]) # not last
       response += bytes([self.send_read_data_byte(sdr[-1],1)]) # last, exit 1 DR
     self.send_tms(0) # -> pause DR
-    if drpause:
-      time.sleep(drpause)
+    if drpause_ms:
+      time.sleep_ms(drpause_ms)
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     if idle:
@@ -241,15 +241,15 @@ class ecp5:
     self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
     self.sdr([0xFF for i in range(64)])
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
-    self.sdr(b"\x00", idle=(2,1.0E-2))
-    self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
+    self.sdr(b"\x00", idle=(2,10))
+    self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     self.sdr(self.uint(32,0), mask=self.uint(32,0x00024040), expected=self.uint(32,0), message="FAIL status")
     self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
-    self.sdr(b"\x01", idle=(2,1.0E-2))
-    self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
+    self.sdr(b"\x01", idle=(2,10))
+    self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     self.sdr(self.uint(32,0), mask=self.uint(32,0x0000B000), expected=self.uint(32,0), message="FAIL status")
     self.sir(b"\x46") # LSC_INIT_ADDRESS
-    self.sdr(b"\x01", idle=(2,1.0E-2))
+    self.sdr(b"\x01", idle=(2,10))
     self.sir(b"\x7A") # LSC_BITSTREAM_BURST
     # ---------- bitstream begin -----------
     # manually walk the TAP
@@ -278,12 +278,12 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
-    self.runtest_idle(100, 1.0E-2)
+    self.runtest_idle(100, 10)
     # ---------- bitstream end -----------
-    self.sir(b"\xC0", idle=(2,1.0E-3)) # read usercode
+    self.sir(b"\xC0", idle=(2,1)) # read usercode
     self.sdr(self.uint(32,0), expected=self.uint(32,0), message="FAIL usercode")
-    self.sir(b"\x26", idle=(2,2.0E-1)) # ISC DISABLE
-    self.sir(b"\xFF", idle=(2,1.0E-3)) # BYPASS
+    self.sir(b"\x26", idle=(2,200)) # ISC DISABLE
+    self.sir(b"\xFF", idle=(2,1)) # BYPASS
     self.sir(b"\x3C") # LSC_READ_STATUS
     self.sdr(self.uint(32,0), mask=self.uint(32,0x00002100), expected=self.uint(32,0x00000100), message="FAIL bitstream")
     self.spi_jtag_off()
@@ -306,12 +306,12 @@ class ecp5:
     self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
     self.sdr([0xFF for i in range(64)])
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
-    self.sdr(b"\x00", idle=(2,1.0E-2))
-    self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
+    self.sdr(b"\x00", idle=(2,10))
+    self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     self.sdr(self.uint(32,0), mask=self.uint(32,0x00024040), expected=self.uint(32,0), message="FAIL status")
     self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
-    self.sdr(b"\x01", idle=(2,1.0E-2))
-    self.sir(b"\x3C", idle=(2,1.0E-3)) # LSC_READ_STATUS
+    self.sdr(b"\x01", idle=(2,10))
+    self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     self.sdr(self.uint(32,0), mask=self.uint(32,0x0000B000), expected=self.uint(32,0), message="FAIL status")
     self.reset_tap()
     self.runtest_idle(1,0)
@@ -329,7 +329,7 @@ class ecp5:
       status = self.sdr(self.uint(16, 0x00A0)) # READ STATUS REGISTER
       if (status[1] & 0xC1) == 0:
         break
-      time.sleep(0.1)
+      time.sleep_ms(50)
       retry -= 1
     if retry <= 0:
       self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x0000)) # READ STATUS REGISTER
@@ -416,11 +416,11 @@ class ecp5:
     # switch from SPI to bitbanging
     # ---------- flashing end -----------
     self.sdr(b"\x20") # SPI WRITE DISABLE
-    self.sir(b"\xFF", idle=(100,1.0E-3)) # BYPASS
-    self.sir(b"\x26", idle=(2,2.0E-1)) # ISC DISABLE
-    self.sir(b"\xFF", idle=(2,1.0E-3)) # BYPASS
+    self.sir(b"\xFF", idle=(100,1)) # BYPASS
+    self.sir(b"\x26", idle=(2,200)) # ISC DISABLE
+    self.sir(b"\xFF", idle=(2,1)) # BYPASS
     self.sir(b"\x79") # LSC_REFRESH reload the bitstream from flash
-    self.sdr(b"\x00\x00\x00", idle=(2,1.0E-1))
+    self.sdr(b"\x00\x00\x00", idle=(2,100))
     self.spi_jtag_off()
     self.reset_tap()
     self.led.off()

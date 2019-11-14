@@ -440,9 +440,9 @@ class ecp5:
     self.prog_open()
     bytes_uploaded = 0
     self.stopwatch_start()
+    block = bytearray(blocksize)
     while True:
-      block = filedata.read(blocksize)
-      if block:
+      if filedata.readinto(block):
         self.hwspi.write(block)
         if self.progress:
           print(".",end="")

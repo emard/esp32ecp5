@@ -94,4 +94,4 @@ SD card usage (SPI at gpio 12-15):
     [x] read flash content
     [ ] fix HTTP GET for binary file
     [ ] from read, decide if block has to be erased
-    [ ] write disk image to SD card
+    [ ] write disk image to SD card https://docs.micropython.org/en/latest/library/uos.html

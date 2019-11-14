@@ -605,7 +605,7 @@ def passthru():
     ecp5().program_file(filename, gz=True)
 
 print("usage:")
-print("ecp5.flash(\"blink.bit.gzt\", addr=0x000000)")
+print("ecp5.flash(\"blink.bit.gz\", addr=0x000000)")
 print("ecp5.flash_read(addr=0x000000, length=1)")
 print("ecp5.program(\"blink.bit\")")
 print("ecp5.program(\"blink.bit.gz\") # gzip -9 blink.bit")

@@ -367,22 +367,23 @@ class ecp5:
     self.send_tms(1) # -> select DR scan
     self.flash_wait_status()
 
-  def flash_read_block(self, addr=0, length=0):
+  # data is bytearray of to-be-read length
+  def flash_read_block(self, data, addr=0):
     import struct
     # 0x03 is SPI flash read command
     sdr = struct.pack(">I", 0x03000000 | (addr & 0xFFFFFF))
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.swspi.write(sdr) # send SPI FLASH read command and address
-    block = self.swspi.read(length) # read whole block
+    self.swspi.readinto(data) # read whole block
     self.send_read_data_byte_reverse(0,1) # dummy read byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    return block
 
-  def flash_fast_read_block(self, addr=0, length=0):
+  # data is bytearray of to-be-read length
+  def flash_fast_read_block(self, data, addr=0):
     import struct
     # 0x0B is SPI flash fast read command
     sdr = struct.pack(">I", 0x0B000000 | (addr & 0xFFFFFF))
@@ -399,7 +400,7 @@ class ecp5:
       self.tck.on()
     # switch from bitbanging to SPI mode
     self.hwspi.init(baudrate=self.spi_freq) # 1 TCK-glitch
-    block = self.hwspi.read(length) # retrieve whole block
+    self.hwspi.readinto(data) # retrieve whole block
     # switch from SPI to bitbanging mode
     self.hwspi.init(baudrate=self.spi_freq//2) # TCK-glitch
     self.bitbang_jtag_on()
@@ -408,7 +409,6 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    return block
 
   # call this after uploading all of the flash blocks,
   # this will exit FPGA flashing mode and start the bitstream
@@ -433,8 +433,8 @@ class ecp5:
     elapsed_ms = time.ticks_ms() - self.stopwatch_ms
     transfer_rate_MBps = 0
     if elapsed_ms > 0:
-      transfer_rate_MBps = bytes_uploaded / (elapsed_ms * 1024 * 1.024)
-    print("%d bytes uploaded in %.3f s (%.3f MB/s)" % (bytes_uploaded, elapsed_ms/1000, transfer_rate_MBps))
+      transfer_rate_kBps = bytes_uploaded // elapsed_ms
+    print("%d bytes uploaded in %d ms (%d kB/s)" % (bytes_uploaded, elapsed_ms, transfer_rate_kBps))
 
   def program_loop(self, filedata, blocksize=16384):
     self.prog_open()
@@ -472,11 +472,11 @@ class ecp5:
     self.program_loop(s)
     s.close()
 
-  def flash_read(self, addr=0, length=0):
+  # data is bytearray of to-be-read length
+  def flash_read(self, data, addr=0):
     self.flash_open()
-    data = self.flash_fast_read_block(addr=addr, length=length)
+    self.flash_fast_read_block(data, addr)
     self.flash_close()
-    return data
 
   # force erase and write
   # wears flash even if overwriting the same data
@@ -520,9 +520,10 @@ class ecp5:
     bytes_uploaded = 0
     self.stopwatch_start()
     file_block = bytearray(self.flash_erase_size)
+    flash_block = bytearray(self.flash_erase_size)
     while True:
       if filedata.readinto(file_block):
-        flash_block = self.flash_fast_read_block(addr=addr+bytes_uploaded, length=len(file_block))
+        self.flash_fast_read_block(flash_block, addr=addr+bytes_uploaded)
         must_erase = False
         for i in range(len(file_block)):
           if (flash_block[i] & file_block[i]) != file_block[i]:
@@ -595,7 +596,9 @@ def flash(filepath, addr=0):
     ecp5().flash_file(filepath, addr=addr, gz=gz)
 
 def flash_read(addr=0, length=1):
-  return ecp5().flash_read(addr=addr, length=length)
+  data = bytearray(length)
+  ecp5().flash_read(data, addr)
+  return data
 
 def passthru():
   idcode = ecp5().idcode()

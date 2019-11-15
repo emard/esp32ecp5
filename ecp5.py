@@ -6,14 +6,15 @@
 
 import time
 from machine import SPI, Pin
+from micropython import const
 
 class ecp5:
 
   def init_pinout_jtag(self):
-    self.gpio_tms = 21
-    self.gpio_tck = 18
-    self.gpio_tdi = 23
-    self.gpio_tdo = 19
+    self.gpio_tms = const(21)
+    self.gpio_tck = const(18)
+    self.gpio_tdi = const(23)
+    self.gpio_tdo = const(19)
 
   # if JTAG is directed to SD card pins
   # then bus traffic can be monitored using
@@ -57,20 +58,23 @@ class ecp5:
     self.swspi=SPI(-1, baudrate=self.spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(self.gpio_tck), mosi=Pin(self.gpio_tdi), miso=Pin(self.gpio_tdo))
 
   def spi_jtag_off(self):
+    self.hwspi.deinit()
     del self.hwspi
+    self.swspi.deinit()
     del self.swspi
 
   def __init__(self):
-    self.spi_freq = 30000000 # Hz JTAG clk frequency
+    self.spi_freq = const(30000000) # Hz JTAG clk frequency
     # -1 for JTAG over SOFT SPI slow, compatibility
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
-    self.flash_write_size = 256
-    self.flash_erase_size = 4096 # no ESP32 memory for more at flash_loop_clever()
+    self.flash_write_size = const(256)
+    self.flash_erase_size = const(4096) # no ESP32 memory for more at flash_loop_clever()
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
-    self.spi_channel = 2 # -1 soft, 1:sd, 2:jtag
-    self.gpio_led = 5
+    self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
+    self.gpio_led = const(5)
+    self.gpio_dummy = const(17)
     self.progress = False
     self.init_pinout_jtag()
     #self.init_pinout_sd()
@@ -231,7 +235,7 @@ class ecp5:
   # after this TAP will be in "shift DR" state
   def prog_open(self):
     self.spi_jtag_on()
-    self.hwspi.init(baudrate=self.spi_freq//2) # workarounds ESP32 micropython SPI bugs
+    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
     self.bitbang_jtag_on()
     self.led.on()
     self.reset_tap()
@@ -257,7 +261,7 @@ class ecp5:
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     # switch from bitbanging to SPI mode
-    self.hwspi.init(baudrate=self.spi_freq) # 1 TCK-glitch
+    self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDI=0
     # we are lucky that format of the bitstream tolerates
     # any leading and trailing junk bits. If it weren't so,
     # HW SPI JTAG acceleration wouldn't work.
@@ -272,6 +276,7 @@ class ecp5:
   # this will exit FPGA programming mode and start the bitstream
   def prog_close(self):
     # switch from hardware SPI to bitbanging
+    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
     self.bitbang_jtag_on() # 1 TCK-glitch
     self.send_tms(1) # -> exit 1 DR
     self.send_tms(0) # -> pause DR
@@ -296,7 +301,7 @@ class ecp5:
   # TAP should be in "select DR scan" state
   def flash_open(self):
     self.spi_jtag_on()
-    self.hwspi.init(baudrate=self.spi_freq//2) # workarounds ESP32 micropython SPI bugs
+    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
     self.bitbang_jtag_on()
     self.led.on()
     self.reset_tap()
@@ -399,10 +404,10 @@ class ecp5:
       self.tck.off()
       self.tck.on()
     # switch from bitbanging to SPI mode
-    self.hwspi.init(baudrate=self.spi_freq) # 1 TCK-glitch
+    self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDI=0
     self.hwspi.readinto(data) # retrieve whole block
     # switch from SPI to bitbanging mode
-    self.hwspi.init(baudrate=self.spi_freq//2) # TCK-glitch
+    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
     self.bitbang_jtag_on()
     self.send_read_data_byte_reverse(0,1) # dummy read byte -> exit 1 DR
     self.send_tms(0) # -> pause DR

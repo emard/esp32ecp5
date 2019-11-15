@@ -69,7 +69,7 @@ Yes there it is, let's try:
     ecp5.flash("filepath_or_url", addr=0x000000) uploads to SPI CONFIG FLASH
 
 upload to FLASH will start at byte address specified by "addr".
-which should be 64K even - lower 16 bits must be 0x0000
+which should be 4K even - lower 12 bits must be 0x000
 
 To save space on ESP32, bitstream can be compressed by gzip -9
 and stored to ESP32 filesystem (gzipped on web not support yet).

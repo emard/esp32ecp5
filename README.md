@@ -35,13 +35,13 @@ Setup webrepl
 Enable it and let it reboot ESP32.
 
 setup ESP32 as access point
-or as client that logs in to your wifi router
+or as client that logs on to your WiFi router
 
     help()
     ... follow instructions for wifi
     ... for convenience put autostart commands in "main.py"
 
-example autostart file "main.py"
+example autostart file "main.py" which logs on to WiFi router:
 
     import network
     sta_if = network.WLAN(network.STA_IF)

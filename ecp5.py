@@ -555,18 +555,19 @@ class ecp5:
       if filedata.readinto(file_block):
         self.flash_fast_read_block(flash_block, addr=addr+bytes_uploaded)
         must_erase = False
-        for i in range(len(file_block)):
-          if (flash_block[i] & file_block[i]) != file_block[i]:
-            must_erase = True
         must_write = False # TODO must_write[i] for each 256 byte block
-        if must_erase: # erase will reset all bytes to 0xFF
+        if flash_block != file_block:
           for i in range(len(file_block)):
-            if file_block[i] != 0xFF:
-              must_write = True
-        else: # no erase
-          for i in range(len(file_block)):
-            if flash_block[i] != file_block[i]:
-              must_write = True
+            if (flash_block[i] & file_block[i]) != file_block[i]:
+              must_erase = True
+          if must_erase: # erase will reset all bytes to 0xFF
+            for i in range(len(file_block)):
+              if file_block[i] != 0xFF:
+                must_write = True
+          else: # no erase
+            for i in range(len(file_block)):
+              if flash_block[i] != file_block[i]:
+                must_write = True
         if must_erase:
           self.flash_erase_block(addr=addr+bytes_uploaded)
           count_erase += 1

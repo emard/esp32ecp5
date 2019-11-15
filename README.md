@@ -71,8 +71,6 @@ Yes there it is, let's try:
 upload to FLASH will start at byte address specified by "addr".
 which should be 4K even - lower 12 bits must be 0x000
 
-To save space on ESP32, bitstream can be compressed by gzip -9
-and stored to ESP32 filesystem (gzipped on web not support yet).
 If file ends with "*.gz", it will be decompressed on-the-fly:
 
     linux$ gzip -9 blink.bit
@@ -84,6 +82,10 @@ SD card usage (SPI at gpio 12-15):
     import os,machine
     os.mount(machine.SDCard(slot=3),"/sd")
     os.listdir("/sd")
+
+"slot=3" must be specified to prevent using SD card MMC mode.
+MMC mode is about 2x faster but currently it doesn't work together
+with this ecp5.py programmer.
 
 # JTAG info
 

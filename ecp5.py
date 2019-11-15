@@ -341,7 +341,6 @@ class ecp5:
 
   def flash_erase_block(self, addr=0):
     import struct
-    print("from 0x%06X erase %d bytes" % (addr, self.flash_erase_size))
     self.sdr(b"\x60") # SPI WRITE ENABLE
     # some chips won't clear WIP without this:
     self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x4000)) # READ STATUS REGISTER
@@ -354,7 +353,7 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    #self.sdr(self.uint(32, (self.bitreverse(addr//self.flash_erase_size)<<8) | self.bitreverse(self.flash_erase_cmd)))
+    print("from 0x%06X erase %dK" % (addr, self.flash_erase_size>>10),end="\r")
     self.flash_wait_status()
 
   def flash_write_block(self, block, addr=0):
@@ -524,6 +523,9 @@ class ecp5:
     self.flash_open()
     bytes_uploaded = 0
     self.stopwatch_start()
+    count_total = 0
+    count_erase = 0
+    count_write = 0
     file_block = bytearray(self.flash_erase_size)
     flash_block = bytearray(self.flash_erase_size)
     while True:
@@ -544,6 +546,7 @@ class ecp5:
               must_write = True
         if must_erase:
           self.flash_erase_block(addr=addr+bytes_uploaded)
+          count_erase += 1
         if must_write:
           write_addr = addr+bytes_uploaded
           block_addr = 0
@@ -553,14 +556,17 @@ class ecp5:
             self.flash_write_block(file_block[block_addr:next_block_addr], addr=write_addr)
             write_addr += self.flash_write_size
             block_addr = next_block_addr
+          count_write += 1
         if self.progress:
           print(".",end="")
+        count_total += 1
         bytes_uploaded += len(file_block)
       else:
         if self.progress:
           print("*")
         break
     self.stopwatch_stop(bytes_uploaded)
+    print("%dK blocks: %d total, %d erased, %d written." % (self.flash_erase_size>>10, count_total, count_erase, count_write))
     self.flash_close()
 
   def flash_file(self, filename, addr=0, gz=False):

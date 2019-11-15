@@ -57,7 +57,7 @@ List directory to see if the files are uploaded:
 
     import os
     os.listdir()
-    ['boot.py', 'ecp5.py', 'main.py', 'blink.bit.gz']
+    ['boot.py', 'ecp5.py', 'main.py', 'blink.bit']
 
 Yes there it is, let's try:
 

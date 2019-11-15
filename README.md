@@ -109,3 +109,5 @@ with this ecp5.py programmer.
     [x] fix HTTP GET for binary file
     [ ] write disk image to SD card https://docs.micropython.org/en/latest/library/uos.html
     [ ] reuse currently separated code for file/web bit/bit.gz
+    [ ] integrate with ftp server like https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD
+    [ ] integrate with webrepl and file browser like https://github.com/hyperglitch/webrepl

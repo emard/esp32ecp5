@@ -48,7 +48,8 @@ example autostart file "main.py"
     sta_if.active(True)
     sta_if.connect("accesspoint", "password")
 
-upload "ecp5.py", "main.py" and some bitstream file "blink.bit.gz" to
+upload "ecp5.py", "main.py" and some bitstream file like "blink.bit" or
+"blink.bit.gz" (compressed with gzip -9) to
 the root of ESP32 python FLASH filesystem
 using [micropython webrepl](http://micropython.org/webrepl).
 
@@ -56,13 +57,13 @@ List directory to see if the files are uploaded:
 
     import os
     os.listdir()
-    ['boot.py', 'ecp5.py', 'main.py', 'blink.bit']
+    ['boot.py', 'ecp5.py', 'main.py', 'blink.bit.gz']
 
 Yes there it is, let's try:
 
     import ecp5
     ecp5.program("blink.bit") 
-    99262 bytes uploaded in 0.142 s (0.667 MB/s)
+    99262 bytes uploaded in 142 ms (675 kB/s)
 
     ecp5.program("filepath_or_url") uploads to FPGA SRAM.
     ecp5.flash("filepath_or_url", addr=0x000000) uploads to SPI CONFIG FLASH

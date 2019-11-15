@@ -41,12 +41,19 @@ or as client that logs on to your WiFi router
     ... follow instructions for wifi
     ... for convenience put autostart commands in "main.py"
 
-example autostart file "main.py" which logs on to WiFi router:
+example autostart file "main.py" which logs on to WiFi access point:
 
     import network
     sta_if = network.WLAN(network.STA_IF)
     sta_if.active(True)
     sta_if.connect("accesspoint", "password")
+
+example autostart file "main.py" which makes ESP32 to become WiFi access point:
+
+    import network
+    ap_if = network.WLAN(network.AP_IF)
+    ap_if.active(True)
+    ap_if.config(essid="accesspoint", password="password")
 
 upload "ecp5.py", "main.py" and some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with gzip -9) to

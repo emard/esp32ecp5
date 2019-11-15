@@ -228,7 +228,7 @@ class ecp5:
     id_bytes = self.sdr(self.uint(32,0))
     self.led.off()
     self.bitbang_jtag_off()
-    return struct.unpack("<I", id_bytes)
+    return struct.unpack("<I", id_bytes)[0]
   
   # call this before sending the bitstram
   # FPGA will enter programming mode

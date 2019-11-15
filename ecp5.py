@@ -489,14 +489,21 @@ class ecp5:
       else:
         self.program_loop(filedata,blocksize=16384)
 
-  def program_web(self, url):
+  def program_web(self, url, gz=False):
     import socket
     _, _, host, path = url.split('/', 3)
     addr = socket.getaddrinfo(host, 80)[0][-1]
     s = socket.socket()
     s.connect(addr)
-    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path, host), 'utf8'))
-    self.program_loop(s)
+    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\nAccept:  image/*\r\n\r\n' % (path, host), 'utf8'))
+    for i in range(100): # read first 100 lines searching for
+      if len(s.readline()) < 3: # first empty line (contains "\r\n")
+        break
+    if gz:
+      import uzlib
+      self.program_loop(uzlib.DecompIO(s,31),blocksize=4096)
+    else:
+      self.program_loop(s,blocksize=16384)
     s.close()
 
   # data is bytearray of to-be-read length
@@ -601,15 +608,21 @@ class ecp5:
       else:
         self.flash_loop_clever(filedata,addr=addr)
 
-  def flash_web(self, url, addr=0):
+  def flash_web(self, url, addr=0, gz=False):
     import socket
     _, _, host, path = url.split('/', 3)
     iaddr = socket.getaddrinfo(host, 80)[0][-1]
     s = socket.socket()
     s.connect(iaddr)
-    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path, host), 'utf8'))
-    # FIXME this simple GET request won't trasparently download binary file
-    self.flash_loop_clever(s, addr=addr)
+    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\nAccept:  image/*\r\n\r\n' % (path, host), 'utf8'))
+    for i in range(100): # read first 100 lines searching for
+      if len(s.readline()) < 3: # first empty line (contains "\r\n")
+        break
+    if gz:
+      import uzlib
+      self.flash_loop_clever(uzlib.DecompIO(s,31),addr=addr)
+    else:
+      self.flash_loop_clever(s,addr=addr)
     s.close()
 
 # easier command typing
@@ -619,16 +632,17 @@ def idcode():
 def program(filepath):
   gz=filepath.endswith(".gz")
   if filepath.startswith("http://"):
-    ecp5().program_web(filepath)
+    ecp5().program_web(filepath, gz)
   else:
-    ecp5().program_file(filepath, gz=gz)
+    ecp5().program_file(filepath, gz)
+
 
 def flash(filepath, addr=0):
   gz=filepath.endswith(".gz")
   if filepath.startswith("http://"):
-    ecp5().flash_web(filepath, addr=addr)
+    ecp5().flash_web(filepath, addr, gz)
   else:
-    ecp5().flash_file(filepath, addr=addr, gz=gz)
+    ecp5().flash_file(filepath, addr, gz)
 
 def flash_read(addr=0, length=1):
   data = bytearray(length)
@@ -645,7 +659,7 @@ def passthru():
 print("usage:")
 print("ecp5.flash(\"blink.bit.gz\", addr=0x000000)")
 print("ecp5.flash_read(addr=0x000000, length=1)")
-print("ecp5.program(\"blink.bit\")")
+print("ecp5.program(\"http://192.168.4.2/blink.bit\")")
 print("ecp5.program(\"blink.bit.gz\") # gzip -9 blink.bit")
 print("ecp5.passthru()")
 print("\"0x%08X\" % ecp5.idcode()")

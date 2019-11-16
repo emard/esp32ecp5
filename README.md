@@ -103,8 +103,8 @@ to accept site-specific FTP command:
     ftp> site filename.bit
     ... will run ecp5.program("filename.bit")
 
-To automate upload from linux shell, put IP address of
-ESP32 in the list of ftp auto-login hosts in "~/.netrc":
+To automate upload from linux shell,
+enable ftp auto-login in "~/.netrc":
 
     cat ~/.netrc
     default login anonymous password user@site

@@ -107,7 +107,7 @@ To automate upload from linux shell, put IP address of
 ESP32 in the list of ftp auto-login hosts in "~/.netrc":
 
     cat ~/.netrc
-    default login anonymous password user@192.168.4.1
+    default login anonymous password user@site
 
 A simple shell command can upload bitstream
 with FTP and program ECP5:

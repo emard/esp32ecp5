@@ -97,6 +97,33 @@ SD card usage (SPI at gpio 12-15):
 MMC mode is about 2x faster but currently it doesn't work together
 with this ecp5.py programmer.
 
+I have patched [ESP32 FTP server](https://github.com/emard/FTP-Server-for-ESP8266-ESP32-and-PYBD)
+to accept site-specific FTP command:
+
+    ftp> site filename.bit
+    ... will run ecp5.program("filename.bit")
+
+To automate upload from linux shell, put IP address of
+ESP32 in the list of ftp auto-login hosts in "~/.netrc":
+
+    cat ~/.netrc
+    default login anonymous password user@192.168.4.1
+
+A simple shell command can upload bitstream
+with FTP and program ECP5:
+
+    cat /usr/local/bin/ftpecp5prog
+    #!/bin/sh
+    ftp 192.168.4.1 <<EOF
+    cd /sd/ULX3S # if SD is mounted
+    put ${1}
+    site ${1}
+    EOF
+
+use it as:
+
+    ftpecp5prog blink.bit
+
 # JTAG info
 
 [JTAG STATE GRAPH](https://www.xjtag.com/about-jtag/jtag-a-technical-overview/tap_state_machine1)
@@ -109,5 +136,5 @@ with this ecp5.py programmer.
     [x] fix HTTP GET for binary file
     [ ] write disk image to SD card https://docs.micropython.org/en/latest/library/uos.html
     [ ] reuse currently separated code for file/web bit/bit.gz
-    [ ] integrate with ftp server like https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD
+    [x] integrate with ftp server like https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD
     [ ] integrate with webrepl and file browser like https://github.com/hyperglitch/webrepl

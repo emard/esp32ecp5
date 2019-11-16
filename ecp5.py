@@ -126,17 +126,17 @@ class ecp5:
 
   def send_read_data_byte(self, val, last):
     byte = 0
-    for nf in range(8):
-      self.send_bit((val >> nf) & 1, (last & int((nf == 7) == True)))
+    for nf in range(7):
+      self.send_bit((val >> nf) & 1, 0)
       byte |= self.tdo.value() << nf
+    self.send_bit((val >> 7) & 1, 1)
+    byte |= self.tdo.value() << 7
     return byte
 
-  def send_read_data_byte_reverse(self, val, last):
-    byte = 0
-    for nf in range(8):
-      self.send_bit((val >> (7-nf)) & 1, (last & int((nf == 7) == True)))
-      byte |= self.tdo.value() << nf
-    return byte
+  def send_data_byte_reverse(self, val, last, bits=8):
+    for nf in range(bits-1):
+      self.send_bit((val >> (7-nf)) & 1, 0)
+    self.send_bit(val & 1, 1)
     
   # TAP to "reset" state
   def reset_tap(self):
@@ -270,7 +270,7 @@ class ecp5:
     #self.hwspi.write(block)
     # SLOW bitbanging mode
     #for byte in block:
-    #  self.send_read_data_byte_reverse(byte,0)
+    #  self.send_data_byte_reverse(byte,0)
 
   # call this after uploading all of the bitstream blocks,
   # this will exit FPGA programming mode and start the bitstream
@@ -348,7 +348,7 @@ class ecp5:
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.swspi.write(sdr[:-1])
-    self.send_read_data_byte_reverse(sdr[-1],1) # last byte -> exit 1 DR
+    self.send_data_byte_reverse(sdr[-1],1) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -364,7 +364,7 @@ class ecp5:
     # self.bitreverse(0x40) = 0x02 -> 0x02000000
     self.swspi.write(struct.pack(">I", 0x02000000 | (addr & 0xFFFFFF)))
     self.swspi.write(block[:-1]) # whole block except last byte
-    self.send_read_data_byte_reverse(block[-1],1) # last byte -> exit 1 DR
+    self.send_data_byte_reverse(block[-1],1) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -379,7 +379,7 @@ class ecp5:
     self.send_tms(0) # -> shift DR
     # self.bitreverse(0x40) = 0x02 -> 0x02000000
     # send bits of 0x02 before the TCK glitch
-    self.send_read_data_byte_reverse(0x02,0,bits=7) # LSB bit 0 not sent now
+    self.send_data_byte_reverse(0x02,0,bits=7) # LSB bit 0 not sent now
     a = struct.pack(">I", addr)
     self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDO=0 as LSB bit
     self.hwspi.write(a[1:4]) # send 3-byte address
@@ -387,7 +387,7 @@ class ecp5:
     # switch from SPI to bitbanging mode
     self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
     self.bitbang_jtag_on()
-    self.send_read_data_byte_reverse(block[-1],1) # last byte -> exit 1 DR
+    self.send_data_byte_reverse(block[-1],1) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -403,7 +403,7 @@ class ecp5:
     self.send_tms(0) # -> shift DR
     self.swspi.write(sdr) # send SPI FLASH read command and address
     self.swspi.readinto(data) # read whole block
-    self.send_read_data_byte_reverse(0,1) # dummy read byte -> exit 1 DR
+    self.send_data_byte_reverse(0,1) # dummy read byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -431,7 +431,7 @@ class ecp5:
     # switch from SPI to bitbanging mode
     self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
     self.bitbang_jtag_on()
-    self.send_read_data_byte_reverse(0,1) # dummy read byte -> exit 1 DR
+    self.send_data_byte_reverse(0,1) # dummy read byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR

@@ -112,31 +112,33 @@ class ecp5:
     self.tck.off()
     self.tck.on()
 
-  def send_bit(self, tdi, tms):
+  def send_bit(self, tdi):
     if tdi:
       self.tdi.on()
     else:
       self.tdi.off()
-    if tms:
-      self.tms.on()
-    else:
-      self.tms.off()
     self.tck.off()
     self.tck.on()
 
   def send_read_data_byte(self, val, last):
     byte = 0
+    self.tms.off()
     for nf in range(7):
-      self.send_bit((val >> nf) & 1, 0)
+      self.send_bit((val >> nf) & 1)
       byte |= self.tdo.value() << nf
-    self.send_bit((val >> 7) & 1, 1)
+    if last:
+      self.tms.on()
+    self.send_bit((val >> 7) & 1)
     byte |= self.tdo.value() << 7
     return byte
 
   def send_data_byte_reverse(self, val, last, bits=8):
+    self.tms.off()
     for nf in range(bits-1):
-      self.send_bit((val >> (7-nf)) & 1, 0)
-    self.send_bit(val & 1, 1)
+      self.send_bit((val >> (7-nf)) & 1)
+    if last:
+      self.tms.on()
+    self.send_bit(val & 1)
     
   # TAP to "reset" state
   def reset_tap(self):

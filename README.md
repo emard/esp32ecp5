@@ -72,10 +72,10 @@ List directory to see if the files are uploaded:
 Yes there it is, let's try:
 
     import ecp5
-    ecp5.program("blink.bit") 
+    ecp5.prog("blink.bit") 
     99262 bytes uploaded in 142 ms (675 kB/s)
 
-    ecp5.program("filepath_or_url") uploads to FPGA SRAM.
+    ecp5.prog("filepath_or_url") uploads to FPGA SRAM.
     ecp5.flash("filepath_or_url", addr=0x000000) uploads to SPI CONFIG FLASH
 
 upload to FLASH will start at byte address specified by "addr".
@@ -84,7 +84,7 @@ which should be 4K even - lower 12 bits must be 0x000
 If file ends with "*.gz", it will be decompressed on-the-fly:
 
     linux$ gzip -9 blink.bit
-    >>> ecp5.program("http://192.168.4.2/blink.bit.gz")
+    >>> ecp5.prog("http://192.168.4.2/blink.bit.gz")
     >>> ecp5.flash("blink.bit.gz")
 
 SD card usage (SPI at gpio 12-15):
@@ -109,7 +109,7 @@ Besides normal FTP commands like "ls", "cd", "mkdir", "rmdir", "put", "get", "de
 it also accepts "site" command:
 
     ftp> site filename.bit
-    ... will run ecp5.program("filename.bit")
+    ... will run ecp5.prog("filename.bit")
 
 To automate upload from linux shell,
 enable ftp auto-login in "~/.netrc":
@@ -146,5 +146,5 @@ use it as:
     [ ] reuse currently separated code for file/web bit/bit.gz
     [x] integrate with ftp server like https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD
     [ ] integrate with webrepl and file browser like https://github.com/hyperglitch/webrepl
-    [x] ecp5.program() should return True if OK, False if FAIL
+    [x] ecp5.prog() should return True if OK, False if FAIL
     [x] optimize send_bit, n-1 bits in loop and last bit outside of loop

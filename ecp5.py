@@ -292,11 +292,18 @@ class ecp5:
     self.sir(b"\x26", idle=(2,200)) # ISC DISABLE
     self.sir(b"\xFF", idle=(2,1)) # BYPASS
     self.sir(b"\x3C") # LSC_READ_STATUS
-    self.sdr(self.uint(32,0), mask=self.uint(32,0x00002100), expected=self.uint(32,0x00000100), message="FAIL bitstream")
+    mask = self.uint(32,0x00002100)
+    expected = self.uint(32,0x00000100)
+    response = self.sdr(self.uint(32,0), mask=mask, expected=expected, message="FAIL bitstream")
+    done = True
+    for i in range(len(response)):
+      if (response[i] & mask[i]) != expected[i]:
+        done = False
     self.spi_jtag_off()
     self.reset_tap()
     self.led.off()
     self.bitbang_jtag_off()
+    return done
 
   # call this before sending the flash image
   # FPGA will enter flashing mode
@@ -454,6 +461,7 @@ class ecp5:
     self.reset_tap()
     self.led.off()
     self.bitbang_jtag_off()
+    return True # FIXME
       
   def stopwatch_start(self):
     self.stopwatch_ms = time.ticks_ms()
@@ -481,15 +489,15 @@ class ecp5:
           print("*")
         break
     self.stopwatch_stop(bytes_uploaded)
-    self.prog_close()
+    return self.prog_close()
 
   def program_file(self, filename, gz=False):
     with open(filename, "rb") as filedata:
       if gz:
         import uzlib
-        self.program_loop(uzlib.DecompIO(filedata,31),blocksize=4096)
+        return self.program_loop(uzlib.DecompIO(filedata,31),blocksize=4096)
       else:
-        self.program_loop(filedata,blocksize=16384)
+        return self.program_loop(filedata,blocksize=16384)
 
   def program_web(self, url, gz=False):
     import socket
@@ -503,10 +511,11 @@ class ecp5:
         break
     if gz:
       import uzlib
-      self.program_loop(uzlib.DecompIO(s,31),blocksize=4096)
+      done = self.program_loop(uzlib.DecompIO(s,31),blocksize=4096)
     else:
-      self.program_loop(s,blocksize=16384)
+      done = self.program_loop(s,blocksize=16384)
     s.close()
+    return done
 
   # data is bytearray of to-be-read length
   def flash_read(self, data, addr=0):
@@ -540,7 +549,7 @@ class ecp5:
           print("*")
         break
     self.stopwatch_stop(bytes_uploaded)
-    self.flash_close()
+    return self.flash_close()
 
   # clever = read-compare-erase-write
   # prevents flash wear when overwriting the same data
@@ -600,15 +609,15 @@ class ecp5:
         break
     self.stopwatch_stop(bytes_uploaded)
     print("%dK blocks: %d total, %d erased, %d written." % (self.flash_erase_size>>10, count_total, count_erase, count_write))
-    self.flash_close()
+    return self.flash_close()
 
   def flash_file(self, filename, addr=0, gz=False):
     with open(filename, "rb") as filedata:
       if gz:
         import uzlib
-        self.flash_loop_clever(uzlib.DecompIO(filedata,31),addr=addr)
+        return self.flash_loop_clever(uzlib.DecompIO(filedata,31),addr=addr)
       else:
-        self.flash_loop_clever(filedata,addr=addr)
+        return self.flash_loop_clever(filedata,addr=addr)
 
   def flash_web(self, url, addr=0, gz=False):
     import socket
@@ -622,10 +631,11 @@ class ecp5:
         break
     if gz:
       import uzlib
-      self.flash_loop_clever(uzlib.DecompIO(s,31),addr=addr)
+      done = self.flash_loop_clever(uzlib.DecompIO(s,31),addr=addr)
     else:
-      self.flash_loop_clever(s,addr=addr)
+      done = self.flash_loop_clever(s,addr=addr)
     s.close()
+    return done
 
 # easier command typing
 def idcode():
@@ -634,17 +644,17 @@ def idcode():
 def program(filepath):
   gz=filepath.endswith(".gz")
   if filepath.startswith("http://"):
-    ecp5().program_web(filepath, gz)
+    return ecp5().program_web(filepath, gz)
   else:
-    ecp5().program_file(filepath, gz)
+    return ecp5().program_file(filepath, gz)
 
 
 def flash(filepath, addr=0):
   gz=filepath.endswith(".gz")
   if filepath.startswith("http://"):
-    ecp5().flash_web(filepath, addr, gz)
+    return ecp5().flash_web(filepath, addr, gz)
   else:
-    ecp5().flash_file(filepath, addr, gz)
+    return ecp5().flash_file(filepath, addr, gz)
 
 def flash_read(addr=0, length=1):
   data = bytearray(length)
@@ -656,7 +666,7 @@ def passthru():
   if idcode != 0 and idcode != 0xFFFFFFFF:
     filename = "passthru%08X.bit.gz" % idcode
     print("program \"%s\"" % filename)
-    ecp5().program_file(filename, gz=True)
+    return ecp5().program_file(filename, gz=True)
 
 print("usage:")
 print("ecp5.flash(\"blink.bit.gz\", addr=0x000000)")

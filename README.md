@@ -99,13 +99,8 @@ with this ecp5.py programmer.
 
 I have patched [ESP32 FTP
 server](https://github.com/emard/FTP-Server-for-ESP8266-ESP32-and-PYBD).
-Install FTP server by uploading 3 files to the root of ESP32 filesystem:
-
-    ftp.py
-    ftp_thread.py
-    uftpd.py
-
-Start it with:
+Install FTP server by uploading "uftpd.py" file to the root of ESP32 filesystem:
+and start it with:
 
     import uftpd
 

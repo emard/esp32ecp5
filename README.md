@@ -103,6 +103,7 @@ Install FTP server by uploading "uftpd.py" file to the root of ESP32 filesystem:
 and start it with:
 
     import uftpd
+    FTP server started on 192.168.4.1:21
 
 Besides normal FTP commands like "ls", "cd", "mkdir", "rmdir", "put", "get", "del",
 it also accepts "site" command:

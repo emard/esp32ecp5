@@ -4,7 +4,7 @@
 # AUTHOR=EMARD
 # LICENSE=BSD
 
-import time
+from time import ticks_ms, sleep_ms
 from machine import SPI, Pin
 from micropython import const
 
@@ -148,10 +148,10 @@ class ecp5:
   # TAP should be in "idle" state
   # TAP returns to "select DR scan" state
   def runtest_idle(self, count, duration_ms):
-    leave=time.ticks_ms() + duration_ms
+    leave=ticks_ms() + duration_ms
     for n in range(count):
       self.send_tms(0) # -> idle
-    while time.ticks_ms() < leave:
+    while ticks_ms() < leave:
       self.send_tms(0) # -> idle
     self.send_tms(1) # -> select DR scan
   
@@ -210,7 +210,7 @@ class ecp5:
       response += bytes([self.send_read_data_byte(sdr[-1],1)]) # last, exit 1 DR
     self.send_tms(0) # -> pause DR
     if drpause_ms:
-      time.sleep_ms(drpause_ms)
+      sleep_ms(drpause_ms)
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     if idle:
@@ -343,7 +343,7 @@ class ecp5:
       status = self.sdr(self.uint(16, 0x00A0)) # READ STATUS REGISTER
       if (status[1] & 0xC1) == 0:
         break
-      time.sleep_ms(50)
+      sleep_ms(50)
       retry -= 1
     if retry <= 0:
       self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x0000)) # READ STATUS REGISTER
@@ -464,10 +464,10 @@ class ecp5:
     return True # FIXME
       
   def stopwatch_start(self):
-    self.stopwatch_ms = time.ticks_ms()
+    self.stopwatch_ms = ticks_ms()
   
   def stopwatch_stop(self, bytes_uploaded):
-    elapsed_ms = time.ticks_ms() - self.stopwatch_ms
+    elapsed_ms = ticks_ms() - self.stopwatch_ms
     transfer_rate_MBps = 0
     if elapsed_ms > 0:
       transfer_rate_kBps = bytes_uploaded // elapsed_ms
@@ -569,8 +569,7 @@ class ecp5:
     count_write = 0
     file_block = bytearray(self.flash_erase_size)
     flash_block = bytearray(self.flash_erase_size)
-    while True:
-      if filedata.readinto(file_block):
+    while filedata.readinto(file_block):
         self.flash_fast_read_block(flash_block, addr=addr+bytes_uploaded)
         must_erase = False
         must_write = False # TODO must_write[i] for each 256 byte block
@@ -599,14 +598,8 @@ class ecp5:
             write_addr += self.flash_write_size
             block_addr = next_block_addr
           count_write += 1
-        if self.progress:
-          print(".",end="")
         count_total += 1
         bytes_uploaded += len(file_block)
-      else:
-        if self.progress:
-          print("*")
-        break
     self.stopwatch_stop(bytes_uploaded)
     print("%dK blocks: %d total, %d erased, %d written." % (self.flash_erase_size>>10, count_total, count_erase, count_write))
     return self.flash_close()
@@ -631,9 +624,9 @@ class ecp5:
         break
     if gz:
       import uzlib
-      done = self.flash_loop_clever(uzlib.DecompIO(s,31),addr=addr)
+      done = self.flash_loop_clever(uzlib.DecompIO(s,31),addr)
     else:
-      done = self.flash_loop_clever(s,addr=addr)
+      done = self.flash_loop_clever(s,addr)
     s.close()
     return done
 

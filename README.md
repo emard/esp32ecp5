@@ -104,7 +104,7 @@ and start it with:
 
     import uftpd
 
-Besides normal FTP commands like "cd", "mkdir", "ls", "put", "get", "del",
+Besides normal FTP commands like "ls", "cd", "mkdir", "rmdir", "put", "get", "del",
 it also accepts "site" command:
 
     ftp> site filename.bit

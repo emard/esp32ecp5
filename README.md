@@ -138,3 +138,4 @@ use it as:
     [ ] reuse currently separated code for file/web bit/bit.gz
     [x] integrate with ftp server like https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD
     [ ] integrate with webrepl and file browser like https://github.com/hyperglitch/webrepl
+    [ ] ecp5.program() should return True if OK, False if FAIL

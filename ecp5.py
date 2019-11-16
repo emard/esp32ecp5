@@ -634,7 +634,7 @@ class ecp5:
 def idcode():
   return ecp5().idcode()
 
-def program(filepath):
+def prog(filepath):
   gz=filepath.endswith(".gz")
   if filepath.startswith("http://"):
     return ecp5().program_web(filepath, gz)
@@ -664,11 +664,11 @@ def passthru():
 print("usage:")
 print("ecp5.flash(\"blink.bit.gz\", addr=0x000000)")
 print("ecp5.flash_read(addr=0x000000, length=1)")
-print("ecp5.program(\"http://192.168.4.2/blink.bit\")")
-print("ecp5.program(\"blink.bit.gz\") # gzip -9 blink.bit")
+print("ecp5.prog(\"http://192.168.4.2/blink.bit\")")
+print("ecp5.prog(\"blink.bit.gz\") # gzip -9 blink.bit")
 print("ecp5.passthru()")
 print("\"0x%08X\" % ecp5.idcode()")
 print("0x%08X" % idcode())
 #flash("blink.bit")
-#program("blink.bit")
-#program("http://192.168.4.2/blink.bit")
+#prog("blink.bit")
+#prog("http://192.168.4.2/blink.bit")

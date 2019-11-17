@@ -31,37 +31,41 @@ Connect over USB-serial
 
     screen /dev/ttyUSB0 115200
 
-Setup webrepl
+To automate further use, it is good to setup ESP32 to automatically
+bring up networking and services after power up. At power up, file "main.py"
+is auto-executed.
 
+Choose either: (copy-paste to usb-serial python prompt ">>>")
+
+setup as client that logs on to WiFi access point (home internet router):
+
+    f=open("main.py","w")
+    f.write("import network\n")
+    f.write("sta_if = network.WLAN(network.STA_IF)\n")
+    f.write("sta_if.active(True)\n")
+    f.write('sta_if.connect("accesspoint", "password")\n')
+    f.write("import uftpd\n")
+    f.close()
     import webrepl_setup
 
-Enable it and let it reboot ESP32.
+or setup as access point:
 
-setup ESP32 as access point
-or as client that logs on to your WiFi router
+    f=open("main.py","w")
+    f.write("import network\n")
+    f.write("ap_if = network.WLAN(network.AP_IF)\n")
+    f.write("ap_if.active(True)\n")
+    f.write('ap_if.config(essid="accesspoint", password="password")\n')
+    f.write("import uftpd\n")
+    import webrepl_setup
 
-    help()
-    ... follow instructions for wifi
-    ... for convenience put autostart commands in "main.py"
+Enable it, choose any password as you like (and write or remember it)
+and let it reboot ESP32.
 
-example autostart file "main.py" which logs on to WiFi access point:
-
-    import network
-    sta_if = network.WLAN(network.STA_IF)
-    sta_if.active(True)
-    sta_if.connect("accesspoint", "password")
-
-example autostart file "main.py" which makes ESP32 to become WiFi access point:
-
-    import network
-    ap_if = network.WLAN(network.AP_IF)
-    ap_if.active(True)
-    ap_if.config(essid="accesspoint", password="password")
-
-upload "ecp5.py", "main.py" and some bitstream file like "blink.bit" or
+with web browser open [micropython webrepl](http://micropython.org/webrepl),
+enter IP address of ESP32 and upload "ecp5.py", (optionally also "uftpd.py"
+if you want FTP server, read below) and some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with gzip -9) to
 the root of ESP32 python FLASH filesystem
-using [micropython webrepl](http://micropython.org/webrepl).
 
 List directory to see if the files are uploaded:
 

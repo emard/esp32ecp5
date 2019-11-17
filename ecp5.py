@@ -176,10 +176,26 @@ class ecp5:
     self.send_tms(0) # -> shift IR
     for byte in sir[:-1]:
       self.send_read_data_byte(byte,0) # not last
-    self.send_read_data_byte(sir[-1],1) # last, exit 1 DR
+    self.send_read_data_byte(sir[-1],1) # last, exit 1 IR
     self.send_tms(0) # -> pause IR
     self.send_tms(1) # -> exit 2 IR
     self.send_tms(1) # -> update IR
+    if idle:
+      #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
+      self.runtest_idle(idle[0]+1, idle[1])
+    else:
+      self.send_tms(1) # -> select DR scan
+
+  # "light" sdr, when response can be ignored
+  def sdr0(self, sdr, idle=False):
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
+    for byte in sdr[:-1]:
+      self.send_read_data_byte(byte,0) # not last
+    self.send_read_data_byte(sdr[-1],1) # last, exit 1 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
     if idle:
       #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
       self.runtest_idle(idle[0]+1, idle[1])
@@ -257,17 +273,17 @@ class ecp5:
     #self.sir(b"\xE0") # read IDCODE
     #self.sdr(self.uint(32,0), expected=self.uint(32,0), message="IDCODE")
     self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
-    self.sdr([0xFF for i in range(64)])
+    self.sdr0([0xFF for i in range(64)])
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
-    self.sdr(b"\x00", idle=(2,10))
+    self.sdr0(b"\x00", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     self.sdr(self.uint(32,0), mask=self.uint(32,0x00024040), expected=self.uint(32,0), message="FAIL status")
     self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
-    self.sdr(b"\x01", idle=(2,10))
+    self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     self.sdr(self.uint(32,0), mask=self.uint(32,0x0000B000), expected=self.uint(32,0), message="FAIL status")
     self.sir(b"\x46") # LSC_INIT_ADDRESS
-    self.sdr(b"\x01", idle=(2,10))
+    self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x7A") # LSC_BITSTREAM_BURST
     # ---------- bitstream begin -----------
     # manually walk the TAP
@@ -330,20 +346,20 @@ class ecp5:
     #self.sir(b"\xE0") # read IDCODE
     #self.sdr(self.uint(32,0), expected=self.uint(32,0), message="IDCODE")
     self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
-    self.sdr([0xFF for i in range(64)])
+    self.sdr0([0xFF for i in range(64)])
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
-    self.sdr(b"\x00", idle=(2,10))
+    self.sdr0(b"\x00", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     self.sdr(self.uint(32,0), mask=self.uint(32,0x00024040), expected=self.uint(32,0), message="FAIL status")
     self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
-    self.sdr(b"\x01", idle=(2,10))
+    self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     self.sdr(self.uint(32,0), mask=self.uint(32,0x0000B000), expected=self.uint(32,0), message="FAIL status")
     self.reset_tap()
     self.runtest_idle(1,0)
     self.sir(b"\xFF", idle=(32,0)) # BYPASS
     self.sir(b"\x3A") # LSC_PROG_SPI
-    self.sdr(self.uint(16,0x68FE), idle=(32,0))
+    self.sdr0(self.uint(16,0x68FE), idle=(32,0))
     # ---------- flashing begin -----------
     # 0x60 and other SPI flash commands here are bitreverse() values
     # of flash commands found in SPI FLASH datasheet.
@@ -362,7 +378,7 @@ class ecp5:
 
   def flash_erase_block(self, addr=0):
     import struct
-    self.sdr(b"\x60") # SPI WRITE ENABLE
+    self.sdr0(b"\x60") # SPI WRITE ENABLE
     # some chips won't clear WIP without this:
     self.sdr(self.uint(16, 0x00A0), mask=self.uint(16, 0xC100), expected=self.uint(16,0x4000)) # READ STATUS REGISTER
     sdr = struct.pack(">I", (self.flash_erase_cmd << 24) | (addr & 0xFFFFFF))
@@ -379,7 +395,7 @@ class ecp5:
 
   def flash_write_block(self, block, addr=0):
     import struct
-    self.sdr(b"\x60") # SPI WRITE ENABLE
+    self.sdr0(b"\x60") # SPI WRITE ENABLE
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     # self.bitreverse(0x40) = 0x02 -> 0x02000000
@@ -395,7 +411,7 @@ class ecp5:
   # 256-byte write block is too short so this as fast as above
   def flash_fast_write_block(self, block, addr=0):
     import struct
-    self.sdr(b"\x60") # SPI WRITE ENABLE
+    self.sdr0(b"\x60") # SPI WRITE ENABLE
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     # self.bitreverse(0x40) = 0x02 -> 0x02000000
@@ -463,12 +479,12 @@ class ecp5:
   def flash_close(self):
     # switch from SPI to bitbanging
     # ---------- flashing end -----------
-    self.sdr(b"\x20") # SPI WRITE DISABLE
+    self.sdr0(b"\x20") # SPI WRITE DISABLE
     self.sir(b"\xFF", idle=(100,1)) # BYPASS
     self.sir(b"\x26", idle=(2,200)) # ISC DISABLE
     self.sir(b"\xFF", idle=(2,1)) # BYPASS
     self.sir(b"\x79") # LSC_REFRESH reload the bitstream from flash
-    self.sdr(b"\x00\x00\x00", idle=(2,100))
+    self.sdr0(b"\x00\x00\x00", idle=(2,100))
     self.spi_jtag_off()
     self.reset_tap()
     self.led.off()

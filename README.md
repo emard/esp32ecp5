@@ -2,7 +2,7 @@
 
 This is micropython running on ESP32 to allow
 JTAG programming and flashing of Lattice ECP5 FPGA JTAG.
-A simple way in about 600 lines of code.
+A simple way in about 700 lines of code.
 
 # Usage
 

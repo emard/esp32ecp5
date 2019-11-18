@@ -314,11 +314,9 @@ class ecp5:
     self.led.off()
     self.bitbang_jtag_off()
     return unpack("<I", id_bytes)[0]
-  
-  # call this before sending the bitstram
-  # FPGA will enter programming mode
-  # after this TAP will be in "shift DR" state
-  def prog_open(self):
+
+  # common JTAG open for both program and flash
+  def common_open(self):
     self.spi_jtag_on()
     self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
     self.bitbang_jtag_on()
@@ -340,6 +338,12 @@ class ecp5:
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     self.sdr0(self.i0,response=status)
     self.check_response(unpack("<I",status)[0], mask=0xB000, expected=0, message="FAIL status")
+  
+  # call this before sending the bitstram
+  # FPGA will enter programming mode
+  # after this TAP will be in "shift DR" state
+  def prog_open(self):
+    self.common_open()
     self.sir(b"\x46") # LSC_INIT_ADDRESS
     self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x7A") # LSC_BITSTREAM_BURST
@@ -382,7 +386,6 @@ class ecp5:
     self.sir(b"\x3C") # LSC_READ_STATUS
     self.sdr0(self.i0,response=response)
     status = unpack("<I",response)[0]
-    #self.check_response(status,mask=0x2100,expected=0x100,message="FAIL status")
     done = True
     if (status & 0x2100) != 0x100:
       done = False
@@ -396,27 +399,7 @@ class ecp5:
   # FPGA will enter flashing mode
   # TAP should be in "select DR scan" state
   def flash_open(self):
-    self.spi_jtag_on()
-    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
-    self.bitbang_jtag_on()
-    self.led.on()
-    self.reset_tap()
-    self.runtest_idle(1,0)
-    #self.sir(b"\xE0") # read IDCODE
-    #self.sdr(pack("<I",0), expected=pack("<I",0), message="IDCODE")
-    self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
-    self.sdr0(bytearray([0xFF for i in range(64)]))
-    self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
-    self.sdr0(b"\x00", idle=(2,10))
-    self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
-    status = self.i0
-    self.sdr0(self.i0,response=status)
-    self.check_response(unpack("<I",status)[0], mask=0x24040, expected=0, message="FAIL status")
-    self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
-    self.sdr0(b"\x01", idle=(2,10))
-    self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
-    self.sdr0(self.i0,response=status)
-    self.check_response(unpack("<I",status)[0], mask=0xB000, expected=0, message="FAIL status")
+    self.common_open()
     self.reset_tap()
     self.runtest_idle(1,0)
     self.sir(b"\xFF", idle=(32,0)) # BYPASS
@@ -442,8 +425,9 @@ class ecp5:
   def flash_erase_block(self, addr=0):
     self.sdr0(b"\x60") # SPI WRITE ENABLE
     # some chips won't clear WIP without this:
-    #self.sdr(pack("<H",0x00A0), mask=pack("<H",0xC100), expected=pack("<H",0x4000)) # READ STATUS REGISTER
-    self.sdr0(pack("<H",0x00A0))
+    status = pack("<H",0x00A0) # READ STATUS REGISTER
+    self.sdr0(status, response=status)
+    self.check_response(unpack("<H",status)[0],mask=0xC100,expected=0x4000)
     sdr = pack(">I", (self.flash_erase_cmd << 24) | (addr & 0xFFFFFF))
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR

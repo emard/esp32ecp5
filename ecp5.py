@@ -108,30 +108,30 @@ class ecp5:
     self.tck.off()
     self.tck.on()
 
-  @micropython.viper
-  def send_read_data_byte(self, val:int, last:int) -> int:
-    byte = 0
-    self.tms.off()
-    for nf in range(7):
-      if (val >> nf) & 1:
-        self.tdi.on()
-      else:
-        self.tdi.off()
-      self.tck.off()
-      self.tck.on()
-      if self.tdo.value():
-        byte |= 1 << nf
-    if last:
-      self.tms.on()
-    if (val >> 7) & 1:
-      self.tdi.on()
-    else:
-      self.tdi.off()
-    self.tck.off()
-    self.tck.on()
-    if self.tdo.value():
-        byte |= 1 << 7
-    return byte
+#  @micropython.viper
+#  def send_read_data_byte(self, val:int, last:int) -> int:
+#    byte = 0
+#    self.tms.off()
+#    for nf in range(7):
+#      if (val >> nf) & 1:
+#        self.tdi.on()
+#      else:
+#        self.tdi.off()
+#      self.tck.off()
+#      self.tck.on()
+#      if self.tdo.value():
+#        byte |= 1 << nf
+#    if last:
+#      self.tms.on()
+#    if (val >> 7) & 1:
+#      self.tdi.on()
+#    else:
+#      self.tdi.off()
+#    self.tck.off()
+#    self.tck.on()
+#    if self.tdo.value():
+#        byte |= 1 << 7
+#    return byte
 
   @micropython.viper
   def send_read_data_buf(self, buf, last:int, w:ptr8):
@@ -142,7 +142,7 @@ class ecp5:
     for i in range(l-1):
       byte = 0
       val = p[i]
-      for nf in range(7):
+      for nf in range(8):
         if (val >> nf) & 1:
           self.tdi.on()
         else:
@@ -231,11 +231,18 @@ class ecp5:
     else:
       self.send_tms(1) # -> select DR scan
 
-  # "light" sdr, when response can be ignored
-  def sdr0(self, sdr, idle=False):
+  # "light" sdr can write data to "response" buffer
+  # using ptr8 pointer. "response" can be same as "sdr"
+  # but always take care, it is writing to "response"
+  # using ptr8 pointers!
+  def sdr0(self, sdr, response=False, idle=False):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.send_read_data_buf(sdr, 1, 0) # -> exit 1 DR
+    if response:
+      if int(len(response)) >= int(len(sdr)):
+        self.send_read_data_buf(sdr, 1, addressof(response))
+    else:
+      self.send_read_data_buf(sdr, 1, 0) # -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -250,46 +257,46 @@ class ecp5:
   # TAP should be in "select DR scan" state
   # TAP returns to "select DR scan" state
   # return value "True" if error, "False" if no error
-  def sdr(self, sdr, mask=False, expected=False, message="", drpause_ms=False, idle=False):
-    self.send_tms(0) # -> capture DR
-    self.send_tms(0) # -> shift DR
-    tdo_mismatch = False
-    response = b""
-    if expected:
-      for byte in sdr[:-1]:
-        response += bytes([self.send_read_data_byte(byte,0)]) # not last
-      response += bytes([self.send_read_data_byte(sdr[-1],1)]) # last, exit 1 DR
-      if mask:
-        for i in range(len(expected)):
-          if (response[i] & mask[i]) != expected[i]:
-            tdo_mismatch = True
-      else:
-        for i in range(len(expected)):
-          if response[i] != expected[i]:
-            tdo_mismatch = True
-      if tdo_mismatch:
-        if mask:
-          self.print_hex_reverse(response, head="0x", tail=" & ")
-          self.print_hex_reverse(mask, head="0x", tail=" != ")
-        else:
-          self.print_hex_reverse(response, head="0x", tail=" != ")
-        self.print_hex_reverse(expected, head="0x", tail="")
-        print(" ("+message+")")
-    else: # no print, faster
-      for byte in sdr[:-1]:
-        response += bytes([self.send_read_data_byte(byte,0)]) # not last
-      response += bytes([self.send_read_data_byte(sdr[-1],1)]) # last, exit 1 DR
-    self.send_tms(0) # -> pause DR
-    if drpause_ms:
-      sleep_ms(drpause_ms)
-    self.send_tms(1) # -> exit 2 DR
-    self.send_tms(1) # -> update DR
-    if idle:
-      #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
-      self.runtest_idle(idle[0]+1, idle[1])
-    else:
-      self.send_tms(1) # -> select DR scan
-    return response
+#  def sdr(self, sdr, mask=False, expected=False, message="", drpause_ms=False, idle=False):
+#    self.send_tms(0) # -> capture DR
+#    self.send_tms(0) # -> shift DR
+#    tdo_mismatch = False
+#    response = b""
+#    if expected:
+#      for byte in sdr[:-1]:
+#        response += bytes([self.send_read_data_byte(byte,0)]) # not last
+#      response += bytes([self.send_read_data_byte(sdr[-1],1)]) # last, exit 1 DR
+#      if mask:
+#        for i in range(len(expected)):
+#          if (response[i] & mask[i]) != expected[i]:
+#            tdo_mismatch = True
+#      else:
+#        for i in range(len(expected)):
+#          if response[i] != expected[i]:
+#            tdo_mismatch = True
+#      if tdo_mismatch:
+#        if mask:
+#          self.print_hex_reverse(response, head="0x", tail=" & ")
+#          self.print_hex_reverse(mask, head="0x", tail=" != ")
+#        else:
+#          self.print_hex_reverse(response, head="0x", tail=" != ")
+#        self.print_hex_reverse(expected, head="0x", tail="")
+#        print(" ("+message+")")
+#    else: # no print, faster
+#      for byte in sdr[:-1]:
+#        response += bytes([self.send_read_data_byte(byte,0)]) # not last
+#      response += bytes([self.send_read_data_byte(sdr[-1],1)]) # last, exit 1 DR
+#    self.send_tms(0) # -> pause DR
+#    if drpause_ms:
+#      sleep_ms(drpause_ms)
+#    self.send_tms(1) # -> exit 2 DR
+#    self.send_tms(1) # -> update DR
+#    if idle:
+#      #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
+#      self.runtest_idle(idle[0]+1, idle[1])
+#    else:
+#      self.send_tms(1) # -> select DR scan
+#    return response
 
   def idcode(self):
     self.bitbang_jtag_on()
@@ -297,7 +304,8 @@ class ecp5:
     self.reset_tap()
     self.runtest_idle(1,0)
     self.sir(b"\xE0")
-    id_bytes = self.sdr(pack("<I",0))
+    id_bytes = pack("<I",0)
+    self.sdr0(id_bytes, response=id_bytes)
     self.led.off()
     self.bitbang_jtag_off()
     return unpack("<I", id_bytes)[0]
@@ -319,11 +327,13 @@ class ecp5:
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
     self.sdr0(b"\x00", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
-    self.sdr(pack("<I",0), mask=pack("<I",0x00024040), expected=pack("<I",0), message="FAIL status")
+    #self.sdr(pack("<I",0), mask=pack("<I",0x00024040), expected=pack("<I",0), message="FAIL status")
+    self.sdr0(pack("<I",0))
     self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
     self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
-    self.sdr(pack("<I",0), mask=pack("<I",0x0000B000), expected=pack("<I",0), message="FAIL status")
+    #self.sdr(pack("<I",0), mask=pack("<I",0x0000B000), expected=pack("<I",0), message="FAIL status")
+    self.sdr0(pack("<I",0))
     self.sir(b"\x46") # LSC_INIT_ADDRESS
     self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x7A") # LSC_BITSTREAM_BURST
@@ -358,16 +368,18 @@ class ecp5:
     self.runtest_idle(100, 10)
     # ---------- bitstream end -----------
     self.sir(b"\xC0", idle=(2,1)) # read usercode
-    self.sdr(pack("<I",0), expected=pack("<I",0), message="FAIL usercode")
+    #self.sdr(pack("<I",0), expected=pack("<I",0), message="FAIL usercode")
+    self.sdr0(pack("<I",0))
     self.sir(b"\x26", idle=(2,200)) # ISC DISABLE
     self.sir(b"\xFF", idle=(2,1)) # BYPASS
     self.sir(b"\x3C") # LSC_READ_STATUS
     mask = pack("<I",0x00002100)
     expected = pack("<I",0x00000100)
-    response = self.sdr(pack("<I",0), mask=mask, expected=expected, message="FAIL bitstream")
+    status = pack("<I",0)
+    self.sdr0(status, response=status)
     done = True
-    for i in range(len(response)):
-      if (response[i] & mask[i]) != expected[i]:
+    for i in range(len(status)):
+      if (status[i] & mask[i]) != expected[i]:
         done = False
     self.spi_jtag_off()
     self.reset_tap()
@@ -392,11 +404,13 @@ class ecp5:
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
     self.sdr0(b"\x00", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
-    self.sdr(pack("<I",0), mask=pack("<I",0x00024040), expected=pack("<I",0), message="FAIL status")
+    #self.sdr(pack("<I",0), mask=pack("<I",0x00024040), expected=pack("<I",0), message="FAIL status")
+    self.sdr0(pack("<I",0))
     self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
     self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
-    self.sdr(pack("<I",0), mask=pack("<I",0x0000B000), expected=pack("<I",0), message="FAIL status")
+    #self.sdr(pack("<I",0), mask=pack("<I",0x0000B000), expected=pack("<I",0), message="FAIL status")
+    self.sdr0(pack("<I",0))
     self.reset_tap()
     self.runtest_idle(1,0)
     self.sir(b"\xFF", idle=(32,0)) # BYPASS
@@ -410,18 +424,20 @@ class ecp5:
   def flash_wait_status(self):
     retry=10
     while retry > 0:
-      status = self.sdr(pack("<H",0x00A0)) # READ STATUS REGISTER
+      status = pack("<H",0x00A0)
+      self.sdr0(status, response=status) # READ STATUS REGISTER
       if (status[1] & 0xC1) == 0:
         break
       sleep_ms(50)
       retry -= 1
-    if retry <= 0:
-      self.sdr(pack("<H",0x00A0), mask=pack("<H",0xC100), expected=pack("<H",0)) # READ STATUS REGISTER
+    #if retry <= 0:
+    #  self.sdr(pack("<H",0x00A0), mask=pack("<H",0xC100), expected=pack("<H",0)) # READ STATUS REGISTER
 
   def flash_erase_block(self, addr=0):
     self.sdr0(b"\x60") # SPI WRITE ENABLE
     # some chips won't clear WIP without this:
-    self.sdr(pack("<H",0x00A0), mask=pack("<H",0xC100), expected=pack("<H",0x4000)) # READ STATUS REGISTER
+    #self.sdr(pack("<H",0x00A0), mask=pack("<H",0xC100), expected=pack("<H",0x4000)) # READ STATUS REGISTER
+    self.sdr0(pack("<H",0x00A0))
     sdr = pack(">I", (self.flash_erase_cmd << 24) | (addr & 0xFFFFFF))
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR

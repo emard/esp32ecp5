@@ -373,14 +373,14 @@ class ecp5:
     self.sir(b"\x26", idle=(2,200)) # ISC DISABLE
     self.sir(b"\xFF", idle=(2,1)) # BYPASS
     self.sir(b"\x3C") # LSC_READ_STATUS
-    mask = pack("<I",0x00002100)
-    expected = pack("<I",0x00000100)
-    status = pack("<I",0)
+    #mask = pack("<I",0x00002100)
+    #expected = pack("<I",0x00000100)
+    status = bytearray(4) # = pack("<I",0)
     self.sdr0(status, response=status)
+    istatus = unpack("<I",status)[0]
     done = True
-    for i in range(len(status)):
-      if (status[i] & mask[i]) != expected[i]:
-        done = False
+    if (istatus & 0x2100) != 0x100:
+      done = False
     self.spi_jtag_off()
     self.reset_tap()
     self.led.off()

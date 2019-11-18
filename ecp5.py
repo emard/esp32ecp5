@@ -8,6 +8,7 @@ from time import ticks_ms, sleep_ms
 from machine import SPI, Pin
 from micropython import const
 from struct import pack, unpack
+from uctypes import addressof
 
 class ecp5:
 
@@ -133,6 +134,38 @@ class ecp5:
     return byte
 
   @micropython.viper  
+  def send_data_buf(self, buf):
+    p = ptr8(addressof(buf))
+    l = int(len(buf))
+    val = 0
+    self.tms.off()
+    for i in range(l-1):
+      val = p[i]
+      for nf in range(7):
+        if (val >> nf) & 1:
+          self.tdi.on()
+        else:
+          self.tdi.off()
+        self.tck.off()
+        self.tck.on()
+    val = p[l-1] # last byte
+    for nf in range(7): # first 7 bits
+      if (val >> nf) & 1:
+        self.tdi.on()
+      else:
+        self.tdi.off()
+      self.tck.off()
+      self.tck.on()
+    # last bit
+    self.tms.on()
+    if (val >> 7) & 1:
+      self.tdi.on()
+    else:
+      self.tdi.off()
+    self.tck.off()
+    self.tck.on()
+
+  @micropython.viper  
   def send_data_byte_reverse(self, val:int, last:int, bits:int):
     self.tms.off()
     for nf in range(bits-1):
@@ -175,9 +208,10 @@ class ecp5:
     self.send_tms(1) # -> select IR scan
     self.send_tms(0) # -> capture IR
     self.send_tms(0) # -> shift IR
-    for byte in sir[:-1]:
-      self.send_read_data_byte(byte,0) # not last
-    self.send_read_data_byte(sir[-1],1) # last, exit 1 IR
+    self.send_data_buf(sir)
+#    for byte in sir[:-1]:
+#      self.send_read_data_byte(byte,0) # not last
+#    self.send_read_data_byte(sir[-1],1) # last, exit 1 IR
     self.send_tms(0) # -> pause IR
     self.send_tms(1) # -> exit 2 IR
     self.send_tms(1) # -> update IR

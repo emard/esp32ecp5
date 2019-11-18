@@ -376,7 +376,7 @@ class ecp5:
     #self.sir(b"\xE0") # read IDCODE
     #self.sdr(pack("<I",0), expected=pack("<I",0), message="IDCODE")
     self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
-    self.sdr0([0xFF for i in range(64)])
+    self.sdr0(bytearray([0xFF for i in range(64)]))
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
     self.sdr0(b"\x00", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS

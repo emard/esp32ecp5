@@ -89,15 +89,17 @@ class ecp5:
     for n in range(len(block)):
       print("%02X" % block[len(block)-n-1], end="")
     print(tail, end="")
-  
-  def bitreverse(self,x):
+
+  @micropython.viper  
+  def bitreverse(self,x:int) -> int:
     y = 0
     for i in range(8):
-        if (x >> (7 - i)) & 1 == 1:
+        if (x >> (7 - i)) & 1:
             y |= (1 << i)
     return y
   
-  def send_tms(self, tms):
+  @micropython.viper  
+  def send_tms(self, tms:int):
     if tms:
       self.tms.on()
     else:
@@ -105,7 +107,8 @@ class ecp5:
     self.tck.off()
     self.tck.on()
 
-  def send_read_data_byte(self, val, last):
+  @micropython.viper  
+  def send_read_data_byte(self, val:int, last:int) -> int:
     byte = 0
     self.tms.off()
     for nf in range(7):
@@ -115,7 +118,8 @@ class ecp5:
         self.tdi.off()
       self.tck.off()
       self.tck.on()
-      byte |= self.tdo.value() << nf
+      if self.tdo.value():
+        byte |= 1 << nf
     if last:
       self.tms.on()
     if (val >> 7) & 1:
@@ -124,10 +128,12 @@ class ecp5:
       self.tdi.off()
     self.tck.off()
     self.tck.on()
-    byte |= self.tdo.value() << 7
+    if self.tdo.value():
+        byte |= 1 << 7
     return byte
 
-  def send_data_byte_reverse(self, val, last, bits=8):
+  @micropython.viper  
+  def send_data_byte_reverse(self, val:int, last:int, bits:int):
     self.tms.off()
     for nf in range(bits-1):
       if (val >> (7-nf)) & 1:
@@ -146,17 +152,19 @@ class ecp5:
     self.tck.on()
     
   # TAP to "reset" state
+  @micropython.viper  
   def reset_tap(self):
     for n in range(6):
       self.send_tms(1) # -> Test Logic Reset
 
   # TAP should be in "idle" state
   # TAP returns to "select DR scan" state
-  def runtest_idle(self, count, duration_ms):
-    leave=ticks_ms() + duration_ms
+  @micropython.viper  
+  def runtest_idle(self, count:int, duration_ms:int):
+    leave=int(ticks_ms()) + duration_ms
     for n in range(count):
       self.send_tms(0) # -> idle
-    while ticks_ms() < leave:
+    while int(ticks_ms()) < leave:
       self.send_tms(0) # -> idle
     self.send_tms(1) # -> select DR scan
   
@@ -376,7 +384,7 @@ class ecp5:
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.swspi.write(sdr[:-1])
-    self.send_data_byte_reverse(sdr[-1],1) # last byte -> exit 1 DR
+    self.send_data_byte_reverse(sdr[-1],1,8) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -391,7 +399,7 @@ class ecp5:
     # self.bitreverse(0x40) = 0x02 -> 0x02000000
     self.swspi.write(pack(">I", 0x02000000 | (addr & 0xFFFFFF)))
     self.swspi.write(block[:-1]) # whole block except last byte
-    self.send_data_byte_reverse(block[-1],1) # last byte -> exit 1 DR
+    self.send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -405,7 +413,7 @@ class ecp5:
     self.send_tms(0) # -> shift DR
     # self.bitreverse(0x40) = 0x02 -> 0x02000000
     # send bits of 0x02 before the TCK glitch
-    self.send_data_byte_reverse(0x02,0,bits=7) # LSB bit 0 not sent now
+    self.send_data_byte_reverse(0x02,0,7) # LSB bit 0 not sent now
     a = pack(">I", addr)
     self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDO=0 as LSB bit
     self.hwspi.write(a[1:4]) # send 3-byte address
@@ -413,7 +421,7 @@ class ecp5:
     # switch from SPI to bitbanging mode
     self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
     self.bitbang_jtag_on()
-    self.send_data_byte_reverse(block[-1],1) # last byte -> exit 1 DR
+    self.send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -428,7 +436,7 @@ class ecp5:
     self.send_tms(0) # -> shift DR
     self.swspi.write(sdr) # send SPI FLASH read command and address
     self.swspi.readinto(data) # read whole block
-    self.send_data_byte_reverse(0,1) # dummy read byte -> exit 1 DR
+    self.send_data_byte_reverse(0,1,8) # dummy read byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -455,7 +463,7 @@ class ecp5:
     # switch from SPI to bitbanging mode
     self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
     self.bitbang_jtag_on()
-    self.send_data_byte_reverse(0,1) # dummy read byte -> exit 1 DR
+    self.send_data_byte_reverse(0,1,8) # dummy read byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR

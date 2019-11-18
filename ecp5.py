@@ -134,7 +134,7 @@ class ecp5:
     return byte
 
   @micropython.viper  
-  def send_data_buf(self, buf):
+  def send_data_buf(self, buf, last:int):
     p = ptr8(addressof(buf))
     l = int(len(buf))
     val = 0
@@ -157,7 +157,8 @@ class ecp5:
       self.tck.off()
       self.tck.on()
     # last bit
-    self.tms.on()
+    if last:
+      self.tms.on()
     if (val >> 7) & 1:
       self.tdi.on()
     else:
@@ -208,10 +209,7 @@ class ecp5:
     self.send_tms(1) # -> select IR scan
     self.send_tms(0) # -> capture IR
     self.send_tms(0) # -> shift IR
-    self.send_data_buf(sir)
-#    for byte in sir[:-1]:
-#      self.send_read_data_byte(byte,0) # not last
-#    self.send_read_data_byte(sir[-1],1) # last, exit 1 IR
+    self.send_data_buf(sir, 1) # -> exit 1 IR
     self.send_tms(0) # -> pause IR
     self.send_tms(1) # -> exit 2 IR
     self.send_tms(1) # -> update IR
@@ -225,9 +223,7 @@ class ecp5:
   def sdr0(self, sdr, idle=False):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    for byte in sdr[:-1]:
-      self.send_read_data_byte(byte,0) # not last
-    self.send_read_data_byte(sdr[-1],1) # last, exit 1 DR
+    self.send_data_buf(sdr, 1) # -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -307,7 +303,7 @@ class ecp5:
     #self.sir(b"\xE0") # read IDCODE
     #self.sdr(pack("<I",0), expected=pack("<I",0), message="IDCODE")
     self.sir(b"\x1C") # LSC_PRELOAD: program Bscan register
-    self.sdr0([0xFF for i in range(64)])
+    self.sdr0(bytearray([0xFF for i in range(64)]))
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
     self.sdr0(b"\x00", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS

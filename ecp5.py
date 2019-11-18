@@ -252,6 +252,10 @@ class ecp5:
       self.runtest_idle(idle[0]+1, idle[1])
     else:
       self.send_tms(1) # -> select DR scan
+  
+  def check_response(self, response, expected, mask=0xFFFFFFFF, message=""):
+    if (response & mask) != expected:
+      print("0x%08X & 0x%08X != 0x%08X %s" % (response,mask,expected,message))
 
   # send SDR data (bytes) and print result
   # if (response & mask)!=expected then report TDO mismatch
@@ -328,13 +332,14 @@ class ecp5:
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
     self.sdr0(b"\x00", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
-    #self.sdr(pack("<I",0), mask=pack("<I",0x00024040), expected=pack("<I",0), message="FAIL status")
-    self.sdr0(self.i0)
+    status = self.i0
+    self.sdr0(self.i0,response=status)
+    self.check_response(unpack("<I",status)[0], mask=0x24040, expected=0, message="FAIL status")
     self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
     self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
-    #self.sdr(pack("<I",0), mask=pack("<I",0x0000B000), expected=pack("<I",0), message="FAIL status")
-    self.sdr0(self.i0)
+    self.sdr0(self.i0,response=status)
+    self.check_response(unpack("<I",status)[0], mask=0xB000, expected=0, message="FAIL status")
     self.sir(b"\x46") # LSC_INIT_ADDRESS
     self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x7A") # LSC_BITSTREAM_BURST
@@ -369,16 +374,17 @@ class ecp5:
     self.runtest_idle(100, 10)
     # ---------- bitstream end -----------
     self.sir(b"\xC0", idle=(2,1)) # read usercode
-    #self.sdr(pack("<I",0), expected=pack("<I",0), message="FAIL usercode")
-    self.sdr0(self.i0)
+    response = self.i0
+    self.sdr0(self.i0,response=response)
+    self.check_response(unpack("<I",response)[0],expected=0,message="FAIL usercode")
     self.sir(b"\x26", idle=(2,200)) # ISC DISABLE
     self.sir(b"\xFF", idle=(2,1)) # BYPASS
     self.sir(b"\x3C") # LSC_READ_STATUS
-    status = self.i0 # = pack("<I",0)
-    self.sdr0(status, response=status)
-    istatus = unpack("<I",status)[0]
+    self.sdr0(self.i0,response=response)
+    status = unpack("<I",response)[0]
+    #self.check_response(status,mask=0x2100,expected=0x100,message="FAIL status")
     done = True
-    if (istatus & 0x2100) != 0x100:
+    if (status & 0x2100) != 0x100:
       done = False
     self.spi_jtag_off()
     self.reset_tap()
@@ -403,13 +409,14 @@ class ecp5:
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
     self.sdr0(b"\x00", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
-    #self.sdr(pack("<I",0), mask=pack("<I",0x00024040), expected=pack("<I",0), message="FAIL status")
-    self.sdr0(self.i0)
+    status = self.i0
+    self.sdr0(self.i0,response=status)
+    self.check_response(unpack("<I",status)[0], mask=0x24040, expected=0, message="FAIL status")
     self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
     self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
-    #self.sdr(pack("<I",0), mask=pack("<I",0x0000B000), expected=pack("<I",0), message="FAIL status")
-    self.sdr0(self.i0)
+    self.sdr0(self.i0,response=status)
+    self.check_response(unpack("<I",status)[0], mask=0xB000, expected=0, message="FAIL status")
     self.reset_tap()
     self.runtest_idle(1,0)
     self.sir(b"\xFF", idle=(32,0)) # BYPASS

@@ -91,7 +91,7 @@ class ecp5:
       print("%02X" % block[len(block)-n-1], end="")
     print(tail, end="")
 
-  @micropython.viper  
+  @micropython.viper
   def bitreverse(self,x:int) -> int:
     y = 0
     for i in range(8):
@@ -99,7 +99,7 @@ class ecp5:
             y |= (1 << i)
     return y
   
-  @micropython.viper  
+  @micropython.viper
   def send_tms(self, tms:int):
     if tms:
       self.tms.on()
@@ -108,7 +108,7 @@ class ecp5:
     self.tck.off()
     self.tck.on()
 
-  @micropython.viper  
+  @micropython.viper
   def send_read_data_byte(self, val:int, last:int) -> int:
     byte = 0
     self.tms.off()
@@ -133,13 +133,14 @@ class ecp5:
         byte |= 1 << 7
     return byte
 
-  @micropython.viper  
-  def send_data_buf(self, buf, last:int):
+  @micropython.viper
+  def send_read_data_buf(self, buf, last:int, w:ptr8):
     p = ptr8(addressof(buf))
     l = int(len(buf))
     val = 0
     self.tms.off()
     for i in range(l-1):
+      byte = 0
       val = p[i]
       for nf in range(7):
         if (val >> nf) & 1:
@@ -148,7 +149,12 @@ class ecp5:
           self.tdi.off()
         self.tck.off()
         self.tck.on()
-    val = p[l-1] # last byte
+        if self.tdo.value():
+          byte |= 1 << nf
+      if int(w):
+        p[i] = byte # write byte
+    byte = 0
+    val = p[l-1] # read last byte
     for nf in range(7): # first 7 bits
       if (val >> nf) & 1:
         self.tdi.on()
@@ -156,6 +162,8 @@ class ecp5:
         self.tdi.off()
       self.tck.off()
       self.tck.on()
+      if self.tdo.value():
+        byte |= 1 << nf
     # last bit
     if last:
       self.tms.on()
@@ -165,8 +173,12 @@ class ecp5:
       self.tdi.off()
     self.tck.off()
     self.tck.on()
+    if self.tdo.value():
+      byte |= 1 << 7
+    if int(w):
+      p[l-1] = byte # write last byte
 
-  @micropython.viper  
+  @micropython.viper
   def send_data_byte_reverse(self, val:int, last:int, bits:int):
     self.tms.off()
     for nf in range(bits-1):
@@ -186,14 +198,14 @@ class ecp5:
     self.tck.on()
     
   # TAP to "reset" state
-  @micropython.viper  
+  @micropython.viper
   def reset_tap(self):
     for n in range(6):
       self.send_tms(1) # -> Test Logic Reset
 
   # TAP should be in "idle" state
   # TAP returns to "select DR scan" state
-  @micropython.viper  
+  @micropython.viper
   def runtest_idle(self, count:int, duration_ms:int):
     leave=int(ticks_ms()) + duration_ms
     for n in range(count):
@@ -209,7 +221,7 @@ class ecp5:
     self.send_tms(1) # -> select IR scan
     self.send_tms(0) # -> capture IR
     self.send_tms(0) # -> shift IR
-    self.send_data_buf(sir, 1) # -> exit 1 IR
+    self.send_read_data_buf(sir, 1, 0) # -> exit 1 IR
     self.send_tms(0) # -> pause IR
     self.send_tms(1) # -> exit 2 IR
     self.send_tms(1) # -> update IR
@@ -223,7 +235,7 @@ class ecp5:
   def sdr0(self, sdr, idle=False):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.send_data_buf(sdr, 1) # -> exit 1 DR
+    self.send_read_data_buf(sdr, 1, 0) # -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR

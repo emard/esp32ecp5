@@ -136,6 +136,23 @@ use it as:
 
     ftpecp5prog blink.bit
 
+If FTP server is running and you try to program from webrepl and
+it fails with a memory allocation error:
+
+    ecp5.flash("blink.bit.gz")
+    MemoryError: memory allocation failed, allocating 32768 bytes
+
+Yes it happens to me all the time :). "esp32ecp5" constantly runs near out of memory.
+Either disable FTP server or try workaround from ftp> commandline to issue any
+"site" command just to let FTP server import ecp5 and then
+memory situation will be better for ecp5.flash() from webrepl
+
+    ... linux commandline
+    ftp> site blink.bit.gz
+    ... webrepl
+    import ecp5
+    ecp5.flash("blink.bit.gz")
+
 # JTAG info
 
 [JTAG STATE GRAPH](https://www.xjtag.com/about-jtag/jtag-a-technical-overview/tap_state_machine1)

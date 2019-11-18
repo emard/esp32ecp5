@@ -79,6 +79,7 @@ class ecp5:
     self.gpio_dummy = const(17)
     self.progress = False
     self.init_pinout_jtag()
+    self.i0 = bytearray(4) # often needed
     #self.init_pinout_sd()
 
 #  def __call__(self):
@@ -304,7 +305,7 @@ class ecp5:
     self.reset_tap()
     self.runtest_idle(1,0)
     self.sir(b"\xE0")
-    id_bytes = pack("<I",0)
+    id_bytes = self.i0
     self.sdr0(id_bytes, response=id_bytes)
     self.led.off()
     self.bitbang_jtag_off()
@@ -328,12 +329,12 @@ class ecp5:
     self.sdr0(b"\x00", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     #self.sdr(pack("<I",0), mask=pack("<I",0x00024040), expected=pack("<I",0), message="FAIL status")
-    self.sdr0(pack("<I",0))
+    self.sdr0(self.i0)
     self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
     self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     #self.sdr(pack("<I",0), mask=pack("<I",0x0000B000), expected=pack("<I",0), message="FAIL status")
-    self.sdr0(pack("<I",0))
+    self.sdr0(self.i0)
     self.sir(b"\x46") # LSC_INIT_ADDRESS
     self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x7A") # LSC_BITSTREAM_BURST
@@ -369,13 +370,11 @@ class ecp5:
     # ---------- bitstream end -----------
     self.sir(b"\xC0", idle=(2,1)) # read usercode
     #self.sdr(pack("<I",0), expected=pack("<I",0), message="FAIL usercode")
-    self.sdr0(pack("<I",0))
+    self.sdr0(self.i0)
     self.sir(b"\x26", idle=(2,200)) # ISC DISABLE
     self.sir(b"\xFF", idle=(2,1)) # BYPASS
     self.sir(b"\x3C") # LSC_READ_STATUS
-    #mask = pack("<I",0x00002100)
-    #expected = pack("<I",0x00000100)
-    status = bytearray(4) # = pack("<I",0)
+    status = self.i0 # = pack("<I",0)
     self.sdr0(status, response=status)
     istatus = unpack("<I",status)[0]
     done = True
@@ -405,12 +404,12 @@ class ecp5:
     self.sdr0(b"\x00", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     #self.sdr(pack("<I",0), mask=pack("<I",0x00024040), expected=pack("<I",0), message="FAIL status")
-    self.sdr0(pack("<I",0))
+    self.sdr0(self.i0)
     self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
     self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     #self.sdr(pack("<I",0), mask=pack("<I",0x0000B000), expected=pack("<I",0), message="FAIL status")
-    self.sdr0(pack("<I",0))
+    self.sdr0(self.i0)
     self.reset_tap()
     self.runtest_idle(1,0)
     self.sir(b"\xFF", idle=(32,0)) # BYPASS

@@ -408,20 +408,6 @@ class ecp5:
 #    self.flash_wait_status()
 
   # data is bytearray of to-be-read length
-#  def flash_read_block(self, data, addr=0):
-#    # 0x03 is SPI flash read command
-#    sdr = pack(">I", 0x03000000 | (addr & 0xFFFFFF))
-#    self.send_tms(0) # -> capture DR
-#    self.send_tms(0) # -> shift DR
-#    self.swspi.write(sdr) # send SPI FLASH read command and address
-#    self.swspi.readinto(data) # read whole block
-#    self.send_data_byte_reverse(0,1,8) # dummy read byte -> exit 1 DR
-#    self.send_tms(0) # -> pause DR
-#    self.send_tms(1) # -> exit 2 DR
-#    self.send_tms(1) # -> update DR
-#    self.send_tms(1) # -> select DR scan
-
-  # data is bytearray of to-be-read length
   def flash_fast_read_block(self, data, addr=0):
     # 0x0B is SPI flash fast read command
     sdr = pack(">I", 0x0B000000 | (addr & 0xFFFFFF))
@@ -515,65 +501,11 @@ class ecp5:
       return uzlib.DecompIO(s,31)
     return s
 
-#  def program_file(self, filename, gz=False):
-#    with open(filename, "rb") as filedata:
-#      if gz:
-#        import uzlib
-#        return self.program_loop(uzlib.DecompIO(filedata,31),blocksize=4096)
-#      else:
-#        return self.program_loop(filedata,blocksize=16384)
-
-#  def program_web(self, url, gz=False):
-#    import socket
-#    _, _, host, path = url.split('/', 3)
-#    addr = socket.getaddrinfo(host, 80)[0][-1]
-#    s = socket.socket()
-#    s.connect(addr)
-#    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\nAccept:  image/*\r\n\r\n' % (path, host), 'utf8'))
-#    for i in range(100): # read first 100 lines searching for
-#      if len(s.readline()) < 3: # first empty line (contains "\r\n")
-#        break
-#    if gz:
-#      import uzlib
-#      done = self.program_loop(uzlib.DecompIO(s,31),blocksize=4096)
-#    else:
-#      done = self.program_loop(s,blocksize=16384)
-#    s.close()
-#    return done
-
   # data is bytearray of to-be-read length
   def flash_read(self, data, addr=0):
     self.flash_open()
     self.flash_fast_read_block(data, addr)
     self.flash_close()
-
-  # force erase and write
-  # wears flash even if overwriting the same data
-  # needs less buffering, can use 64K erase block
-#  def flash_loop_force(self, filedata, addr=0):
-#    addr_mask = self.flash_erase_size-1
-#    if addr & addr_mask:
-#      print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (self.flash_erase_size, 0xFFFFFF & ~addr_mask))
-#      return
-#    addr = addr & 0xFFFFFF & ~addr_mask # rounded to even 64K (erase block)
-#    self.flash_open()
-#    bytes_uploaded = 0
-#    self.stopwatch_start()
-#    block = bytearray(self.flash_write_size)
-#    while True:
-#      if filedata.readinto(block):
-#        if (bytes_uploaded % self.flash_erase_size) == 0:
-#          self.flash_erase_block(addr=addr+bytes_uploaded)
-#        self.flash_write_block(block, addr=addr+bytes_uploaded)
-#        if self.progress:
-#          print(".",end="")
-#        bytes_uploaded += len(block)
-#      else:
-#        if self.progress:
-#          print("*")
-#        break
-#    self.stopwatch_stop(bytes_uploaded)
-#    return self.flash_close()
 
   # accelerated compare flash and file block
   # return value
@@ -649,32 +581,6 @@ class ecp5:
     self.flash_close()
     return retry >= 0 # True if successful
 
-#  def flash_file(self, filename, addr=0, gz=False):
-#    with open(filename, "rb") as filedata:
-#      if gz:
-#        import uzlib
-#        return self.flash_loop_clever(uzlib.DecompIO(filedata,31),addr)
-#      else:
-#        return self.flash_loop_clever(filedata,addr)
-
-#  def flash_web(self, url, addr=0, gz=False):
-#    import socket
-#    _, _, host, path = url.split('/', 3)
-#    iaddr = socket.getaddrinfo(host, 80)[0][-1]
-#    s = socket.socket()
-#    s.connect(iaddr)
-#    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\nAccept:  image/*\r\n\r\n' % (path, host), 'utf8'))
-#    for i in range(100): # read first 100 lines searching for
-#      if len(s.readline()) < 3: # first empty line (contains "\r\n")
-#        break
-#    if gz:
-#      import uzlib
-#      done = self.flash_loop_clever(uzlib.DecompIO(s,31),addr)
-#    else:
-#      done = self.flash_loop_clever(s,addr)
-#    s.close()
-#    return done
-
 # easier command typing
 def idcode():
   return ecp5().idcode()
@@ -714,6 +620,7 @@ def passthru():
     print("program \"%s\"" % filename)
     filedata = ecp5().open_file(filepath, gz=True)
     return ecp5().program_loop(filedata)
+  return False
 
 print("usage:")
 print("ecp5.flash(\"blink.bit.gz\", addr=0x000000)")

@@ -124,7 +124,7 @@ class ecp5:
         if self.tdo.value():
           byte |= 1 << nf
       if int(w):
-        p[i] = byte # write byte
+        w[i] = byte # write byte
     byte = 0
     val = p[l-1] # read last byte
     for nf in range(7): # first 7 bits
@@ -148,7 +148,7 @@ class ecp5:
     if self.tdo.value():
       byte |= 1 << 7
     if int(w):
-      p[l-1] = byte # write last byte
+      w[l-1] = byte # write last byte
 
   @micropython.viper
   def send_data_byte_reverse(self, val:int, last:int, bits:int):

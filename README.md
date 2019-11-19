@@ -164,10 +164,11 @@ memory situation will be better for ecp5.flash() from webrepl
     [x] from read, decide if block has to be erased
     [x] fix HTTP GET for binary file
     [ ] write disk image to SD card https://docs.micropython.org/en/latest/library/uos.html
-    [ ] reuse currently separated code for file/web bit/bit.gz
+    [x] reuse currently separated code for file/web bit/bit.gz
     [x] integrate with ftp server like https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD
     [ ] integrate with webrepl and file browser like https://github.com/hyperglitch/webrepl
     [x] ecp5.prog() should return True if OK, False if FAIL
     [x] optimize send_bit, n-1 bits in loop and last bit outside of loop
     [x] while read flash until same content as file, with retry
     [ ] research if bitstream can be started from non-0 flash address
+    [ ] more progress for flashing

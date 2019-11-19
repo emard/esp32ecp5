@@ -82,9 +82,6 @@ class ecp5:
     self.i0 = bytearray(4) # often needed
     #self.init_pinout_sd()
 
-#  def __call__(self):
-#    some_variable = 0
-    
   # print bytes reverse - appears the same as in SVF file
   def print_hex_reverse(self, block, head="", tail="\n"):
     print(head, end="")
@@ -108,31 +105,6 @@ class ecp5:
       self.tms.off()
     self.tck.off()
     self.tck.on()
-
-#  @micropython.viper
-#  def send_read_data_byte(self, val:int, last:int) -> int:
-#    byte = 0
-#    self.tms.off()
-#    for nf in range(7):
-#      if (val >> nf) & 1:
-#        self.tdi.on()
-#      else:
-#        self.tdi.off()
-#      self.tck.off()
-#      self.tck.on()
-#      if self.tdo.value():
-#        byte |= 1 << nf
-#    if last:
-#      self.tms.on()
-#    if (val >> 7) & 1:
-#      self.tdi.on()
-#    else:
-#      self.tdi.off()
-#    self.tck.off()
-#    self.tck.on()
-#    if self.tdo.value():
-#        byte |= 1 << 7
-#    return byte
 
   @micropython.viper
   def send_read_data_buf(self, buf, last:int, w:ptr8):
@@ -257,52 +229,6 @@ class ecp5:
     if (response & mask) != expected:
       print("0x%08X & 0x%08X != 0x%08X %s" % (response,mask,expected,message))
 
-  # send SDR data (bytes) and print result
-  # if (response & mask)!=expected then report TDO mismatch
-  # TAP should be in "select DR scan" state
-  # TAP returns to "select DR scan" state
-  # return value "True" if error, "False" if no error
-#  def sdr(self, sdr, mask=False, expected=False, message="", drpause_ms=False, idle=False):
-#    self.send_tms(0) # -> capture DR
-#    self.send_tms(0) # -> shift DR
-#    tdo_mismatch = False
-#    response = b""
-#    if expected:
-#      for byte in sdr[:-1]:
-#        response += bytes([self.send_read_data_byte(byte,0)]) # not last
-#      response += bytes([self.send_read_data_byte(sdr[-1],1)]) # last, exit 1 DR
-#      if mask:
-#        for i in range(len(expected)):
-#          if (response[i] & mask[i]) != expected[i]:
-#            tdo_mismatch = True
-#      else:
-#        for i in range(len(expected)):
-#          if response[i] != expected[i]:
-#            tdo_mismatch = True
-#      if tdo_mismatch:
-#        if mask:
-#          self.print_hex_reverse(response, head="0x", tail=" & ")
-#          self.print_hex_reverse(mask, head="0x", tail=" != ")
-#        else:
-#          self.print_hex_reverse(response, head="0x", tail=" != ")
-#        self.print_hex_reverse(expected, head="0x", tail="")
-#        print(" ("+message+")")
-#    else: # no print, faster
-#      for byte in sdr[:-1]:
-#        response += bytes([self.send_read_data_byte(byte,0)]) # not last
-#      response += bytes([self.send_read_data_byte(sdr[-1],1)]) # last, exit 1 DR
-#    self.send_tms(0) # -> pause DR
-#    if drpause_ms:
-#      sleep_ms(drpause_ms)
-#    self.send_tms(1) # -> exit 2 DR
-#    self.send_tms(1) # -> update DR
-#    if idle:
-#      #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
-#      self.runtest_idle(idle[0]+1, idle[1])
-#    else:
-#      self.send_tms(1) # -> select DR scan
-#    return response
-
   def idcode(self):
     self.bitbang_jtag_on()
     self.led.on()
@@ -414,12 +340,13 @@ class ecp5:
     retry=10
     while retry > 0:
       status = pack("<H",0x00A0)
-      self.sdr0(status, response=status) # READ STATUS REGISTER
+      self.sdr0(status,response=status) # READ STATUS REGISTER
       if (status[1] & 0xC1) == 0:
         break
       sleep_ms(50)
       retry -= 1
-    #if retry <= 0:
+    if retry <= 0:
+      print("error write flash block")
     #  self.sdr(pack("<H",0x00A0), mask=pack("<H",0xC100), expected=pack("<H",0)) # READ STATUS REGISTER
 
   def flash_erase_block(self, addr=0):
@@ -454,41 +381,42 @@ class ecp5:
     self.send_tms(1) # -> select DR scan
     self.flash_wait_status()
 
-  # 256-byte write block is too short so this as fast as above
-  def flash_fast_write_block(self, block, addr=0):
-    self.sdr0(b"\x60") # SPI WRITE ENABLE
-    self.send_tms(0) # -> capture DR
-    self.send_tms(0) # -> shift DR
-    # self.bitreverse(0x40) = 0x02 -> 0x02000000
-    # send bits of 0x02 before the TCK glitch
-    self.send_data_byte_reverse(0x02,0,7) # LSB bit 0 not sent now
-    a = pack(">I", addr)
-    self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDO=0 as LSB bit
-    self.hwspi.write(a[1:4]) # send 3-byte address
-    self.hwspi.write(block[:-1]) # whole block except last byte
-    # switch from SPI to bitbanging mode
-    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
-    self.bitbang_jtag_on()
-    self.send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
-    self.send_tms(1) # -> update DR
-    self.send_tms(1) # -> select DR scan
-    self.flash_wait_status()
+  # 256-byte write block is too short for hardware SPI to accelerate
+  # flash_fast_write_block() is actually slower than flash_write_block()
+#  def flash_fast_write_block(self, block, addr=0):
+#    self.sdr0(b"\x60") # SPI WRITE ENABLE
+#    self.send_tms(0) # -> capture DR
+#    self.send_tms(0) # -> shift DR
+#    # self.bitreverse(0x40) = 0x02 -> 0x02000000
+#    # send bits of 0x02 before the TCK glitch
+#    self.send_data_byte_reverse(0x02,0,7) # LSB bit 0 not sent now
+#    a = pack(">I", addr)
+#    self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDO=0 as LSB bit
+#    self.hwspi.write(a[1:4]) # send 3-byte address
+#    self.hwspi.write(block[:-1]) # whole block except last byte
+#    # switch from SPI to bitbanging mode
+#    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
+#    self.bitbang_jtag_on()
+#    self.send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
+#    self.send_tms(0) # -> pause DR
+#    self.send_tms(1) # -> exit 2 DR
+#    self.send_tms(1) # -> update DR
+#    self.send_tms(1) # -> select DR scan
+#    self.flash_wait_status()
 
   # data is bytearray of to-be-read length
-  def flash_read_block(self, data, addr=0):
-    # 0x03 is SPI flash read command
-    sdr = pack(">I", 0x03000000 | (addr & 0xFFFFFF))
-    self.send_tms(0) # -> capture DR
-    self.send_tms(0) # -> shift DR
-    self.swspi.write(sdr) # send SPI FLASH read command and address
-    self.swspi.readinto(data) # read whole block
-    self.send_data_byte_reverse(0,1,8) # dummy read byte -> exit 1 DR
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
-    self.send_tms(1) # -> update DR
-    self.send_tms(1) # -> select DR scan
+#  def flash_read_block(self, data, addr=0):
+#    # 0x03 is SPI flash read command
+#    sdr = pack(">I", 0x03000000 | (addr & 0xFFFFFF))
+#    self.send_tms(0) # -> capture DR
+#    self.send_tms(0) # -> shift DR
+#    self.swspi.write(sdr) # send SPI FLASH read command and address
+#    self.swspi.readinto(data) # read whole block
+#    self.send_data_byte_reverse(0,1,8) # dummy read byte -> exit 1 DR
+#    self.send_tms(0) # -> pause DR
+#    self.send_tms(1) # -> exit 2 DR
+#    self.send_tms(1) # -> update DR
+#    self.send_tms(1) # -> select DR scan
 
   # data is bytearray of to-be-read length
   def flash_fast_read_block(self, data, addr=0):
@@ -597,30 +525,30 @@ class ecp5:
   # force erase and write
   # wears flash even if overwriting the same data
   # needs less buffering, can use 64K erase block
-  def flash_loop_force(self, filedata, addr=0):
-    addr_mask = self.flash_erase_size-1
-    if addr & addr_mask:
-      print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (self.flash_erase_size, 0xFFFFFF & ~addr_mask))
-      return
-    addr = addr & 0xFFFFFF & ~addr_mask # rounded to even 64K (erase block)
-    self.flash_open()
-    bytes_uploaded = 0
-    self.stopwatch_start()
-    block = bytearray(self.flash_write_size)
-    while True:
-      if filedata.readinto(block):
-        if (bytes_uploaded % self.flash_erase_size) == 0:
-          self.flash_erase_block(addr=addr+bytes_uploaded)
-        self.flash_write_block(block, addr=addr+bytes_uploaded)
-        if self.progress:
-          print(".",end="")
-        bytes_uploaded += len(block)
-      else:
-        if self.progress:
-          print("*")
-        break
-    self.stopwatch_stop(bytes_uploaded)
-    return self.flash_close()
+#  def flash_loop_force(self, filedata, addr=0):
+#    addr_mask = self.flash_erase_size-1
+#    if addr & addr_mask:
+#      print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (self.flash_erase_size, 0xFFFFFF & ~addr_mask))
+#      return
+#    addr = addr & 0xFFFFFF & ~addr_mask # rounded to even 64K (erase block)
+#    self.flash_open()
+#    bytes_uploaded = 0
+#    self.stopwatch_start()
+#    block = bytearray(self.flash_write_size)
+#    while True:
+#      if filedata.readinto(block):
+#        if (bytes_uploaded % self.flash_erase_size) == 0:
+#          self.flash_erase_block(addr=addr+bytes_uploaded)
+#        self.flash_write_block(block, addr=addr+bytes_uploaded)
+#        if self.progress:
+#          print(".",end="")
+#        bytes_uploaded += len(block)
+#      else:
+#        if self.progress:
+#          print("*")
+#        break
+#    self.stopwatch_stop(bytes_uploaded)
+#    return self.flash_close()
 
   # clever = read-compare-erase-write
   # prevents flash wear when overwriting the same data

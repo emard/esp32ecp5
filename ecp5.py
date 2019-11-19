@@ -235,7 +235,7 @@ class ecp5:
     self.reset_tap()
     self.runtest_idle(1,0)
     self.sir(b"\xE0")
-    id_bytes = self.i0
+    id_bytes = bytearray(4)
     self.sdr0(id_bytes, response=id_bytes)
     self.led.off()
     self.bitbang_jtag_off()
@@ -256,7 +256,7 @@ class ecp5:
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
     self.sdr0(b"\x00", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
-    status = self.i0
+    status = bytearray(4)
     self.sdr0(self.i0,response=status)
     self.check_response(unpack("<I",status)[0], mask=0x24040, expected=0, message="FAIL status")
     self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
@@ -304,7 +304,7 @@ class ecp5:
     self.runtest_idle(100, 10)
     # ---------- bitstream end -----------
     self.sir(b"\xC0", idle=(2,1)) # read usercode
-    response = self.i0
+    response = bytearray(4)
     self.sdr0(self.i0,response=response)
     self.check_response(unpack("<I",response)[0],expected=0,message="FAIL usercode")
     self.sir(b"\x26", idle=(2,200)) # ISC DISABLE
@@ -338,15 +338,16 @@ class ecp5:
 
   def flash_wait_status(self):
     retry=10
+    read_status_register = pack("<H",0x00A0) # READ STATUS REGISTER
+    status_register = bytearray(2)
     while retry > 0:
-      status = pack("<H",0x00A0)
-      self.sdr0(status,response=status) # READ STATUS REGISTER
-      if (status[1] & 0xC1) == 0:
+      self.sdr0(read_status_register,response=status_register)
+      if (status_register[1] & 0xC1) == 0:
         break
       sleep_ms(50)
       retry -= 1
     if retry <= 0:
-      print("error write flash block")
+      print("error write flash block, status %04X & 0xC1 != 0" % (unpack("<H",status_register))[0])
     #  self.sdr(pack("<H",0x00A0), mask=pack("<H",0xC100), expected=pack("<H",0)) # READ STATUS REGISTER
 
   def flash_erase_block(self, addr=0):

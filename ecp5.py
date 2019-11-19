@@ -616,10 +616,10 @@ def flash_read(addr=0, length=1):
 def passthru():
   idcode = ecp5().idcode()
   if idcode != 0 and idcode != 0xFFFFFFFF:
-    filename = "passthru%08X.bit.gz" % idcode
-    print("program \"%s\"" % filename)
+    filepath = "passthru%08X.bit.gz" % idcode
+    print("ecp5.prog(\"%s\")" % filepath)
     filedata = ecp5().open_file(filepath, gz=True)
-    return ecp5().program_loop(filedata)
+    return ecp5().program_loop(filedata,blocksize=4096)
   return False
 
 print("usage:")

@@ -554,7 +554,8 @@ class ecp5:
 #    return self.flash_close()
 
   # accelerated compare flash and file block
-  # return 0-nothing, 1-must erase, 2-must write, 3-must erase and write
+  # return value
+  # 0-must nothing, 1-must erase, 2-must write, 3-must erase and write
   @micropython.viper
   def compare_flash_file_buf(self, flash_b, file_b) -> int:
     flash_block = ptr8(addressof(flash_b))
@@ -594,22 +595,7 @@ class ecp5:
     flash_block = bytearray(self.flash_erase_size)
     while filedata.readinto(file_block):
         self.flash_fast_read_block(flash_block, addr=addr+bytes_uploaded)
-#        must_erase = False
-#        must_write = False # TODO must_write[i] for each 256 byte block
-        must = 0
-        if flash_block != file_block:
-          must = self.compare_flash_file_buf(flash_block,file_block)
-#          for i in range(len(file_block)):
-#            if (flash_block[i] & file_block[i]) != file_block[i]:
-#              must_erase = True
-#          if must_erase: # erase will reset all bytes to 0xFF
-#            for i in range(len(file_block)):
-#              if file_block[i] != 0xFF:
-#                must_write = True
-#          else: # no erase
-#            for i in range(len(file_block)):
-#              if flash_block[i] != file_block[i]:
-#                must_write = True
+        must = self.compare_flash_file_buf(flash_block,file_block)
         if must & 1: # must_erase:
           self.flash_erase_block(addr=addr+bytes_uploaded)
           count_erase += 1
@@ -665,7 +651,6 @@ def prog(filepath):
     return ecp5().program_web(filepath, gz)
   else:
     return ecp5().program_file(filepath, gz)
-
 
 def flash(filepath, addr=0):
   gz=filepath.endswith(".gz")

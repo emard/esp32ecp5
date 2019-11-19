@@ -171,4 +171,4 @@ memory situation will be better for ecp5.flash() from webrepl
     [x] optimize send_bit, n-1 bits in loop and last bit outside of loop
     [x] while read flash until same content as file, with retry
     [ ] research if bitstream can be started from non-0 flash address
-    [ ] more progress for flashing
+    [x] more progress for flashing

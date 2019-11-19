@@ -79,7 +79,6 @@ class ecp5:
     self.gpio_dummy = const(17)
     self.progress = False
     self.init_pinout_jtag()
-    self.i0 = bytearray(4) # often needed
     #self.init_pinout_sd()
 
   # print bytes reverse - appears the same as in SVF file
@@ -257,12 +256,13 @@ class ecp5:
     self.sdr0(b"\x00", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
     status = bytearray(4)
-    self.sdr0(self.i0,response=status)
+    self.sdr0(status,response=status)
     self.check_response(unpack("<I",status)[0], mask=0x24040, expected=0, message="FAIL status")
     self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
     self.sdr0(b"\x01", idle=(2,10))
     self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
-    self.sdr0(self.i0,response=status)
+    status = bytearray(4)
+    self.sdr0(status,response=status)
     self.check_response(unpack("<I",status)[0], mask=0xB000, expected=0, message="FAIL status")
   
   # call this before sending the bitstram
@@ -305,12 +305,13 @@ class ecp5:
     # ---------- bitstream end -----------
     self.sir(b"\xC0", idle=(2,1)) # read usercode
     response = bytearray(4)
-    self.sdr0(self.i0,response=response)
+    self.sdr0(response,response=response)
     self.check_response(unpack("<I",response)[0],expected=0,message="FAIL usercode")
     self.sir(b"\x26", idle=(2,200)) # ISC DISABLE
     self.sir(b"\xFF", idle=(2,1)) # BYPASS
     self.sir(b"\x3C") # LSC_READ_STATUS
-    self.sdr0(self.i0,response=response)
+    response = bytearray(4)
+    self.sdr0(response,response=response)
     status = unpack("<I",response)[0]
     self.check_response(status,mask=0x2100,expected=0x100,message="FAIL status")
     done = True
@@ -385,26 +386,26 @@ class ecp5:
 
   # 256-byte write block is too short for hardware SPI to accelerate
   # flash_fast_write_block() is actually slower than flash_write_block()
-#  def flash_fast_write_block(self, block, addr=0):
-#    self.sdr0(b"\x60") # SPI WRITE ENABLE
-#    self.send_tms(0) # -> capture DR
-#    self.send_tms(0) # -> shift DR
-#    # self.bitreverse(0x40) = 0x02 -> 0x02000000
-#    # send bits of 0x02 before the TCK glitch
-#    self.send_data_byte_reverse(0x02,0,7) # LSB bit 0 not sent now
-#    a = pack(">I", addr)
-#    self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDO=0 as LSB bit
-#    self.hwspi.write(a[1:4]) # send 3-byte address
-#    self.hwspi.write(block[:-1]) # whole block except last byte
-#    # switch from SPI to bitbanging mode
-#    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
-#    self.bitbang_jtag_on()
-#    self.send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
-#    self.send_tms(0) # -> pause DR
-#    self.send_tms(1) # -> exit 2 DR
-#    self.send_tms(1) # -> update DR
-#    self.send_tms(1) # -> select DR scan
-#    self.flash_wait_status()
+  def flash_fast_write_block(self, block, addr=0):
+    self.sdr0(b"\x60") # SPI WRITE ENABLE
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
+    # self.bitreverse(0x40) = 0x02 -> 0x02000000
+    # send bits of 0x02 before the TCK glitch
+    self.send_data_byte_reverse(0x02,0,7) # LSB bit 0 not sent now
+    a = pack(">I", addr)
+    self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDO=0 as LSB bit
+    self.hwspi.write(a[1:4]) # send 3-byte address
+    self.hwspi.write(block[:-1]) # whole block except last byte
+    # switch from SPI to bitbanging mode
+    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
+    self.bitbang_jtag_on()
+    self.send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
+    self.send_tms(1) # -> select DR scan
+    self.flash_wait_status()
 
   # data is bytearray of to-be-read length
 #  def flash_read_block(self, data, addr=0):

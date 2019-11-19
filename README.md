@@ -170,3 +170,4 @@ memory situation will be better for ecp5.flash() from webrepl
     [x] ecp5.prog() should return True if OK, False if FAIL
     [x] optimize send_bit, n-1 bits in loop and last bit outside of loop
     [ ] while read flash until same content as file, with retry
+    [ ] research if bitstream can be started from non-0 flash address

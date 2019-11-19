@@ -594,8 +594,15 @@ class ecp5:
     file_block = bytearray(self.flash_erase_size)
     flash_block = bytearray(self.flash_erase_size)
     while filedata.readinto(file_block):
+      retry = 3
+      while retry >= 0:
         self.flash_fast_read_block(flash_block, addr=addr+bytes_uploaded)
         must = self.compare_flash_file_buf(flash_block,file_block)
+        if must == 0:
+          count_total += 1
+          bytes_uploaded += len(file_block)
+          break
+        retry -= 1
         if must & 1: # must_erase:
           self.flash_erase_block(addr=addr+bytes_uploaded)
           count_erase += 1
@@ -609,19 +616,24 @@ class ecp5:
             write_addr += self.flash_write_size
             block_addr = next_block_addr
           count_write += 1
-        count_total += 1
-        bytes_uploaded += len(file_block)
+        #if not verify:
+        #  count_total += 1
+        #  bytes_uploaded += len(file_block)
+        #  break
+      if retry < 0:
+        break
     self.stopwatch_stop(bytes_uploaded)
     print("%dK blocks: %d total, %d erased, %d written." % (self.flash_erase_size>>10, count_total, count_erase, count_write))
-    return self.flash_close()
+    self.flash_close()
+    return retry >= 0 # True if successful
 
   def flash_file(self, filename, addr=0, gz=False):
     with open(filename, "rb") as filedata:
       if gz:
         import uzlib
-        return self.flash_loop_clever(uzlib.DecompIO(filedata,31),addr=addr)
+        return self.flash_loop_clever(uzlib.DecompIO(filedata,31),addr)
       else:
-        return self.flash_loop_clever(filedata,addr=addr)
+        return self.flash_loop_clever(filedata,addr)
 
   def flash_web(self, url, addr=0, gz=False):
     import socket

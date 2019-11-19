@@ -493,15 +493,14 @@ class ecp5:
     self.stopwatch_stop(bytes_uploaded)
     return self.prog_close()
 
-  def program_file(self, filename, gz=False):
-    with open(filename, "rb") as filedata:
-      if gz:
-        import uzlib
-        return self.program_loop(uzlib.DecompIO(filedata,31),blocksize=4096)
-      else:
-        return self.program_loop(filedata,blocksize=16384)
+  def open_file(self, filename, gz=False):
+    filedata = open(filename, "rb")
+    if gz:
+      import uzlib
+      return uzlib.DecompIO(filedata,31)
+    return filedata
 
-  def program_web(self, url, gz=False):
+  def open_web(self, url, gz=False):
     import socket
     _, _, host, path = url.split('/', 3)
     addr = socket.getaddrinfo(host, 80)[0][-1]
@@ -513,11 +512,34 @@ class ecp5:
         break
     if gz:
       import uzlib
-      done = self.program_loop(uzlib.DecompIO(s,31),blocksize=4096)
-    else:
-      done = self.program_loop(s,blocksize=16384)
-    s.close()
-    return done
+      return uzlib.DecompIO(s,31)
+    return s
+
+#  def program_file(self, filename, gz=False):
+#    with open(filename, "rb") as filedata:
+#      if gz:
+#        import uzlib
+#        return self.program_loop(uzlib.DecompIO(filedata,31),blocksize=4096)
+#      else:
+#        return self.program_loop(filedata,blocksize=16384)
+
+#  def program_web(self, url, gz=False):
+#    import socket
+#    _, _, host, path = url.split('/', 3)
+#    addr = socket.getaddrinfo(host, 80)[0][-1]
+#    s = socket.socket()
+#    s.connect(addr)
+#    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\nAccept:  image/*\r\n\r\n' % (path, host), 'utf8'))
+#    for i in range(100): # read first 100 lines searching for
+#      if len(s.readline()) < 3: # first empty line (contains "\r\n")
+#        break
+#    if gz:
+#      import uzlib
+#      done = self.program_loop(uzlib.DecompIO(s,31),blocksize=4096)
+#    else:
+#      done = self.program_loop(s,blocksize=16384)
+#    s.close()
+#    return done
 
   # data is bytearray of to-be-read length
   def flash_read(self, data, addr=0):
@@ -627,31 +649,31 @@ class ecp5:
     self.flash_close()
     return retry >= 0 # True if successful
 
-  def flash_file(self, filename, addr=0, gz=False):
-    with open(filename, "rb") as filedata:
-      if gz:
-        import uzlib
-        return self.flash_loop_clever(uzlib.DecompIO(filedata,31),addr)
-      else:
-        return self.flash_loop_clever(filedata,addr)
+#  def flash_file(self, filename, addr=0, gz=False):
+#    with open(filename, "rb") as filedata:
+#      if gz:
+#        import uzlib
+#        return self.flash_loop_clever(uzlib.DecompIO(filedata,31),addr)
+#      else:
+#        return self.flash_loop_clever(filedata,addr)
 
-  def flash_web(self, url, addr=0, gz=False):
-    import socket
-    _, _, host, path = url.split('/', 3)
-    iaddr = socket.getaddrinfo(host, 80)[0][-1]
-    s = socket.socket()
-    s.connect(iaddr)
-    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\nAccept:  image/*\r\n\r\n' % (path, host), 'utf8'))
-    for i in range(100): # read first 100 lines searching for
-      if len(s.readline()) < 3: # first empty line (contains "\r\n")
-        break
-    if gz:
-      import uzlib
-      done = self.flash_loop_clever(uzlib.DecompIO(s,31),addr)
-    else:
-      done = self.flash_loop_clever(s,addr)
-    s.close()
-    return done
+#  def flash_web(self, url, addr=0, gz=False):
+#    import socket
+#    _, _, host, path = url.split('/', 3)
+#    iaddr = socket.getaddrinfo(host, 80)[0][-1]
+#    s = socket.socket()
+#    s.connect(iaddr)
+#    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\nAccept:  image/*\r\n\r\n' % (path, host), 'utf8'))
+#    for i in range(100): # read first 100 lines searching for
+#      if len(s.readline()) < 3: # first empty line (contains "\r\n")
+#        break
+#    if gz:
+#      import uzlib
+#      done = self.flash_loop_clever(uzlib.DecompIO(s,31),addr)
+#    else:
+#      done = self.flash_loop_clever(s,addr)
+#    s.close()
+#    return done
 
 # easier command typing
 def idcode():
@@ -660,16 +682,25 @@ def idcode():
 def prog(filepath):
   gz=filepath.endswith(".gz")
   if filepath.startswith("http://"):
-    return ecp5().program_web(filepath, gz)
+    filedata = ecp5().open_web(filepath, gz)
   else:
-    return ecp5().program_file(filepath, gz)
+    filedata = ecp5().open_file(filepath, gz)
+  if filedata:
+    if gz:
+      return ecp5().program_loop(filedata,blocksize=4096)
+    else:
+      return ecp5().program_loop(filedata,blocksize=16384)
+  return False
 
 def flash(filepath, addr=0):
   gz=filepath.endswith(".gz")
   if filepath.startswith("http://"):
-    return ecp5().flash_web(filepath, addr, gz)
+    filedata = ecp5().open_web(filepath, gz)
   else:
-    return ecp5().flash_file(filepath, addr, gz)
+    filedata = ecp5().open_file(filepath, gz)
+  if filedata:
+    return ecp5().flash_loop_clever(filedata,addr)
+  return False
 
 def flash_read(addr=0, length=1):
   data = bytearray(length)
@@ -681,7 +712,8 @@ def passthru():
   if idcode != 0 and idcode != 0xFFFFFFFF:
     filename = "passthru%08X.bit.gz" % idcode
     print("program \"%s\"" % filename)
-    return ecp5().program_file(filename, gz=True)
+    filedata = ecp5().open_file(filepath, gz=True)
+    return ecp5().program_loop(filedata)
 
 print("usage:")
 print("ecp5.flash(\"blink.bit.gz\", addr=0x000000)")

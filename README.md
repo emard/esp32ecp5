@@ -85,11 +85,17 @@ Yes there it is, let's try:
 upload to FLASH will start at byte address specified by "addr".
 which should be 4K even - lower 12 bits must be 0x000
 
-If file ends with "*.gz", it will be decompressed on-the-fly:
+If file ends with "*.gz", it will be decompressed on-the-fly.
 
     linux$ gzip -9 blink.bit
     >>> ecp5.prog("http://192.168.4.2/blink.bit.gz")
     >>> ecp5.flash("blink.bit.gz")
+
+For bitstreams stored on the web server or SD card, 
+".bin" files are recommended, with bitstream compression enabled
+using --compress option from trellis tools.
+For bitstreams stored on ESP32 internal FLASH,
+".bin.gz" is recommended for FLASH space saving.
 
 SD card usage (SPI at gpio 12-15):
 

@@ -546,6 +546,7 @@ class ecp5:
     count_write = 0
     file_block = bytearray(self.flash_erase_size)
     flash_block = bytearray(self.flash_erase_size)
+    progress_char="."
     while filedata.readinto(file_block):
       retry = 3
       while retry >= 0:
@@ -556,7 +557,8 @@ class ecp5:
           if (write_addr & 0xFFFF) == 0:
             print("\r0x%06X %dK " % (write_addr, self.flash_erase_size>>10),end="")
           else:
-            print(".",end="")
+            print(progress_char,end="")
+          progress_char="."
           count_total += 1
           bytes_uploaded += len(file_block)
           break
@@ -565,6 +567,7 @@ class ecp5:
           #print("from 0x%06X erase %dK" % (write_addr, self.flash_erase_size>>10),end="\r")
           self.flash_erase_block(write_addr)
           count_erase += 1
+          progress_char = "e"
         if must & 2: # must_write:
           #print("from 0x%06X write %dK" % (write_addr, self.flash_erase_size>>10),end="\r")
           block_addr = 0
@@ -575,6 +578,7 @@ class ecp5:
             write_addr += self.flash_write_size
             block_addr = next_block_addr
           count_write += 1
+          progress_char = "w"
         #if not verify:
         #  count_total += 1
         #  bytes_uploaded += len(file_block)

@@ -312,6 +312,7 @@ class ecp5:
     self.sir(b"\x3C") # LSC_READ_STATUS
     self.sdr0(self.i0,response=response)
     status = unpack("<I",response)[0]
+    self.check_response(status,mask=0x2100,expected=0x100,message="FAIL status")
     done = True
     if (status & 0x2100) != 0x100:
       done = False
@@ -337,14 +338,14 @@ class ecp5:
     # e.g. 0x1B here is actually 0xD8 in datasheet, 0x60 is is 0x06 etc.
 
   def flash_wait_status(self):
-    retry=10
+    retry=50
     read_status_register = pack("<H",0x00A0) # READ STATUS REGISTER
     status_register = bytearray(2)
     while retry > 0:
       self.sdr0(read_status_register,response=status_register)
       if (status_register[1] & 0xC1) == 0:
         break
-      sleep_ms(50)
+      sleep_ms(1)
       retry -= 1
     if retry <= 0:
       print("error write flash block, status %04X & 0xC1 != 0" % (unpack("<H",status_register))[0])

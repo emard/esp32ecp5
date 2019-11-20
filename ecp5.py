@@ -189,7 +189,8 @@ class ecp5:
   # send SIR command (bytes)
   # TAP should be in "select DR scan" state
   # TAP returns to "select DR scan" state
-  def sir(self, sir, idle=False):
+  @micropython.viper
+  def sir(self, sir):
     self.send_tms(1) # -> select IR scan
     self.send_tms(0) # -> capture IR
     self.send_tms(0) # -> shift IR
@@ -197,11 +198,22 @@ class ecp5:
     self.send_tms(0) # -> pause IR
     self.send_tms(1) # -> exit 2 IR
     self.send_tms(1) # -> update IR
-    if idle:
-      #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
-      self.runtest_idle(idle[0]+1, idle[1])
-    else:
-      self.send_tms(1) # -> select DR scan
+    self.send_tms(1) # -> select DR scan
+
+  # send SIR command (bytes)
+  # TAP should be in "select DR scan" state
+  # TAP returns to "select DR scan" state
+  # finish with n idle cycles during minimum of ms time
+  @micropython.viper
+  def sir_idle(self, sir, n:int, ms:int):
+    self.send_tms(1) # -> select IR scan
+    self.send_tms(0) # -> capture IR
+    self.send_tms(0) # -> shift IR
+    self.send_read_data_buf(sir, 1, 0) # -> exit 1 IR
+    self.send_tms(0) # -> pause IR
+    self.send_tms(1) # -> exit 2 IR
+    self.send_tms(1) # -> update IR
+    self.runtest_idle(n+1, ms) # -> select DR scan
 
   # "light" sdr can write data to "response" buffer
   # using ptr8 pointer. "response" can be same as "sdr"
@@ -254,13 +266,13 @@ class ecp5:
     self.sdr(bytearray([0xFF for i in range(64)]))
     self.sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
     self.sdr(b"\x00", idle=(2,10))
-    self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
+    self.sir_idle(b"\x3C",2,1) # LSC_READ_STATUS
     status = bytearray(4)
     self.sdr(status,response=status)
     self.check_response(unpack("<I",status)[0], mask=0x24040, expected=0, message="FAIL status")
     self.sir(b"\x0E") # ISC_ERASE: Erase the SRAM
     self.sdr(b"\x01", idle=(2,10))
-    self.sir(b"\x3C", idle=(2,1)) # LSC_READ_STATUS
+    self.sir_idle(b"\x3C",2,1) # LSC_READ_STATUS
     status = bytearray(4)
     self.sdr(status,response=status)
     self.check_response(unpack("<I",status)[0], mask=0xB000, expected=0, message="FAIL status")
@@ -303,12 +315,12 @@ class ecp5:
     #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
     self.runtest_idle(100, 10)
     # ---------- bitstream end -----------
-    self.sir(b"\xC0", idle=(2,1)) # read usercode
+    self.sir_idle(b"\xC0",2,1) # read usercode
     response = bytearray(4)
     self.sdr(response,response=response)
     self.check_response(unpack("<I",response)[0],expected=0,message="FAIL usercode")
-    self.sir(b"\x26", idle=(2,200)) # ISC DISABLE
-    self.sir(b"\xFF", idle=(2,1)) # BYPASS
+    self.sir_idle(b"\x26",2,200) # ISC DISABLE
+    self.sir_idle(b"\xFF",2,1) # BYPASS
     self.sir(b"\x3C") # LSC_READ_STATUS
     response = bytearray(4)
     self.sdr(response,response=response)
@@ -330,7 +342,7 @@ class ecp5:
     self.common_open()
     self.reset_tap()
     self.runtest_idle(1,0)
-    self.sir(b"\xFF", idle=(32,0)) # BYPASS
+    self.sir_idle(b"\xFF",32,0) # BYPASS
     self.sir(b"\x3A") # LSC_PROG_SPI
     self.sdr(pack("<H",0x68FE), idle=(32,0))
     # ---------- flashing begin -----------
@@ -439,9 +451,9 @@ class ecp5:
     # switch from SPI to bitbanging
     # ---------- flashing end -----------
     self.sdr(b"\x20") # SPI WRITE DISABLE
-    self.sir(b"\xFF", idle=(100,1)) # BYPASS
-    self.sir(b"\x26", idle=(2,200)) # ISC DISABLE
-    self.sir(b"\xFF", idle=(2,1)) # BYPASS
+    self.sir_idle(b"\xFF",100,1) # BYPASS
+    self.sir_idle(b"\x26",2,200) # ISC DISABLE
+    self.sir_idle(b"\xFF",2,1) # BYPASS
     self.sir(b"\x79") # LSC_REFRESH reload the bitstream from flash
     self.sdr(b"\x00\x00\x00", idle=(2,100))
     self.spi_jtag_off()

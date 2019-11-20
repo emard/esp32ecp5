@@ -622,8 +622,9 @@ def idcode():
   return ecp5().idcode()
 
 def prog(filepath):
+  print(filepath)
   gz=filepath.endswith(".gz")
-  if filepath.startswith("http://"):
+  if filepath.startswith("http://") or filepath.startswith("/http:/"):
     filedata = ecp5().open_web(filepath, gz)
   else:
     filedata = ecp5().open_file(filepath, gz)

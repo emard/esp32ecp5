@@ -131,6 +131,12 @@ it also accepts "site" command:
     ... will program local file to FPGA using
     ... ecp5.prog("filename.bit")
 
+It is possible to directly program a "*.bin" file
+(not gzipped) from "ftp>" prompt directly to FPGA or FLASH
+
+    ftp> put blink.bit fpga
+    ftp> put blink.bit flash
+
 To automate upload from linux shell,
 enable ftp auto-login in "~/.netrc":
 

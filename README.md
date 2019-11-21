@@ -67,7 +67,11 @@ or setup as access point:
 It will prompt to ask few questions:
 Enable "webrepl" by choosing "E".
 Type and repeat any password you like, "webrepl" service will later ask for this password.
-Finally agree to reboot ESP32.
+Finally agree to reboot ESP32. After reboot and successful WiFi connection,
+it will print its IP address. You can always soft-reboot again to see IP
+address if you press Ctrl-D on empty python prompt:
+
+    >>> Ctrl-D
 
 with web browser open [micropython webrepl](http://micropython.org/webrepl),
 enter IP address of ESP32 and upload "ecp5.py", (optionally also "uftpd.py"

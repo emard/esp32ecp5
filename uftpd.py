@@ -301,8 +301,21 @@ class FTP_client:
                 try:
                     data_client = self.open_dataclient()
                     cl.sendall("150 Opened data connection.\r\n")
-                    self.save_file_data(path, data_client,
-                                        "w" if command == "STOR" else "a")
+                    if path == "/fpga":
+                        import ecp5
+                        tap = ecp5.ecp5()
+                        tap.program_stream(data_client,_CHUNK_SIZE)
+                        del tap
+                        data_client.close()
+                    elif path == "/flash":
+                        import ecp5
+                        tap = ecp5.ecp5()
+                        tap.flash_stream(data_client)
+                        del tap
+                        data_client.close()
+                    else:
+                        self.save_file_data(path, data_client,
+                                            "w" if command == "STOR" else "a")
                     # if the next statement is reached,
                     # the data_client was closed.
                     data_client = None
@@ -363,6 +376,15 @@ class FTP_client:
                 try:
                     uos.mkdir(path)
                     cl.sendall('250 OK\r\n')
+                except:
+                    cl.sendall('550 Fail\r\n')
+            elif command == "SITE":
+                try:
+                    import ecp5
+                    if ecp5.prog(path):
+                        cl.sendall('250 OK\r\n')
+                    else:
+                        cl.sendall('550 Fail\r\n')
                 except:
                     cl.sendall('550 Fail\r\n')
             else:

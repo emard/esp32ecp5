@@ -133,6 +133,7 @@ it also accepts "site" command:
 
 It is possible to directly program a "*.bin" file
 (not gzipped) from "ftp>" prompt directly to FPGA or FLASH
+using special destination file name "fpga" or "flash":
 
     ftp> put blink.bit fpga
     ftp> put blink.bit flash

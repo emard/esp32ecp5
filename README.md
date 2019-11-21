@@ -118,8 +118,12 @@ and start it with:
 Besides normal FTP commands like "ls", "cd", "mkdir", "rmdir", "put", "get", "del",
 it also accepts "site" command:
 
+    ftp> site http://192.168.4.2/blink.bit
+    ... will program remote file to FPGA using
+    ... ecp5.prog("/http:/192.168.4.2/blink.bit")
     ftp> site filename.bit
-    ... will run ecp5.prog("filename.bit")
+    ... will program local file to FPGA using
+    ... ecp5.prog("filename.bit")
 
 To automate upload from linux shell,
 enable ftp auto-login in "~/.netrc":

@@ -71,7 +71,7 @@ class ecp5:
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
     self.flash_write_size = const(256)
-    self.flash_erase_size = const(4096) # no ESP32 memory for more at flash_loop_clever()
+    self.flash_erase_size = const(4096) # no ESP32 memory for more at flash_stream()
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
@@ -486,7 +486,7 @@ class ecp5:
       transfer_rate_kBps = bytes_uploaded // elapsed_ms
     print("%d bytes uploaded in %d ms (%d kB/s)" % (bytes_uploaded, elapsed_ms, transfer_rate_kBps))
 
-  def program_loop(self, filedata, blocksize=16384):
+  def program_stream(self, filedata, blocksize=16384):
     self.prog_open()
     bytes_uploaded = 0
     self.stopwatch_start()
@@ -558,7 +558,7 @@ class ecp5:
   # prevents flash wear when overwriting the same data
   # needs more buffers: 4K erase block is max that fits on ESP32
   # TODO reduce buffer usage
-  def flash_loop_clever(self, filedata, addr=0):
+  def flash_stream(self, filedata, addr=0):
     addr_mask = self.flash_erase_size-1
     if addr & addr_mask:
       print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (self.flash_erase_size, 0xFFFFFF & ~addr_mask))
@@ -629,9 +629,9 @@ def prog(filepath):
     filedata = ecp5().open_file(filepath, gz)
   if filedata:
     if gz:
-      return ecp5().program_loop(filedata,blocksize=4096)
+      return ecp5().program_stream(filedata,blocksize=4096)
     else:
-      return ecp5().program_loop(filedata,blocksize=16384)
+      return ecp5().program_stream(filedata,blocksize=16384)
   return False
 
 def flash(filepath, addr=0):
@@ -641,7 +641,7 @@ def flash(filepath, addr=0):
   else:
     filedata = ecp5().open_file(filepath, gz)
   if filedata:
-    return ecp5().flash_loop_clever(filedata,addr)
+    return ecp5().flash_stream(filedata,addr)
   return False
 
 def flash_read(addr=0, length=1):
@@ -655,7 +655,7 @@ def passthru():
     filepath = "passthru%08X.bit.gz" % idcode
     print("ecp5.prog(\"%s\")" % filepath)
     filedata = ecp5().open_file(filepath, gz=True)
-    return ecp5().program_loop(filedata,blocksize=4096)
+    return ecp5().program_stream(filedata,blocksize=4096)
   return False
 
 print("usage:")

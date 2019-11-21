@@ -64,7 +64,7 @@ or setup as access point:
     f.write("import uftpd\n")
     import webrepl_setup
 
-When prompted, enable "webrepl" by choosing "E". When prompted type any 
+When prompted, enable "webrepl" by choosing "E". They type and repeat any 
 password you like, "webrepl" service will later ask for this password.
 Finally agree to reboot ESP32.
 

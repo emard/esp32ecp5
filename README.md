@@ -127,8 +127,31 @@ and start it with:
     import uftpd
     FTP server started on 192.168.4.1:21
 
+Connect with ftp client to ESP32, type ENTER at (empty) password
+
+    ftp 192.168.4.1
+    Connected to 192.168.5.72.
+    220 Hello, this is the ESP8266.
+    230 Logged in.
+    Remote system type is UNIX.
+    Using binary mode to transfer files.
+    ftp>
+
+Try to list files, it should work like this:
+
+    ftp> ls
+    200 OK
+    150 Directory listing:
+    -rw-r--r-- 1 owner group        137 Jan  1 00:03 boot.py
+    -rw-r--r-- 1 owner group        128 Jan  1 00:05 main.py
+    -rw-r--r-- 1 owner group         14 Jan  1 00:05 webrepl_cfg.py
+    -rw-r--r-- 1 owner group      19482 Jan  1 00:09 uftpd.py
+    -rw-r--r-- 1 owner group      22777 Jan  1 00:10 ecp5.py
+    -rw-r--r-- 1 owner group       5505 Jan  1 00:13 passthru21111043.bit.gz
+    226 Done.
+
 Besides normal FTP commands like "ls", "cd", "mkdir", "rmdir", "put", "get", "del",
-it also accepts "site" command:
+it also accepts "site" command to program FPGA or upload to FLASH:
 
     ftp> site http://192.168.4.2/blink.bit
     ... will program remote file to FPGA using

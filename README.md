@@ -48,6 +48,12 @@ setup as client that logs on to WiFi access point (home internet router):
     f.close()
     import webrepl_setup
 
+if client can't connect it will continuoulsy retry,
+printing failure messages. Then it will be difficult to type
+at usb-serial prompt. To stop it, type blindly or copy-paste:
+
+    sta_if.disconnect()
+
 or setup as access point:
 
     f=open("main.py","w")

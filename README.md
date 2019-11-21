@@ -32,8 +32,8 @@ Connect over USB-serial
     screen /dev/ttyUSB0 115200
 
 To automate further use, it is good to setup ESP32 to automatically
-bring up networking and services after power up. At power up, file "main.py"
-is auto-executed.
+bring up networking and services after power up. This is done using
+auto-executable file named "main.py".
 
 Choose either: (copy-paste to usb-serial python prompt ">>>")
 

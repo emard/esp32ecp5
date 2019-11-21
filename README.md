@@ -127,6 +127,11 @@ and start it with:
     import uftpd
     FTP server started on 192.168.4.1:21
 
+Get ftp client. I use only this, other may not work because
+some things are hacky
+
+    apt-get install ftp
+
 Connect with ftp client to ESP32, type ENTER at (empty) password
 
     ftp 192.168.4.1
@@ -149,6 +154,9 @@ Try to list files, it should work like this:
     -rw-r--r-- 1 owner group      22777 Jan  1 00:10 ecp5.py
     -rw-r--r-- 1 owner group       5505 Jan  1 00:13 passthru21111043.bit.gz
     226 Done.
+
+If you don't see listing similar to this, something is incompatible,
+try "passive" FTP mode or another FTP client.
 
 Besides normal FTP commands like "ls", "cd", "mkdir", "rmdir", "put", "get", "del",
 it also accepts "site" command to program FPGA or upload to FLASH:

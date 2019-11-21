@@ -64,8 +64,9 @@ or setup as access point:
     f.write("import uftpd\n")
     import webrepl_setup
 
-Enable it, choose any password as you like (and write or remember it)
-and let it reboot ESP32.
+When prompted, enable "webrepl" by choosing "E". When prompted type any 
+password you like, "webrepl" service will later ask for this password.
+Finally agree to reboot ESP32.
 
 with web browser open [micropython webrepl](http://micropython.org/webrepl),
 enter IP address of ESP32 and upload "ecp5.py", (optionally also "uftpd.py"

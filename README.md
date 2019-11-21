@@ -163,16 +163,17 @@ use it as:
 
     ftpecp5prog 192.168.4.1 blink.bit
 
-If FTP server is running and you try to program from webrepl and
+If FTP server is running and you try to program from "webrepl" and
 it fails with a memory allocation error:
 
     ecp5.flash("blink.bit.gz")
     MemoryError: memory allocation failed, allocating 32768 bytes
 
 Yes it happens to me all the time :). "esp32ecp5" constantly runs near out of memory.
-Either disable FTP server or try workaround from ftp> commandline to issue any
+Either disable FTP server by removing "import uftpd.py" from "main.py" file
+and rebooting, or try workaround from ftp> commandline to issue any
 "site" command just to let FTP server import ecp5 and then
-memory situation will be better for ecp5.flash() from webrepl
+memory situation will be better for ecp5.flash() from "webrepl"
 
     ... linux commandline
     ftp> site blink.bit.gz

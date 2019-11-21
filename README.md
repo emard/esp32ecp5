@@ -147,17 +147,15 @@ enable ftp auto-login in "~/.netrc":
 A simple shell command can upload bitstream
 with FTP and program ECP5:
 
-    cat /usr/local/bin/ftpecp5prog
+    cat /usr/local/bin/ftpecp5prog 
     #!/bin/sh
-    ftp 192.168.4.1 <<EOF
-    cd /sd/ULX3S # if SD is mounted
-    put ${1}
-    site ${1}
+    ftp ${1} <<EOF
+    put ${2} fpga
     EOF
 
 use it as:
 
-    ftpecp5prog blink.bit
+    ftpecp5prog 192.168.4.1 blink.bit
 
 If FTP server is running and you try to program from webrepl and
 it fails with a memory allocation error:

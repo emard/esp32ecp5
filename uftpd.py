@@ -298,32 +298,37 @@ class FTP_client:
                     if data_client is not None:
                         data_client.close()
             elif command == "STOR" or command == "APPE":
+                result = False
                 try:
                     data_client = self.open_dataclient()
                     cl.sendall("150 Opened data connection.\r\n")
                     if path == "/fpga":
                         import ecp5
                         tap = ecp5.ecp5()
-                        tap.program_stream(data_client,_CHUNK_SIZE)
+                        result = tap.program_stream(data_client,_CHUNK_SIZE)
                         del tap
                         data_client.close()
                     elif path == "/flash":
                         import ecp5
                         tap = ecp5.ecp5()
-                        tap.flash_stream(data_client)
+                        result = tap.flash_stream(data_client)
                         del tap
                         data_client.close()
                     else:
                         self.save_file_data(path, data_client,
                                             "w" if command == "STOR" else "a")
+                        result = True
                     # if the next statement is reached,
                     # the data_client was closed.
                     data_client = None
-                    cl.sendall("226 Done.\r\n")
                 except:
-                    cl.sendall('550 Fail\r\n')
                     if data_client is not None:
                         data_client.close()
+                if result:
+                    cl.sendall("226 Done.\r\n")
+                else:
+                    cl.sendall('550 Fail\r\n')
+                del result
             elif command == "SIZE":
                 try:
                     cl.sendall('213 {}\r\n'.format(uos.stat(path)[6]))

@@ -120,8 +120,9 @@ SD card usage (SPI at gpio 12-15):
 MMC mode is about 2x faster but currently it doesn't work together
 with this ecp5.py programmer.
 
-I have patched [ESP32 FTP
-server](https://github.com/emard/FTP-Server-for-ESP8266-ESP32-and-PYBD).
+Here I have "uftpd.py" which came from original
+[ESP32 FTP server](https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD)
+with my small modifications to support "ecp5.py" programmer.
 Install FTP server by uploading "uftpd.py" file to the root of ESP32 filesystem:
 and start it with:
 

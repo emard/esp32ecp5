@@ -77,7 +77,6 @@ class ecp5:
     self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
     self.gpio_led = const(5)
     self.gpio_dummy = const(17)
-    self.progress = False
     self.init_pinout_jtag()
     #self.init_pinout_sd()
 
@@ -494,12 +493,8 @@ class ecp5:
     while True:
       if filedata.readinto(block):
         self.hwspi.write(block)
-        if self.progress:
-          print(".",end="")
         bytes_uploaded += len(block)
       else:
-        if self.progress:
-          print("*")
         break
     self.stopwatch_stop(bytes_uploaded)
     return self.prog_close()

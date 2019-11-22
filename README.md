@@ -247,4 +247,4 @@ memory situation will be better for ecp5.flash() from "webrepl"
     [x] optimize send_bit, n-1 bits in loop and last bit outside of loop
     [x] while read flash until same content as file, with retry
     [x] more progress for flashing
-    [ ] put fpga/flash should report when bitstream fails to start
+    [x] ftp put fpga/flash reports Done/Fail

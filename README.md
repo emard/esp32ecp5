@@ -182,6 +182,10 @@ using special destination file name "fpga" or "flash":
     ftp> put blink.bit fpga
     ftp> put blink.bit flash
 
+NOTE: special destination file names "fpga" and "flash" are
+used for direct programming and they don't relate to actual
+files on ESP32 filesystem.
+
 if using "lftp", syntax is different, use option "-o" like this:
 
     lftp 192.168.4.1:/> put blink.bit -o fpga

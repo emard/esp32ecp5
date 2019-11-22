@@ -129,10 +129,10 @@ and start it with:
     import uftpd
     FTP server started on 192.168.4.1:21
 
-Get ftp client. I use only this, other may not work because
-some things are hacky
+Get ftp client "ftp" or "lftp". I tried them both and they work,
+other clients I haven't tried...
 
-    apt-get install ftp
+    apt-get install ftp lftp
 
 Connect with ftp client to ESP32, type ENTER at (empty) password
 
@@ -168,7 +168,8 @@ FTP client.
     ftp> open 192.168.4.1
 
 Besides normal FTP commands like "ls", "cd", "mkdir", "rmdir", "put", "get", "del",
-it also accepts "site" command to program FPGA or upload to FLASH:
+it also accepts "site" command to read file from ESP32 local filesystem
+(FLASH or SD card) and program FPGA:
 
     ftp> site http://192.168.4.2/blink.bit
     ... will program remote file to FPGA using

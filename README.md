@@ -156,7 +156,14 @@ Try to list files, it should work like this:
     226 Done.
 
 If you don't see listing similar to this, something is incompatible,
-try "passive" FTP mode or another FTP client.
+try to toggle "passive" FTP mode (for me it works for passive off and
+doesn't work for passive on), close/open connection or try another 
+FTP client.
+
+    ftp> passive
+    Passive mode off.
+    ftp> close
+    ftp> open 192.168.4.1
 
 Besides normal FTP commands like "ls", "cd", "mkdir", "rmdir", "put", "get", "del",
 it also accepts "site" command to program FPGA or upload to FLASH:

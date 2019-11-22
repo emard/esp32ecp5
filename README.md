@@ -158,12 +158,12 @@ Try to list files, it should work like this:
     226 Done.
 
 If you don't see listing similar to this, something is incompatible,
-try to toggle "passive" FTP mode (for me it works for passive off and
-doesn't work for passive on), close/open connection or try another 
+try to toggle "passive" FTP mode. If FTP client is behind the firewall
+it may work with passive mode on, close/open connection or try another 
 FTP client.
 
     ftp> passive
-    Passive mode off.
+    Passive mode on.
     ftp> close
     ftp> open 192.168.4.1
 

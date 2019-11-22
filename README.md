@@ -37,7 +37,8 @@ auto-executable file named "main.py".
 
 Choose either: (copy-paste to usb-serial python prompt ">>>")
 
-setup as client that logs on to WiFi access point (home internet router):
+setup as client that logs on to WiFi access point (home internet router),
+replace "accesspoint" and "password" with proper logins for your WiFi router:
 
     f=open("main.py","w")
     f.write("import network\n")

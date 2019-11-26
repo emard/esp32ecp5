@@ -509,7 +509,11 @@ class ecp5:
   def open_web(self, url, gz=False):
     import socket
     _, _, host, path = url.split('/', 3)
-    addr = socket.getaddrinfo(host, 80)[0][-1]
+    port = 80
+    if ( len(host.split(':')) == 2 ):
+      host, port = host.split(':', 2)
+    print("host = ",host," port = ", port, " path = ", path)
+    addr = socket.getaddrinfo(host, port)[0][-1]
     s = socket.socket()
     s.connect(addr)
     s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\nAccept:  image/*\r\n\r\n' % (path, host), 'utf8'))

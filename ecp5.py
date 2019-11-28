@@ -722,6 +722,8 @@ def passthru():
   return False
 
 print("usage:")
+print("ecp5.sd_write(\"http://192.168.4.2/sdcard.img\", addr=0)")
+print("ecp5.sd_read(addr=0, length=512)")
 print("ecp5.flash(\"blink.bit.gz\", addr=0x000000)")
 print("ecp5.flash_read(addr=0x000000, length=1)")
 print("ecp5.prog(\"http://192.168.4.2/blink.bit\")")

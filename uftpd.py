@@ -398,6 +398,21 @@ class FTP_client:
                 except:
                     cl.sendall('550 Fail\r\n')
             elif command == "SITE":
+              if path == "/mount":
+                import os, machine
+                try:
+                  os.mount(machine.SDCard(slot=3),"/sd")
+                  cl.sendall('250 OK\r\n')
+                except:
+                  cl.sendall('550 Fail\r\n')
+              elif path == "/umount":
+                import os
+                try:
+                  os.umount("/sd")
+                  cl.sendall('250 OK\r\n')
+                except:
+                  cl.sendall('550 Fail\r\n')
+              else:
                 try:
                     import ecp5
                     if ecp5.prog(path):

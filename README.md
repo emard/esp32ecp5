@@ -185,6 +185,7 @@ name "fpga" or "flash", "sdraw":
 
     ftp> put blink.bit fpga
     ftp> put blink.bit flash
+    ftp> put blink.bit flash@0x200000
     ftp> put freedos.img sdraw
 
 NOTE: special destination file names "fpga", "flash", "sdraw" are
@@ -253,4 +254,4 @@ memory situation will be better for ecp5.flash() from "webrepl"
     [x] more progress for flashing
     [x] ftp put fpga/flash reports Done/Fail
     ] ] mount/umount SD card from ftp prompt (just cd to /sd)?
-    [ ] specify flash address ftp> put file.bit flash@0x200000
+    [x] specify flash address ftp> put file.bit flash@0x200000

@@ -72,8 +72,12 @@ class FTP_client:
         elif ((STA_addr[1] & STA_addr[2]) ==
               (num_ip(self.remote_addr) & STA_addr[2])):
             self.pasv_data_addr = STA_addr[0]
+        elif ((AP_addr[1] == 0) and (STA_addr[1] != 0)):
+            self.pasv_data_addr = STA_addr[0]
+        elif ((AP_addr[1] != 0) and (STA_addr[1] == 0)):
+            self.pasv_data_addr = AP_addr[0]
         else:
-            self.pasv_data_addr = "0.0.0.0"  # Ivalid value
+            self.pasv_data_addr = "0.0.0.0"  # Invalid value
 
     def send_list_data(self, path, data_client, full):
         try:

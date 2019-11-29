@@ -243,7 +243,7 @@ memory situation will be better for ecp5.flash() from "webrepl"
     [x] read flash content
     [x] from read, decide if block has to be erased
     [x] fix HTTP GET for binary file
-    [ ] write disk image to SD card https://docs.micropython.org/en/latest/library/uos.html
+    [x] write disk image to SD card
     [x] reuse currently separated code for file/web bit/bit.gz
     [x] integrate with ftp server like https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD
     [ ] integrate with webrepl and file browser like https://github.com/hyperglitch/webrepl
@@ -252,3 +252,4 @@ memory situation will be better for ecp5.flash() from "webrepl"
     [x] while read flash until same content as file, with retry
     [x] more progress for flashing
     [x] ftp put fpga/flash reports Done/Fail
+    ] ] mount/umount SD card from ftp prompt (just cd to /sd)?

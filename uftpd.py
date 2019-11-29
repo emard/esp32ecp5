@@ -312,12 +312,6 @@ class FTP_client:
                         result = tap.program_stream(data_client,_CHUNK_SIZE)
                         del tap
                         data_client.close()
-                    elif path == "/flash":
-                        import ecp5
-                        tap = ecp5.ecp5()
-                        result = tap.flash_stream(data_client)
-                        del tap
-                        data_client.close()
                     elif path.startswith("/flash@"):
                         dummy, addr = path.split("@")
                         addr = int(addr)
@@ -326,13 +320,7 @@ class FTP_client:
                         result = tap.flash_stream(data_client,addr)
                         del tap, addr, dummy
                         data_client.close()
-                    elif path == "/sdraw":
-                        import sdraw
-                        sd_raw = sdraw.sdraw()
-                        result = sd_raw.sd_write_stream(data_client)
-                        del sd_raw
-                        data_client.close()
-                    elif path.startswith("/sdraw@"):
+                    elif path.startswith("/sd@"):
                         dummy, addr = path.split("@")
                         addr = int(addr)
                         import sdraw

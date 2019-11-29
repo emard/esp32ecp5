@@ -178,10 +178,10 @@ it also accepts "site" command to read file from ESP32 local filesystem
     ... will program local file to FPGA using
     ... ecp5.prog("filename.bit")
 
-It is possible to directly program a "*.bin" file
-(not gzipped) from "ftp>" prompt directly to FPGA, FLASH or
-as the raw image to SD card
-using special destination file name "fpga" or "flash", "sdraw":
+It is possible to directly put a binary file
+(not gzipped) from "ftp>" prompt into FPGA, FLASH or
+SD card (as raw image) using special destination file
+name "fpga" or "flash", "sdraw":
 
     ftp> put blink.bit fpga
     ftp> put blink.bit flash

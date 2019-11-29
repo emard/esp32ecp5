@@ -178,6 +178,13 @@ it also accepts "site" command to read file from ESP32 local filesystem
     ... will program local file to FPGA using
     ... ecp5.prog("filename.bit")
 
+SD card with FAT filesystem can be mounted or unmounted to "/sd" directory:
+
+    ftp> site mount
+    ftp> ls sd
+    ftp> site umount
+    ftp> ls sd
+
 It is possible to directly put a binary file
 (not gzipped) from "ftp>" prompt into FPGA, FLASH or
 SD card (as raw image) using special destination file
@@ -256,6 +263,6 @@ memory situation will be better for ecp5.flash() from "webrepl"
     [x] while read flash until same content as file, with retry
     [x] more progress for flashing
     [x] ftp put fpga/flash reports Done/Fail
-    [ ] mount/umount SD card from ftp prompt (just cd to /sd)?
+    [x] mount/umount SD card from ftp prompt (just cd to /sd)?
     [x] specify flash address ftp> put file.bit flash@0x200000
     [ ] "site" command execute some python script

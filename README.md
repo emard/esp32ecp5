@@ -75,7 +75,7 @@ address if you press Ctrl-D on empty python prompt:
     >>> Ctrl-D
 
 with web browser open [micropython webrepl](http://micropython.org/webrepl),
-enter IP address of ESP32 and upload "ecp5.py", (optionally also "uftpd.py"
+enter IP address of ESP32 and upload "ecp5.py", "sdraw.py", (optionally also "uftpd.py"
 if you want FTP server, read below) and some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with gzip -9) to
 the root of ESP32 python FLASH filesystem
@@ -179,11 +179,13 @@ it also accepts "site" command to read file from ESP32 local filesystem
     ... ecp5.prog("filename.bit")
 
 It is possible to directly program a "*.bin" file
-(not gzipped) from "ftp>" prompt directly to FPGA or FLASH
-using special destination file name "fpga" or "flash":
+(not gzipped) from "ftp>" prompt directly to FPGA, FLASH or
+as the raw image to SD card
+using special destination file name "fpga" or "flash", "sdraw":
 
     ftp> put blink.bit fpga
     ftp> put blink.bit flash
+    ftp> put freedos.img sdraw
 
 NOTE: special destination file names "fpga" and "flash" are
 used for direct programming and they don't relate to actual

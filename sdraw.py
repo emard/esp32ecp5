@@ -4,16 +4,14 @@
 # AUTHOR=EMARD
 # LICENSE=BSD
 
-#from time import ticks_ms, sleep_ms
+from time import ticks_ms
 from machine import SPI, Pin, SDCard
 from micropython import const
-#from struct import pack, unpack
-#from uctypes import addressof
 
 class sdraw:
 
   def __init__(self):
-    print("init")
+    print("SD RAW writer")
     #self.init_pinout_sd()
 
   def stopwatch_start(self):
@@ -110,9 +108,9 @@ def sd_write(filepath, addr=0):
     filedata = sdraw().open_file(filepath, gz)
   if filedata:
     if gz:
-      return ecp5().sd_write_stream(filedata,addr,blocksize=4096)
+      return sdraw().sd_write_stream(filedata,addr,blocksize=4096)
     else:
-      return ecp5().sd_write_stream(filedata,addr,blocksize=16384)
+      return sdraw().sd_write_stream(filedata,addr,blocksize=16384)
   return False
 
 print("usage:")

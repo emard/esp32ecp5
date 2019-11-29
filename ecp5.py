@@ -531,49 +531,6 @@ class ecp5:
     self.flash_fast_read_block(data, addr)
     self.flash_close()
 
-  def sd_open(self):
-    self.sd = SDCard(slot=3)
-
-  def sd_close(self):
-    self.sd.deinit()
-    for i in bytearray([2,12,13,14,15]):
-      p=Pin(i,Pin.IN)
-      a=p.value()
-      del p
-      del a
-    del self.sd
-
-  def sd_check_addr(self, addr):
-    if addr & 0x1FF:
-      print("addr must be rounded to block_size = 512 bytes")
-      return False
-    return True
-
-  def sd_read(self, data, addr=0):
-    if not self.sd_check_addr(addr):
-      return False
-    self.sd_open()
-    self.sd.readblocks(addr//0x200,data)
-    self.sd_close()
-    return True
-
-  def sd_write_stream(self, filedata, addr=0, blocksize=16384):
-    if not self.sd_check_addr(addr):
-      return False
-    bytes_uploaded = 0
-    self.sd_open()
-    self.stopwatch_start()
-    block = bytearray(blocksize)
-    while True:
-      if filedata.readinto(block):
-        self.sd.writeblocks((addr+bytes_uploaded)//0x200,block)
-        bytes_uploaded += len(block)
-      else:
-        break
-    self.stopwatch_stop(bytes_uploaded)
-    self.sd_close()
-    return True
-
   # accelerated compare flash and file block
   # return value
   # 0-must nothing, 1-must erase, 2-must write, 3-must erase and write
@@ -691,27 +648,6 @@ def flash_read(addr=0, length=1):
   ecp5().flash_read(data, addr)
   return data
 
-def sd_read(addr=0, length=512):
-  data = bytearray(length)
-  if ecp5().sd_read(data, addr):
-    return data
-  else:
-    return False
-
-def sd_write(filepath, addr=0):
-  gz=filepath.endswith(".gz")
-  if filepath.startswith("http://") or filepath.startswith("/http:/"):
-    filedata = ecp5().open_web(filepath, gz)
-  else:
-    filedata = ecp5().open_file(filepath, gz)
-  if filedata:
-    if gz:
-      return ecp5().sd_write_stream(filedata,addr,blocksize=4096)
-    else:
-      return ecp5().sd_write_stream(filedata,addr,blocksize=16384)
-  return False
-
-
 def passthru():
   idcode = ecp5().idcode()
   if idcode != 0 and idcode != 0xFFFFFFFF:
@@ -722,8 +658,6 @@ def passthru():
   return False
 
 print("usage:")
-print("ecp5.sd_write(\"http://192.168.4.2/sdcard.img\", addr=0)")
-print("ecp5.sd_read(addr=0, length=512)")
 print("ecp5.flash(\"blink.bit.gz\", addr=0x000000)")
 print("ecp5.flash_read(addr=0x000000, length=1)")
 print("ecp5.prog(\"http://192.168.4.2/blink.bit\")")

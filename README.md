@@ -181,14 +181,17 @@ it also accepts "site" command to read file from ESP32 local filesystem
 It is possible to directly put a binary file
 (not gzipped) from "ftp>" prompt into FPGA, FLASH or
 SD card (as raw image) using special destination file
-name "fpga" or "flash", "sdraw":
+name "fpga", "flash" or "sdraw".
 
     ftp> put blink.bit fpga
     ftp> put blink.bit flash
     ftp> put blink.bit flash@0x200000
     ftp> put freedos.img sdraw
+    ftp> put freedos.img sdraw@0x200000
 
-NOTE: special destination file names "fpga", "flash", "sdraw" are
+NOTE: FLASH and SD card accept byte offset after "@" character.
+Offset must be rounded to 4096 bytes for FLASH and to 512 bytes for SD.
+Special destination file names "fpga", "flash", "sdraw" are
 used for direct programming and they don't relate to actual
 files on ESP32 filesystem.
 

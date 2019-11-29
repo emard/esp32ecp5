@@ -314,6 +314,12 @@ class FTP_client:
                         result = tap.flash_stream(data_client)
                         del tap
                         data_client.close()
+                    elif path == "/sdraw":
+                        import sdraw
+                        sd_raw = sdraw.sdraw()
+                        result = sd_raw.sd_write_stream(data_client)
+                        del sd_raw
+                        data_client.close()
                     else:
                         self.save_file_data(path, data_client,
                                             "w" if command == "STOR" else "a")

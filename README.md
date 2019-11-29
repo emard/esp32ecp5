@@ -184,10 +184,10 @@ SD card (as raw image) using special destination file
 name "fpga", "flash" or "sdraw".
 
     ftp> put blink.bit fpga
-    ftp> put blink.bit flash
+    ftp> put blink.bit flash@0
     ftp> put blink.bit flash@0x200000
-    ftp> put freedos.img sdraw
-    ftp> put freedos.img sdraw@0x200000
+    ftp> put freedos.img sd@0
+    ftp> put freedos.img sd@0x200000
 
 NOTE: FLASH and SD card accept byte offset after "@" character.
 Offset must be rounded to 4096 bytes for FLASH and to 512 bytes for SD.
@@ -198,7 +198,7 @@ files on ESP32 filesystem.
 if using "lftp", syntax is different, use option "-o" like this:
 
     lftp 192.168.4.1:/> put blink.bit -o fpga
-    lftp 192.168.4.1:/> put blink.bit -o flash
+    lftp 192.168.4.1:/> put blink.bit -o flash@0
 
 To automate upload from linux shell,
 enable ftp auto-login in "~/.netrc":

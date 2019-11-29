@@ -187,7 +187,7 @@ using special destination file name "fpga" or "flash", "sdraw":
     ftp> put blink.bit flash
     ftp> put freedos.img sdraw
 
-NOTE: special destination file names "fpga" and "flash" are
+NOTE: special destination file names "fpga", "flash", "sdraw" are
 used for direct programming and they don't relate to actual
 files on ESP32 filesystem.
 

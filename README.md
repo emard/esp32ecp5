@@ -188,7 +188,7 @@ SD card with FAT filesystem can be mounted or unmounted to "/sd" directory:
 It is possible to directly put a binary file
 (not gzipped) from "ftp>" prompt into FPGA, FLASH or
 SD card (as raw image) using special destination file
-name "fpga", "flash" or "sdraw".
+name "fpga", "flash@" or "sd@".
 
     ftp> put blink.bit fpga
     ftp> put blink.bit flash@0
@@ -198,7 +198,7 @@ name "fpga", "flash" or "sdraw".
 
 NOTE: FLASH and SD card accept byte offset after "@" character.
 Offset must be rounded to 4096 bytes for FLASH and to 512 bytes for SD.
-Special destination file names "fpga", "flash", "sdraw" are
+Special destination file names "fpga", "flash@", "sd@" are
 used for direct programming and they don't relate to actual
 files on ESP32 filesystem.
 

@@ -413,7 +413,7 @@ class FTP_client:
                   self.sd.deinit()
                   del self.sd
                   # let all SD pins be inputs
-                  for i in bytearray([2,12,13,14,15]):
+                  for i in bytearray([2,4,12,13,14,15]):
                     p = machine.Pin(i,machine.Pin.IN)
                     a = p.value()
                     del p, a

@@ -55,11 +55,10 @@ class sdraw:
 
   def sd_close(self):
     self.sd.deinit()
-    for i in bytearray([2,12,13,14,15]):
+    for i in bytearray([2,4,12,13,14,15]):
       p=Pin(i,Pin.IN)
       a=p.value()
-      del p
-      del a
+      del p, a
     del self.sd
 
   def sd_check_param(self, addr):

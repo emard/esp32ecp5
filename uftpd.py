@@ -401,14 +401,22 @@ class FTP_client:
               if path == "/mount":
                 import os, machine
                 try:
-                  os.mount(machine.SDCard(slot=3),"/sd")
+                  self.sd = machine.SDCard(slot=3)
+                  os.mount(self.sd,"/sd")
                   cl.sendall('250 OK\r\n')
                 except:
                   cl.sendall('550 Fail\r\n')
               elif path == "/umount":
-                import os
+                import os, machine
                 try:
                   os.umount("/sd")
+                  self.sd.deinit()
+                  del self.sd
+                  # let all SD pins be inputs
+                  for i in bytearray([2,12,13,14,15]):
+                    p = machine.Pin(i,machine.Pin.IN)
+                    a = p.value()
+                    del p, a
                   cl.sendall('250 OK\r\n')
                 except:
                   cl.sendall('550 Fail\r\n')

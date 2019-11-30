@@ -55,7 +55,8 @@ at usb-serial prompt. To stop it, type blindly or copy-paste:
 
     sta_if.disconnect()
 
-or setup as access point:
+or setup as access point but
+some WiFi clients may have problem connecting to ESP32:
 
     f=open("main.py","w")
     f.write("import network\n")
@@ -63,6 +64,7 @@ or setup as access point:
     f.write("ap_if.active(True)\n")
     f.write('ap_if.config(essid="accesspoint", password="password")\n')
     f.write("import uftpd\n")
+    f.close()
     import webrepl_setup
 
 It will prompt to ask few questions:

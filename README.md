@@ -75,10 +75,16 @@ address if you press Ctrl-D on empty python prompt:
     >>> Ctrl-D
 
 with web browser open [micropython webrepl](http://micropython.org/webrepl),
-enter IP address of ESP32 and upload "ecp5.py", "sdraw.py", (optionally also "uftpd.py"
+enter IP address of ESP32, enter password. Python prompt ">>>" should appear.
+
+If webrepl disconnects immediatly, without asking the password, try to delete
+web browser history, cookies, passwords and similar data, close web browser and
+try again.
+
+From webrepl GUI upload "ecp5.py", (optionally also "uftpd.py" and "sdraw.py"
 if you want FTP server, read below) and some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with gzip -9) to
-the root of ESP32 python FLASH filesystem
+the root of ESP32 python FLASH filesystem.
 
 List directory to see if the files are uploaded:
 

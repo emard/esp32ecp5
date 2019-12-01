@@ -443,8 +443,9 @@ class FTP_client:
                         if path.startswith("/sd/"):
                             try:
                                 self.umount()
+                                cl.sendall('111 umount /sd OK\r\n')
                             except:
-                                pass
+                                cl.sendall('411 umount /sd Fail\r\n')
                         if ecp5.ecp5().prog_close():
                             cl.sendall('250 OK\r\n')
                         else:

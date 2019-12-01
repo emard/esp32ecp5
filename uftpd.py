@@ -188,6 +188,32 @@ class FTP_client:
             log_msg(1, "FTP Data connection with:", data_addr[0])
         return data_client
 
+    def mount(self):
+        from os import mount
+        from machine import SDCard
+        try:
+            self.sd = SDCard(slot=3)
+            mount(self.sd,"/sd")
+            return True
+        except:
+            return False
+
+    def umount(self):
+        from os import umount
+        from machine import Pin
+        try:
+            umount("/sd")
+            self.sd.deinit()
+            del self.sd
+            # let all SD pins be inputs
+            for i in bytearray([2,4,12,13,14,15]):
+                p = Pin(i,Pin.IN)
+                a = p.value()
+                del p, a
+            return True
+        except:
+            return False
+
     def exec_ftp_command(self, cl):
         global datasocket
         global client_busy
@@ -309,7 +335,8 @@ class FTP_client:
                     if path == "/fpga":
                         import ecp5
                         tap = ecp5.ecp5()
-                        result = tap.program_stream(data_client,_CHUNK_SIZE)
+                        tap.prog_stream(data_client,_CHUNK_SIZE)
+                        result = tap.prog_close()
                         del tap
                         data_client.close()
                     elif path.startswith("/flash@"):
@@ -318,6 +345,7 @@ class FTP_client:
                         import ecp5
                         tap = ecp5.ecp5()
                         result = tap.flash_stream(data_client,addr)
+                        tap.flash_close()
                         del tap, addr, dummy
                         data_client.close()
                     elif path.startswith("/sd@"):
@@ -399,32 +427,28 @@ class FTP_client:
                     cl.sendall('550 Fail\r\n')
             elif command == "SITE":
               if path == "/mount":
-                import os, machine
-                try:
-                  self.sd = machine.SDCard(slot=3)
-                  os.mount(self.sd,"/sd")
+                if self.mount():
                   cl.sendall('250 OK\r\n')
-                except:
+                else:
                   cl.sendall('550 Fail\r\n')
               elif path == "/umount":
-                import os, machine
-                try:
-                  os.umount("/sd")
-                  self.sd.deinit()
-                  del self.sd
-                  # let all SD pins be inputs
-                  for i in bytearray([2,4,12,13,14,15]):
-                    p = machine.Pin(i,machine.Pin.IN)
-                    a = p.value()
-                    del p, a
+                if self.umount():
                   cl.sendall('250 OK\r\n')
-                except:
+                else:
                   cl.sendall('550 Fail\r\n')
               else:
                 try:
                     import ecp5
-                    if ecp5.prog(path):
-                        cl.sendall('250 OK\r\n')
+                    if ecp5.prog(path, prog_close=False):
+                        if path.startswith("/sd/"):
+                            try:
+                                self.umount()
+                            except:
+                                pass
+                        if ecp5.ecp5().prog_close():
+                            cl.sendall('250 OK\r\n')
+                        else:
+                            cl.sendall('550 Fail\r\n')
                     else:
                         cl.sendall('550 Fail\r\n')
                 except:

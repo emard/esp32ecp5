@@ -5,7 +5,7 @@
 # LICENSE=BSD
 
 from time import ticks_ms, sleep_ms
-from machine import SPI, Pin, SDCard
+from machine import SPI, Pin
 from micropython import const
 from struct import pack, unpack
 from uctypes import addressof
@@ -311,12 +311,16 @@ class ecp5:
     #for byte in block:
     #  self.send_data_byte_reverse(byte,0)
 
+  def prog_stream_done(self):
+    # switch from hardware SPI to bitbanging done after prog_stream()
+    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
+    self.spi_jtag_off()
+
   # call this after uploading all of the bitstream blocks,
   # this will exit FPGA programming mode and start the bitstream
+  # returns status True-OK False-Fail
   def prog_close(self):
-    # switch from hardware SPI to bitbanging
-    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
-    self.bitbang_jtag_on() # 1 TCK-glitch
+    self.bitbang_jtag_on()
     self.send_tms(1) # -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
@@ -338,7 +342,6 @@ class ecp5:
     done = True
     if (status & 0x2100) != 0x100:
       done = False
-    self.spi_jtag_off()
     self.reset_tap()
     self.led.off()
     self.bitbang_jtag_off()
@@ -485,7 +488,7 @@ class ecp5:
       transfer_rate_kBps = bytes_uploaded // elapsed_ms
     print("%d bytes uploaded in %d ms (%d kB/s)" % (bytes_uploaded, elapsed_ms, transfer_rate_kBps))
 
-  def program_stream(self, filedata, blocksize=16384):
+  def prog_stream(self, filedata, blocksize=16384):
     self.prog_open()
     bytes_uploaded = 0
     self.stopwatch_start()
@@ -497,7 +500,7 @@ class ecp5:
       else:
         break
     self.stopwatch_stop(bytes_uploaded)
-    return self.prog_close()
+    self.prog_stream_done()
 
   def open_file(self, filename, gz=False):
     filedata = open(filename, "rb")
@@ -512,7 +515,7 @@ class ecp5:
     port = 80
     if ( len(host.split(':')) == 2 ):
       host, port = host.split(':', 2)
-    print("host = ",host," port = ", port, " path = ", path)
+    print("host = %s, port = %d, path = %s" % (host, port, path))
     addr = socket.getaddrinfo(host, port)[0][-1]
     s = socket.socket()
     s.connect(addr)
@@ -557,6 +560,7 @@ class ecp5:
   # prevents flash wear when overwriting the same data
   # needs more buffers: 4K erase block is max that fits on ESP32
   # TODO reduce buffer usage
+  # returns status True-OK False-Fail
   def flash_stream(self, filedata, addr=0):
     addr_mask = self.flash_erase_size-1
     if addr & addr_mask:
@@ -616,31 +620,40 @@ class ecp5:
     self.flash_close()
     return retry >= 0 # True if successful
 
+  def filedata_gz(self, filepath):
+    gz = filepath.endswith(".gz")
+    if filepath.startswith("http://") or filepath.startswith("/http:/"):
+      filedata = self.open_web(filepath, gz)
+    else:
+      filedata = self.open_file(filepath, gz)
+    return filedata, gz
+
 # easier command typing
 def idcode():
   return ecp5().idcode()
 
-def prog(filepath):
-  gz=filepath.endswith(".gz")
-  if filepath.startswith("http://") or filepath.startswith("/http:/"):
-    filedata = ecp5().open_web(filepath, gz)
-  else:
-    filedata = ecp5().open_file(filepath, gz)
+def prog(filepath, prog_close=True):
+  board = ecp5()
+  filedata, gz = board.filedata_gz(filepath)
   if filedata:
     if gz:
-      return ecp5().program_stream(filedata,blocksize=4096)
+      board.prog_stream(filedata,blocksize=4096)
     else:
-      return ecp5().program_stream(filedata,blocksize=16384)
+      board.prog_stream(filedata,blocksize=16384)
+    # NOTE now the SD card can be released before bitstream starts
+    if prog_close:
+      return board.prog_close() # start the bitstream
+    return True
   return False
 
 def flash(filepath, addr=0):
-  gz=filepath.endswith(".gz")
-  if filepath.startswith("http://"):
-    filedata = ecp5().open_web(filepath, gz)
-  else:
-    filedata = ecp5().open_file(filepath, gz)
+  board = ecp5()
+  filedata, gz = board.filedata_gz(filepath)
   if filedata:
-    return ecp5().flash_stream(filedata,addr)
+    status=board.flash_stream(filedata,addr)
+    # NOTE now the SD card can be released before bitstream starts
+    board.flash_close() # start the bitstream
+    return status
   return False
 
 def flash_read(addr=0, length=1):
@@ -649,12 +662,14 @@ def flash_read(addr=0, length=1):
   return data
 
 def passthru():
-  idcode = ecp5().idcode()
+  board = ecp5()
+  idcode = board.idcode()
   if idcode != 0 and idcode != 0xFFFFFFFF:
     filepath = "passthru%08X.bit.gz" % idcode
     print("ecp5.prog(\"%s\")" % filepath)
-    filedata = ecp5().open_file(filepath, gz=True)
-    return ecp5().program_stream(filedata,blocksize=4096)
+    filedata = board.open_file(filepath, gz=True)
+    board.prog_stream(filedata,blocksize=4096)
+    return board.prog_close()
   return False
 
 print("usage:")

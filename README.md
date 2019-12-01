@@ -192,6 +192,10 @@ SD card with FAT filesystem can be mounted or unmounted to "/sd" directory:
     ftp> ls sd
     ftp> site umount
     ftp> ls sd
+    ftp> site /sd/blink.bit
+
+"site" command can be used to upload a bitstream from SD card,
+but SD card will be unmounted before starting bitstream.
 
 It is possible to directly put a binary file
 (not gzipped) from "ftp>" prompt into FPGA, FLASH or

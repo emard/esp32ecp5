@@ -85,7 +85,7 @@ if you want FTP server, read below) and some bitstream file like "blink.bit" or
 the root of ESP32 python FLASH filesystem.
 
 If webrepl GUI disconnects immediatly, without asking the password, try to delete
-web browser history, cookies, passwords and similar data, close web browser and
+web browser's history, cookies, passwords and similar data, close web browser and
 try again.
 
 Or get [webrepl for commandline](https://github.com/Hermann-SW/webrepl),

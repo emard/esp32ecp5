@@ -23,6 +23,8 @@ import uos
 import gc
 from time import sleep_ms, localtime
 from micropython import alloc_emergency_exception_buf
+from machine import SDCard, Pin
+import sdraw, ecp5
 
 # constant definitions
 _CHUNK_SIZE = const(1024)
@@ -189,20 +191,16 @@ class FTP_client:
         return data_client
 
     def mount(self):
-        from os import mount
-        from machine import SDCard
         try:
             self.sd = SDCard(slot=3)
-            mount(self.sd,"/sd")
+            uos.mount(self.sd,"/sd")
             return True
         except:
             return False
 
     def umount(self):
-        from os import umount
-        from machine import Pin
         try:
-            umount("/sd")
+            uos.umount("/sd")
             self.sd.deinit()
             del self.sd
             # let all SD pins be inputs
@@ -333,7 +331,6 @@ class FTP_client:
                     data_client = self.open_dataclient()
                     cl.sendall("150 Opened data connection.\r\n")
                     if path == "/fpga":
-                        import ecp5
                         tap = ecp5.ecp5()
                         tap.prog_stream(data_client,_CHUNK_SIZE)
                         result = tap.prog_close()
@@ -342,7 +339,6 @@ class FTP_client:
                     elif path.startswith("/flash@"):
                         dummy, addr = path.split("@")
                         addr = int(addr)
-                        import ecp5
                         tap = ecp5.ecp5()
                         result = tap.flash_stream(data_client,addr)
                         tap.flash_close()
@@ -351,7 +347,6 @@ class FTP_client:
                     elif path.startswith("/sd@"):
                         dummy, addr = path.split("@")
                         addr = int(addr)
-                        import sdraw
                         sd_raw = sdraw.sdraw()
                         result = sd_raw.sd_write_stream(data_client,addr)
                         del sd_raw, addr, dummy
@@ -438,7 +433,6 @@ class FTP_client:
                   cl.sendall('550 Fail\r\n')
               else:
                 try:
-                    import ecp5
                     if ecp5.prog(path, prog_close=False):
                         if path.startswith("/sd/"):
                             try:

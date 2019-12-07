@@ -102,9 +102,13 @@ Upload local files to remote ESP32 like this:
 
     repl ecp5.py 192.168.4.1:ecp5.py
 
-For interactive commandline prompt:
+For prompt without being asked password:
 
     repl -p password -r 192.168.4.1
+
+For prompt with password asked:
+
+    repl 192.168.4.1
 
 Soft-reboot ESP32 by entering uppercase "D" to empty
 prompt and press "ENTER" (instead of Ctrl-D from web GUI)

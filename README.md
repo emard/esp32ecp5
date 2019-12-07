@@ -69,7 +69,7 @@ some WiFi clients may have problem connecting to ESP32:
 
 It will prompt to ask few questions:
 Enable "webrepl" by choosing "E".
-Type and repeat any password you like, "webrepl" service will later ask for this password.
+Type and repeat any password you like, "webrepl" client will later ask for this password.
 Finally agree to reboot ESP32. After reboot and successful WiFi connection,
 it will print its IP address. You can always soft-reboot again to see IP
 address if you press Ctrl-D on empty python prompt:

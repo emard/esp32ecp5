@@ -71,7 +71,12 @@ It will prompt to ask few questions:
 Enable "webrepl" by choosing "E".
 Type and repeat any password you like, "webrepl" client will later ask for this password.
 Finally agree to reboot ESP32. After reboot and successful WiFi connection,
-it will print its IP address. You can always soft-reboot again to see IP
+it will print its IP address (192.168.4.1).
+
+    I (1554) network: CONNECTED
+    I (2824) event: sta ip: 192.168.4.1, mask: 255.255.255.0, gw: 192.168.4.2
+
+You can always soft-reboot again to see IP
 address if you press Ctrl-D on empty python prompt:
 
     >>> Ctrl-D

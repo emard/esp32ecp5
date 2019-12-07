@@ -76,17 +76,35 @@ address if you press Ctrl-D on empty python prompt:
 
     >>> Ctrl-D
 
-with web browser open [micropython webrepl](http://micropython.org/webrepl),
+with web browser open [webrepl for web browser](http://micropython.org/webrepl),
 enter IP address of ESP32, enter password. Python prompt ">>>" should appear.
-
-If webrepl disconnects immediatly, without asking the password, try to delete
-web browser history, cookies, passwords and similar data, close web browser and
-try again.
 
 From webrepl GUI upload "ecp5.py", (optionally also "uftpd.py" and "sdraw.py"
 if you want FTP server, read below) and some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with gzip -9) to
 the root of ESP32 python FLASH filesystem.
+
+If webrepl GUI disconnects immediatly, without asking the password, try to delete
+web browser history, cookies, passwords and similar data, close web browser and
+try again.
+
+Or get [webrepl for commandline](https://github.com/Hermann-SW/webrepl),
+install some python dependencies:
+
+    apt-get install python-websocket
+
+Run it from commandline interactivel to the prompt
+
+    ./webrepl_client.py -p pass -r 192.168.4.1
+
+commandline webrepl can reboot ESP32 by entering uppercase "D" to empty
+prompt and press "ENTER" (instead of Ctrl-D from web GUI)
+
+    >>> D
+
+Upload local files from to remote ESP32 like this:
+
+    ./webrepl_client.py ecp5.py 192.168.4.1:ecp5.py
 
 List directory to see if the files are uploaded:
 

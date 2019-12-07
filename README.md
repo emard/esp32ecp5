@@ -93,18 +93,23 @@ install some python dependencies:
 
     apt-get install python-websocket
 
-Run it from commandline interactivel to the prompt
+To install it, just copy single file to "bin", name it "repl" and make executable:
 
-    ./webrepl_client.py -p pass -r 192.168.4.1
+    cp webrepl_client.py /usr/local/bin/repl
+    chmod +x /usr/local/bin/repl
 
-commandline webrepl can reboot ESP32 by entering uppercase "D" to empty
+Upload local files to remote ESP32 like this:
+
+    repl ecp5.py 192.168.4.1:ecp5.py
+
+For interactive commandline prompt:
+
+    repl -p password -r 192.168.4.1
+
+Soft-reboot ESP32 by entering uppercase "D" to empty
 prompt and press "ENTER" (instead of Ctrl-D from web GUI)
 
     >>> D
-
-Upload local files from to remote ESP32 like this:
-
-    ./webrepl_client.py ecp5.py 192.168.4.1:ecp5.py
 
 List directory to see if the files are uploaded:
 

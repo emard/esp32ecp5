@@ -577,6 +577,7 @@ class ecp5:
     flash_block = bytearray(self.flash_erase_size)
     progress_char="."
     while filedata.readinto(file_block):
+      self.led.value((bytes_uploaded >> 12)&1)
       retry = 3
       while retry >= 0:
         self.flash_fast_read_block(flash_block, addr=addr+bytes_uploaded)
@@ -617,7 +618,6 @@ class ecp5:
     print("\r",end="")
     self.stopwatch_stop(bytes_uploaded)
     print("%dK blocks: %d total, %d erased, %d written." % (self.flash_erase_size>>10, count_total, count_erase, count_write))
-    self.flash_close()
     return retry >= 0 # True if successful
 
   def filedata_gz(self, filepath):
@@ -646,13 +646,14 @@ def prog(filepath, prog_close=True):
     return True
   return False
 
-def flash(filepath, addr=0):
+def flash(filepath, addr=0, flash_close=True):
   board = ecp5()
   filedata, gz = board.filedata_gz(filepath)
   if filedata:
     status=board.flash_stream(filedata,addr)
     # NOTE now the SD card can be released before bitstream starts
-    board.flash_close() # start the bitstream
+    if flash_close:
+      board.flash_close() # start the bitstream
     return status
   return False
 
@@ -672,14 +673,16 @@ def passthru():
     return board.prog_close()
   return False
 
-print("usage:")
-print("ecp5.flash(\"blink.bit.gz\", addr=0x000000)")
-print("ecp5.flash_read(addr=0x000000, length=1)")
-print("ecp5.prog(\"http://192.168.4.2/blink.bit\")")
-print("ecp5.prog(\"blink.bit.gz\") # gzip -9 blink.bit")
-print("ecp5.passthru()")
-print("\"0x%08X\" % ecp5.idcode()")
-print("0x%08X" % idcode())
+def help():
+  print("usage:")
+  print("ecp5.flash(\"blink.bit.gz\", addr=0x000000)")
+  print("ecp5.flash_read(addr=0x000000, length=1)")
+  print("ecp5.prog(\"http://192.168.4.2/blink.bit\")")
+  print("ecp5.prog(\"blink.bit.gz\") # gzip -9 blink.bit")
+  print("ecp5.passthru()")
+  print("\"0x%08X\" % ecp5.idcode()")
+  print("0x%08X" % idcode())
+
 #flash("blink.bit")
 #prog("blink.bit")
 #prog("http://192.168.4.2/blink.bit")

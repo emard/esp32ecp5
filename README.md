@@ -148,10 +148,11 @@ If file ends with "*.gz", it will be decompressed on-the-fly.
     >>> ecp5.flash("blink.bit.gz")
 
 For bitstreams stored on the web server or SD card, 
-".bin" files are recommended, with bitstream compression enabled
+".bit" files are recommended, with bitstream compression enabled
 using --compress option from trellis tools.
 For bitstreams stored on ESP32 internal FLASH,
-".bin.gz" is recommended for FLASH space saving.
+both --compress and gzipped files ".bit.gz" are recommended for
+FLASH space saving.
 
 SD card usage (SPI at gpio 12-15):
 

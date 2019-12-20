@@ -112,6 +112,7 @@ def sd_write(filepath, addr=0):
       return sdraw().sd_write_stream(filedata,addr,blocksize=16384)
   return False
 
-print("usage:")
-print("sdraw.sd_write(\"http://192.168.4.2/sdcard.img\", addr=0)")
-print("sdraw.sd_read(addr=0, length=512)")
+def help():
+  print("usage:")
+  print("sdraw.sd_write(\"http://192.168.4.2/sdcard.img\", addr=0)")
+  print("sdraw.sd_read(addr=0, length=512)")

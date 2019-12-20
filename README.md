@@ -94,6 +94,7 @@ web browser's history, cookies, passwords and similar data, close web browser an
 try again.
 
 Or get [webrepl for commandline](https://github.com/Hermann-SW/webrepl),
+and [KOST's webrepl shell automation](https://github.com/kost/webrepl-python)
 install some python dependencies:
 
     apt-get install python-websocket

@@ -58,7 +58,7 @@ class FTP_client:
         self.command_client.setsockopt(socket.SOL_SOCKET,
                                        _SO_REGISTER_HANDLER,
                                        self.exec_ftp_command)
-        self.command_client.sendall("220 Hello, this is the ESP8266.\r\n")
+        self.command_client.sendall("220 Hello, this is the ULX3S.\r\n")
         self.cwd = '/'
         self.fromname = None
 #        self.logged_in = False

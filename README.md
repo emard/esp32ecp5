@@ -99,13 +99,15 @@ install some python dependencies:
 
     apt-get install python-websocket
 
-To install commandline REPL, just copy 3 files giving them
+To install commandline REPL, just copy 5 files giving them
 typeable names and make them executable:
 
     cp websocket_helper.py /usr/local/bin/websocket_helper.py
     cp webrepl_client.py /usr/local/bin/replsh
     cp webrepl_cli.py /usr/local/bin/replcp
-    chmod +x /usr/local/bin/replsh /usr/local/bin/replcp
+    cp webrepl.py /usr/local/bin/webrepl.py
+    cp scripts/webreplcmd /usr/local/bin/replcmd
+    chmod +x /usr/local/bin/replsh /usr/local/bin/replcp /usr/local/bin/replcmd
 
 Upload local files to remote ESP32 like this:
 

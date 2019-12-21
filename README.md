@@ -113,6 +113,10 @@ Upload local files to remote ESP32 like this:
 
     replcp -p password ecp5.py 192.168.4.1:ecp5.py
 
+or like this:
+
+    replcmd --host=192.168.4.1 --password=1234 put ecp5.py ecp5.py
+
 For prompt without being asked password:
 
     replsh -p password -r 192.168.4.1

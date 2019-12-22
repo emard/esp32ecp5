@@ -189,7 +189,7 @@ Connect with ftp client to ESP32, type ENTER at (empty) password
 
     ftp 192.168.4.1
     Connected to 192.168.5.72.
-    220 Hello, this is the ESP8266.
+    220 Hello, this is the ULX3S.
     230 Logged in.
     Remote system type is UNIX.
     Using binary mode to transfer files.
@@ -321,3 +321,4 @@ memory situation will be better for ecp5.flash() from "webrepl"
     [x] mount/umount SD card from ftp prompt (just cd to /sd)?
     [x] specify flash address ftp> put file.bit flash@0x200000
     [ ] "site" command execute some python script
+    [ ] site mount, exit, site umount Fail

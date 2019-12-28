@@ -9,9 +9,8 @@ from machine import SPI, Pin, SDCard
 from micropython import const
 
 class sdraw:
-
-  def __init__(self):
-    print("SD RAW writer")
+  #def __init__(self):
+    #print("SD RAW writer")
     #self.init_pinout_sd()
 
   def stopwatch_start(self):
@@ -67,11 +66,18 @@ class sdraw:
       return False
     return True
 
+  # negative addr means reference from end of the card  
+  def sd_wrapaddr(self, addr):
+    if addr >= 0:
+      return addr
+    cardsize = self.sd.ioctl(4,0)*0x200
+    return cardsize+addr
+
   def sd_read(self, data, addr=0):
     if not self.sd_check_param(addr) or not self.sd_check_param(len(data)):
       return False
     self.sd_open()
-    self.sd.readblocks(addr//0x200,data)
+    self.sd.readblocks(self.sd_wrapaddr(addr)//0x200,data)
     self.sd_close()
     return True
 
@@ -80,6 +86,9 @@ class sdraw:
       return False
     bytes_uploaded = 0
     self.sd_open()
+    if addr < 0:
+      blocksize = 512
+    addr=self.sd_wrapaddr(addr)
     self.stopwatch_start()
     block = bytearray(blocksize)
     while True:

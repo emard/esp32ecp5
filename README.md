@@ -253,9 +253,11 @@ name "fpga", "flash@" or "sd@".
     ftp> put blink.bit flash@0x200000
     ftp> put freedos.img sd@0
     ftp> put freedos.img sd@0x200000
+    ftp> put bios.img sd@-8192
 
 NOTE: FLASH and SD card accept byte offset after "@" character.
 Offset must be rounded to 4096 bytes for FLASH and to 512 bytes for SD.
+Negative offset can be used for writing relative to the end of SD card.
 Special destination file names "fpga", "flash@", "sd@" are
 used for direct programming and they don't relate to actual
 files on ESP32 filesystem.

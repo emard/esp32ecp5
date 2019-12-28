@@ -431,6 +431,9 @@ class FTP_client:
                   cl.sendall('250 OK\r\n')
                 else:
                   cl.sendall('550 Fail\r\n')
+              elif path == "/passthru":
+                ecp5.passthru()
+                cl.sendall('250 OK passthru\r\n')
               else:
                 try:
                     if ecp5.prog(path, prog_close=False):

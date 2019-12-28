@@ -228,6 +228,9 @@ it also accepts "site" command to read file from ESP32 local filesystem
     ftp> site filename.bit
     ... will program local file to FPGA using
     ... ecp5.prog("filename.bit")
+    ftp> site passthru
+    ... will program file "passthru%08X.bit.gz" % idcode
+    ... ecp5.passhtru()
 
 SD card with FAT filesystem can be mounted or unmounted to "/sd" directory:
 

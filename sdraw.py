@@ -86,14 +86,16 @@ class sdraw:
       return False
     bytes_uploaded = 0
     self.sd_open()
-    if addr < 0:
-      blocksize = 512
     addr=self.sd_wrapaddr(addr)
+    nearend=self.sd_wrapaddr(-blocksize)
     self.stopwatch_start()
     block = bytearray(blocksize)
     while True:
+      waddr=addr+bytes_uploaded
+      if waddr >= nearend and len(block) > 0x200:
+        block = bytearray(0x200)
       if filedata.readinto(block):
-        self.sd.writeblocks((addr+bytes_uploaded)//0x200,block)
+        self.sd.writeblocks(waddr//0x200,block)
         bytes_uploaded += len(block)
       else:
         break

@@ -201,8 +201,11 @@ class FTP_client:
     def umount(self):
         try:
             uos.umount("/sd")
-            self.sd.deinit()
-            del self.sd
+            try:
+              self.sd.deinit()
+              del self.sd
+            except:
+              pass
             # let all SD pins be inputs
             for i in bytearray([2,4,12,13,14,15]):
                 p = Pin(i,Pin.IN)

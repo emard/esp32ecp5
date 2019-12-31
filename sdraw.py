@@ -103,14 +103,14 @@ class sdraw:
     self.sd_close()
     return True
 
-def sd_read(addr=0, length=512):
+def read(addr=0, length=512):
   data = bytearray(length)
   if sdraw().sd_read(data, addr):
     return data
   else:
     return False
 
-def sd_write(filepath, addr=0):
+def write(filepath, addr=0):
   gz=filepath.endswith(".gz")
   if filepath.startswith("http://") or filepath.startswith("/http:/"):
     filedata = sdraw().open_web(filepath, gz)
@@ -125,5 +125,6 @@ def sd_write(filepath, addr=0):
 
 def help():
   print("usage:")
-  print("sdraw.sd_write(\"http://192.168.4.2/sdcard.img\", addr=0)")
-  print("sdraw.sd_read(addr=0, length=512)")
+  print("sdraw.write(\"http://192.168.4.2/sdcard.img\", addr=0) # to start of SD")
+  print("sdraw.read(addr=0, length=512) # from start of SD")
+  print("sdraw.read(-1024) # from 1024 bytes before end of SD")

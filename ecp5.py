@@ -9,6 +9,7 @@ from machine import SPI, Pin
 from micropython import const
 from struct import pack, unpack
 from uctypes import addressof
+from gc import collect
 
 class ecp5:
 
@@ -686,3 +687,4 @@ def help():
 #flash("blink.bit")
 #prog("blink.bit")
 #prog("http://192.168.4.2/blink.bit")
+collect()

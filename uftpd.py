@@ -20,7 +20,7 @@
 import socket
 import network
 import uos
-import gc
+from gc import collect
 from time import sleep_ms, localtime
 from micropython import alloc_emergency_exception_buf
 from machine import SDCard, Pin
@@ -221,7 +221,7 @@ class FTP_client:
         global my_ip_addr
 
         try:
-            gc.collect()
+            collect()
 
             data = cl.readline().decode("utf-8").rstrip("\r\n")
 
@@ -573,3 +573,4 @@ def restart(port=21, verbose=0, splash=True):
 
 
 start(splash=True)
+collect()

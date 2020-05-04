@@ -117,7 +117,7 @@ class FTP_client:
         return description
 
     def send_file_data(self, path, data_client):
-        with open(path, "r") as file:
+        with open(path,"rb") as file:
             chunk = file.read(_CHUNK_SIZE)
             while len(chunk) > 0:
                 data_client.sendall(chunk)

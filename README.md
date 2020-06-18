@@ -37,7 +37,7 @@ auto-executable file named "main.py".
 
 Choose either: (copy-paste to usb-serial python prompt ">>>")
 
-setup as client that logs on to WiFi access point (home internet router),
+setup as client that logs on to a WiFi access point (home internet router),
 replace "accesspoint" and "password" with proper logins for your WiFi router:
 
     f=open("main.py","w")
@@ -84,10 +84,22 @@ address if you press Ctrl-D on empty python prompt:
 with web browser open [webrepl for web browser](http://micropython.org/webrepl),
 enter IP address of ESP32, enter password. Python prompt ">>>" should appear.
 
-From webrepl GUI upload "ecp5.py", (optionally also "uftpd.py" and "sdraw.py"
-if you want FTP server, read below) and some bitstream file like "blink.bit" or
+From webrepl GUI upload "ecp5.py", (optionally also "uftpd.py", "sdraw.py",
+"wifiman.py" and edited "wifiman.conf" if you want FTP server and roaming
+profiles read below) and some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with gzip -9) to
 the root of ESP32 python FLASH filesystem.
+
+"wifiman.py" is a simple WiFi roaming manager which scans WiFi
+access points at power-on and uses password from file "wifiman.conf":
+
+    accesspoint1:password1
+    accesspoint2:password2
+
+Then "main.py" should be only this
+
+    import wifiman
+    import uftpd
 
 If webrepl GUI disconnects immediatly, without asking the password, try to delete
 web browser's history, cookies, passwords and similar data, close web browser and

@@ -110,24 +110,7 @@ profiles read below) and some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with gzip -9) to
 the root of ESP32 python FLASH filesystem.
 
-# WiFi manager for roaming
-
-"wifiman.py" is a simple WiFi roaming manager which scans WiFi
-access points at power-on and uses password from file "wifiman.conf":
-
-    accesspoint1:password1
-    accesspoint2:password2
-
-Then "main.py" should be only this
-
-    import wifiman
-    import uftpd
-
-If webrepl GUI disconnects immediatly, without asking the password, try to delete
-web browser's history, cookies, passwords and similar data, close web browser and
-try again.
-
-# Command line WebREPL uploaders
+# Upload files from linux command line
 
 Get [webrepl for commandline](https://github.com/Hermann-SW/webrepl),
 and [KOST's webrepl shell automation](https://github.com/kost/webrepl-python)
@@ -172,9 +155,24 @@ List directory to see if the files are uploaded:
     os.listdir()
     ['boot.py', 'ecp5.py', 'main.py', 'blink.bit']
 
-# ECP5 programming from python command line
+# WiFi manager for roaming
 
-Yes there it is, let's try:
+"wifiman.py" is a simple WiFi roaming manager which scans WiFi
+access points at power-on and uses password from file "wifiman.conf":
+
+    accesspoint1:password1
+    accesspoint2:password2
+
+Then "main.py" should be only this
+
+    import wifiman
+    import uftpd
+
+If webrepl GUI disconnects immediatly, without asking the password, try to delete
+web browser's history, cookies, passwords and similar data, close web browser and
+try again.
+
+# ECP5 programming from python command line
 
     import ecp5
     ecp5.prog("blink.bit") 

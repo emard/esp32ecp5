@@ -240,6 +240,9 @@ it also accepts "site" command to read file from ESP32 local filesystem
     ftp> site filename.bit
     ... will program local file to FPGA using
     ... ecp5.prog("filename.bit")
+    ftp> site /sd/blink.bit
+    ... If the path starts with "/sd/" then SD card will be unmounted
+    ... before starting bitstream
     ftp> site passthru
     ... will program file "passthru%08X.bit.gz" % idcode
     ... ecp5.passhtru()
@@ -250,10 +253,12 @@ SD card with FAT filesystem can be mounted or unmounted to "/sd" directory:
     ftp> ls sd
     ftp> site umount
     ftp> ls sd
-    ftp> site /sd/blink.bit
 
-"site" command can be used to upload a bitstream from SD card,
-but SD card will be unmounted before starting bitstream.
+exec() any micropython command:
+
+    ftp> site import struct
+    ... will exec("import struct")
+    250 OK import struct
 
 It is possible to directly put a binary file
 (not gzipped) from "ftp>" prompt into FPGA, FLASH or
@@ -274,7 +279,7 @@ Special destination file names "fpga", "flash@", "sd@" are
 used for direct programming and they don't relate to actual
 files on ESP32 filesystem.
 
-if using "lftp", syntax is different, use option "-o" like this:
+if using "lftp", syntax is different, use option "-o" and prepend "/" like this:
 
     lftp 192.168.4.1:/> put blink.bit -o /fpga
     lftp 192.168.4.1:/> put blink.bit -o /flash@0

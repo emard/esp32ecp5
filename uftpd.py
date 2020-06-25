@@ -437,7 +437,7 @@ class FTP_client:
               elif path == "/passthru":
                 ecp5.passthru()
                 cl.sendall('250 OK passthru\r\n')
-              else:
+              elif path.endswith(".bit") or path.endswith(".bit.gz"):
                 try:
                     if ecp5.prog(path, prog_close=False):
                         if path.startswith("/sd/"):
@@ -454,6 +454,17 @@ class FTP_client:
                         cl.sendall('550 Fail\r\n')
                 except:
                     cl.sendall('550 Fail\r\n')
+              else:
+                if path.startswith("/"):
+                  exe=path[1:]
+                else:
+                  exe=path
+                try:
+                  exec(exe)
+                  cl.sendall('250 OK '+exe+'\r\n')
+                except:
+                  cl.sendall('550 Fail '+exe+'\r\n')
+                del exe
             else:
                 cl.sendall("502 Unsupported command.\r\n")
                 # log_msg(2,

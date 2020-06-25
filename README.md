@@ -4,7 +4,7 @@ This is micropython running on ESP32 to allow
 JTAG programming and flashing of Lattice ECP5 FPGA JTAG.
 A simple way in about 700 lines of code.
 
-# Usage
+# Install ESP32 micropython
 
 Skip this step if you have ESP32 on some development board with USB-serial module.
 If you have ESP32 on [ULX3S board](https://github.com/emard/ulx3s), you need to 
@@ -27,13 +27,31 @@ Upload micropython to ESP32
 
 Power off and on ESP32
 
+# ESP32 micropython prompt
+
 Connect over USB-serial
 
     screen /dev/ttyUSB0 115200
 
+Press few ENTERs, you should see prompt
+
+    >>>
+    >>>
+
+Try some simple commands
+
+    >>> 1+2
+    3
+    >>> print("hey")
+    hey
+
+# Connect ESP32 to WiFi
+
 To automate further use, it is good to setup ESP32 to automatically
 bring up networking and services after power up. This is done using
-auto-executable file named "main.py".
+auto-executable file named "main.py" which will connect to one Access Point
+with one password. Later will be explained how to setup simple roaming
+profile with multiple APs and passwords.
 
 Choose either: (copy-paste to usb-serial python prompt ">>>")
 
@@ -84,11 +102,15 @@ address if you press Ctrl-D on empty python prompt:
 with web browser open [webrepl for web browser](http://micropython.org/webrepl),
 enter IP address of ESP32, enter password. Python prompt ">>>" should appear.
 
+# Upload files from web browser
+
 From webrepl GUI upload "ecp5.py", (optionally also "uftpd.py", "sdraw.py",
 "wifiman.py" and edited "wifiman.conf" if you want FTP server and roaming
 profiles read below) and some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with gzip -9) to
 the root of ESP32 python FLASH filesystem.
+
+# WiFi manager for roaming
 
 "wifiman.py" is a simple WiFi roaming manager which scans WiFi
 access points at power-on and uses password from file "wifiman.conf":
@@ -105,7 +127,9 @@ If webrepl GUI disconnects immediatly, without asking the password, try to delet
 web browser's history, cookies, passwords and similar data, close web browser and
 try again.
 
-Or get [webrepl for commandline](https://github.com/Hermann-SW/webrepl),
+# Command line WebREPL uploaders
+
+Get [webrepl for commandline](https://github.com/Hermann-SW/webrepl),
 and [KOST's webrepl shell automation](https://github.com/kost/webrepl-python)
 install some python dependencies:
 
@@ -148,6 +172,8 @@ List directory to see if the files are uploaded:
     os.listdir()
     ['boot.py', 'ecp5.py', 'main.py', 'blink.bit']
 
+# ECP5 programming from python command line
+
 Yes there it is, let's try:
 
     import ecp5
@@ -182,6 +208,8 @@ SD card usage (SPI at gpio 12-15):
 "slot=3" must be specified to prevent using SD card MMC mode.
 MMC mode is about 2x faster but currently it doesn't work together
 with this ecp5.py programmer.
+
+# ECP5 programming from FTP
 
 Here I have "uftpd.py" which came from original
 [ESP32 FTP server](https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD)

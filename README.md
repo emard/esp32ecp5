@@ -281,7 +281,7 @@ SD card with FAT filesystem can be mounted or unmounted to "/sd" directory:
     ftp> ls sd
 
 exec() any micropython command. For this to work, ftp should be in root
-"/" directory because ftp usually prepends path to "site" argument.
+"/" directory because path is usually prepended to "site" argument.
 
     ftp> cd /
     ftp> site import struct

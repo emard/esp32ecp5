@@ -282,11 +282,14 @@ SD card with FAT filesystem can be mounted or unmounted to "/sd" directory:
 
 exec() any micropython command. For this to work, ftp should be in root
 "/" directory because path is usually prepended to "site" argument.
+Quotes ("") may be required sometimes and actual syntax may vary
+between ftp clients.
 
     ftp> cd /
-    ftp> site import struct
+    ftp> site "import struct"
     ... will exec("import struct")
     250 OK import struct
+    lftp> site import struct
 
 It is possible to directly put a binary file
 (not gzipped) from "ftp>" prompt into FPGA, FLASH or

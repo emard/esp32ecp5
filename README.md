@@ -271,7 +271,7 @@ it also accepts "site" command to read file from ESP32 local filesystem
     ... before starting bitstream
     ftp> site passthru
     ... will program file "passthru%08X.bit.gz" % idcode
-    ... ecp5.passhtru()
+    ... ecp5.passthru()
 
 SD card with FAT filesystem can be mounted or unmounted to "/sd" directory:
 
@@ -280,8 +280,10 @@ SD card with FAT filesystem can be mounted or unmounted to "/sd" directory:
     ftp> site umount
     ftp> ls sd
 
-exec() any micropython command:
+exec() any micropython command. For this to work, ftp should be in root
+"/" directory because ftp usually prepends path to "site" argument.
 
+    ftp> cd /
     ftp> site import struct
     ... will exec("import struct")
     250 OK import struct

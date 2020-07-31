@@ -14,9 +14,9 @@ from gc import collect
 class ecp5:
 
   def init_pinout_jtag(self):
-    self.gpio_tms = const(23)
+    self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
     self.gpio_tck = const(18)
-    self.gpio_tdi = const(5)  # LED here
+    self.gpio_tdi = const(23)
     self.gpio_tdo = const(34)
 
   # if JTAG is directed to SD card pins

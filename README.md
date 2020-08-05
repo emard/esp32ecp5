@@ -165,8 +165,13 @@ access points at power-on and uses password from file "wifiman.conf":
 
 Then "main.py" should be only this
 
+    from ntptime import settime
     import wifiman
     import uftpd
+    try:
+      settime()
+    except:
+      print("NTP not available")
 
 If webrepl GUI disconnects immediatly, without asking the password, try to delete
 web browser's history, cookies, passwords and similar data, close web browser and

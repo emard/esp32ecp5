@@ -11,7 +11,7 @@ from struct import pack, unpack
 from gc import collect
 
 def ticks_ms()->int:
-  return monotonic_ns()//1000
+  return monotonic_ns()//1000000
 
 class ecp5:
 
@@ -651,7 +651,7 @@ def prog(filepath, prog_close=True):
     if gz:
       board.prog_stream(filedata,blocksize=4096)
     else:
-      board.prog_stream(filedata,blocksize=16384)
+      board.prog_stream(filedata,blocksize=4096)
     # NOTE now the SD card can be released before bitstream starts
     if prog_close:
       return board.prog_close() # start the bitstream
@@ -697,7 +697,7 @@ def help():
 
 collect()
 print("IDCODE: 0x%08X" % idcode())
-prog("blink.bit")
+#prog("blink.bit")
 #prog("http://192.168.4.2/blink.bit")
 #flash("blink.bit")
 #flash("passthru.bit")

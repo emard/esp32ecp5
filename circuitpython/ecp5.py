@@ -51,6 +51,12 @@ class ecp5:
     del self.tdi
     del self.tdo
 
+  def bitbang_jtag_input(self):
+    self.tms.direction=digitalio.Direction.INPUT
+    self.tck.direction=digitalio.Direction.INPUT
+    self.tdi.direction=digitalio.Direction.INPUT
+    self.tdo.direction=digitalio.Direction.INPUT
+
   # initialize both hardware accelerated SPI
   # software SPI on the same pins
   def spi_jtag_on(self):
@@ -79,10 +85,11 @@ class ecp5:
     self.gpio_led = board.IO4
     self.gpio_dummy = board.IO2
     self.init_pinout_jtag()
-    self.bitbang_jtag_on()
-    self.bitbang_jtag_off()
     self.spi_jtag_on()
     self.spi_jtag_off()
+    self.bitbang_jtag_on()
+    self.bitbang_jtag_input()
+    self.bitbang_jtag_off()
 
   # print bytes reverse - appears the same as in SVF file
   def print_hex_reverse(self, block, head="", tail="\n"):
@@ -349,6 +356,7 @@ class ecp5:
       done = False
     self.reset_tap()
     #self.led.value=0
+    self.bitbang_jtag_input()
     self.bitbang_jtag_off()
     return done
 
@@ -477,6 +485,7 @@ class ecp5:
     self.sdr_idle(b"\x00\x00\x00",2,100)
     self.reset_tap()
     #self.led.value=0
+    self.bitbang_jtag_input()
     self.bitbang_jtag_off()
       
   def stopwatch_start(self):

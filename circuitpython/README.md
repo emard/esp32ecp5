@@ -43,6 +43,19 @@ root of its filesystem and connect to its serial port:
     True
     >>>
 
+Circuitpython bugs: for the first time, prog("blink.bit")
+may be syntax error, for the second time it will succeed:
+
+    >>> from ecp5 import prog,flash
+    IDCODE: 0x21111043
+    >>> prog("blink.bit")
+    Traceback (most recent call last):
+    File "<stdin>", line 1
+    SyntaxError: invalid syntax
+    >>> prog("blink.bit")
+    102400 bytes uploaded in 45 ms (2275 kB/s)
+    True
+
 To autostart bitstream "autostart.bit", make "main.py":
 
     import ecp5

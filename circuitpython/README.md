@@ -8,6 +8,7 @@ Pinout:
     GND  GND
     3V3  3.3V
     EN   10k 3.3V
+    IO0  BTN GND
     IO18 10k 3.3V
     IO19 D-
     IO20 D+
@@ -16,7 +17,17 @@ Pinout:
     IO33 TDI
     IO34 TDO
 
-S2 enumerates as USB-serial and USB-storage device what makes
+To upload circuitpython hold BTN and plug in the board,
+board should enumerate serial port /dev/ttyACM0 on linux.
+Using the latest esptool.py v3.0-dev upload the latest
+circuitpython for
+[Adafruit CircuitPython Saola-1 WROVER board](https://adafruit-circuit-python.s3.amazonaws.com/index.html?prefix=bin/espressif_saola_1_wrover/en_US/)
+
+    wget -c https://adafruit-circuit-python.s3.amazonaws.com/bin/espressif_saola_1_wrover/en_US/adafruit-circuitpython-espressif_saola_1_wrover-en_US-20200825-5b1a1c7.bin
+    python3 esptool.py --chip esp32s2 -p /dev/ttyACM0 --no-stub -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode qio --flash_freq 40m --flash_size 16MB 0x0000 $1
+
+Power OFF/ON the board without pressing BTN.
+S2 should now enumerate as USB-serial and USB-storage device what makes
 it very practical, just copy "ecp5.py" and "blink.bit" to the
 root of its filesystem and connect to its serial port:
 

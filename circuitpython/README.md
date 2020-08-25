@@ -9,7 +9,7 @@ Pinout:
     3V3  3.3V
     EN   10k 3.3V
     IO0  BTN GND
-    IO18 10k 3.3V
+    IO18 10k 3.3V (pullup for floating RXD)
     IO19 D-
     IO20 D+
     IO5  TMS - BLUE LED - 549ohm - 3.3V
@@ -56,13 +56,13 @@ may be syntax error, for the second time it will succeed:
     102400 bytes uploaded in 45 ms (2275 kB/s)
     True
 
-To autostart bitstream "autostart.bit", make "main.py":
+To load "autostart.bit" bitstream at power ON, make "main.py":
 
     import ecp5
     ecp5.prog("autostart.bit")
     ecp5.idcode()
 
-Uploading a new bitstream is easy - just copy "autostart.bit" to
+Uploading a new bitstream is easy - just overwrite new "autostart.bit" to
 USB flash disk and power OFF/ON the board or restart circuitpython
 by pressing Ctrl-D at empty prompt:
 

@@ -310,7 +310,6 @@ class ecp5:
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     # switch from bitbanging to SPI mode
-    #self.hwspi.configure(clock=self.gpio_tck) # 1 TCK-glitch? TDI=0
     self.bitbang_jtag_off()
     self.spi_jtag_on()
     # we are lucky that format of the bitstream tolerates
@@ -325,7 +324,6 @@ class ecp5:
 
   def prog_stream_done(self):
     # switch from hardware SPI to bitbanging done after prog_stream()
-    #self.hwspi.configure(clock=self.gpio_dummy) # avoid TCK-glitch
     self.spi_jtag_off()
 
   # call this after uploading all of the bitstream blocks,

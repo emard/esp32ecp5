@@ -34,14 +34,6 @@ class ecp5:
 
   def bitbang_jtag_off(self):
     #print("bitbang_jtag_off")
-    #self.tms.direction=digitalio.Direction.INPUT
-    #self.tck.direction=digitalio.Direction.INPUT
-    #self.tdi.direction=digitalio.Direction.INPUT
-    #self.tdo.direction=digitalio.Direction.INPUT
-    #a = self.tms.value
-    #a = self.tck.value
-    #a = self.tdo.value
-    #a = self.tdi.value
     self.tck.deinit()
     self.tms.deinit()
     self.tdo.deinit()
@@ -427,29 +419,6 @@ class ecp5:
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
     self.flash_wait_status()
-
-  # 256-byte write block is too short for hardware SPI to accelerate
-  # flash_fast_write_block() is actually slower than flash_write_block()
-#  def flash_fast_write_block(self, block, addr=0):
-#    self.sdr(b"\x60") # SPI WRITE ENABLE
-#    self.send_tms(0) # -> capture DR
-#    self.send_tms(0) # -> shift DR
-#    # self.bitreverse(0x40) = 0x02 -> 0x02000000
-#    # send bits of 0x02 before the TCK glitch
-#    self.send_data_byte_reverse(0x02,0,7) # LSB bit 0 not sent now
-#    a = pack(">I", addr)
-#    self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch? TDO=0 as LSB bit
-#    self.hwspi.write(a[1:4]) # send 3-byte address
-#    self.hwspi.write(block[:-1]) # whole block except last byte
-#    # switch from SPI to bitbanging mode
-#    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
-#    self.bitbang_jtag_on()
-#    self.send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
-#    self.send_tms(0) # -> pause DR
-#    self.send_tms(1) # -> exit 2 DR
-#    self.send_tms(1) # -> update DR
-#    self.send_tms(1) # -> select DR scan
-#    self.flash_wait_status()
 
   # data is bytearray of to-be-read length
   def flash_fast_read_block(self, data, addr=0):

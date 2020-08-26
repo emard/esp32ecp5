@@ -17,8 +17,9 @@ Pinout:
     IO33 TDI
     IO34 TDO
 
-To upload circuitpython hold BTN and plug in the board,
-board should enumerate serial port /dev/ttyACM0 on linux.
+To upload circuitpython hold BTN and plug in the board to PC USB.
+Serial port "/dev/ttyACM0" should appear on linux, other OS should
+get similar serial device with different name.
 Using the latest esptool.py v3.0-dev upload the latest
 circuitpython for
 [Adafruit CircuitPython Saola-1 WROVER board](https://adafruit-circuit-python.s3.amazonaws.com/index.html?prefix=bin/espressif_saola_1_wrover/en_US/)
@@ -27,7 +28,8 @@ circuitpython for
     python3 esptool.py --chip esp32s2 -p /dev/ttyACM0 --no-stub -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode qio --flash_freq 40m --flash_size 16MB 0x0000 $1
 
 Power OFF/ON the board without pressing BTN.
-S2 should now enumerate as USB-serial and USB-storage device what makes
+S2 should now enumerate as USB-serial "/dev/ttyACM0" and 
+USB-storage device "Espressif Saola 1 w/WROVER 1.0" what makes
 it very practical, just copy "ecp5.py" and "blink.bit" to the
 root of its filesystem and connect to its serial port:
 
@@ -61,6 +63,9 @@ To load "autostart.bit" bitstream at power ON, make "main.py":
     import ecp5
     ecp5.prog("autostart.bit")
     ecp5.idcode()
+
+Last "ecp5.idcode()" is to release JTAG pins to high-Z mode
+and allow another JTAG to program ECP5.
 
 Uploading a new bitstream is easy - just overwrite new "autostart.bit" to
 USB flash disk and power OFF/ON the board or restart circuitpython

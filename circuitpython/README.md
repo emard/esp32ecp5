@@ -65,7 +65,7 @@ To load "autostart.bit" bitstream at power ON, make "main.py":
     ecp5.idcode()
 
 Last "ecp5.idcode()" is to release JTAG pins to high-Z mode
-and allow another JTAG to program ECP5.
+and allow external JTAG to program ECP5.
 
 Uploading a new bitstream is easy - just overwrite new "autostart.bit" to
 USB flash disk and power OFF/ON the board or restart circuitpython

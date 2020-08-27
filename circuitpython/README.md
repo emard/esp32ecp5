@@ -49,8 +49,8 @@ root of its filesystem and connect to its serial port:
     102400 bytes uploaded in 46 ms (2226 kB/s)
     True
     >>> flash("blink.bit")
-    102400 bytes uploaded in 1924 ms (53 kB/s)
-    4K blocks: 25 total, 0 erased, 0 written.
+    102400 bytes uploaded in 16320 ms (6 kB/s)
+    4K blocks: 25 total, 25 erased, 25 written.
     True
     >>>
 

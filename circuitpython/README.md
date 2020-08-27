@@ -29,11 +29,11 @@ See also module internal schematics in
 To upload circuitpython hold BTN and plug in the board to PC USB.
 Serial port "/dev/ttyACM0" should appear on linux, other OS should
 get similar serial device with different name.
-Using the latest esptool.py v3.0-dev upload the latest
-circuitpython for
-[Adafruit CircuitPython Saola-1 WROVER board](https://adafruit-circuit-python.s3.amazonaws.com/index.html?prefix=bin/espressif_saola_1_wrover/en_US/)
+Using the latest esptool.py v3.0-dev upload the circuitpython for
+[Adafruit CircuitPython Saola-1 WROVER board](https://adafruit-circuit-python.s3.amazonaws.com/index.html?prefix=bin/espressif_saola_1_wrover/en_US/).
+The latest may not be the one that works best, so here's last known good:
 
-    wget -c https://adafruit-circuit-python.s3.amazonaws.com/bin/espressif_saola_1_wrover/en_US/adafruit-circuitpython-espressif_saola_1_wrover-en_US-20200825-5b1a1c7.bin
+    wget -c https://adafruit-circuit-python.s3.amazonaws.com/bin/espressif_saola_1_wrover/en_US/adafruit-circuitpython-espressif_saola_1_wrover-en_US-20200827-fe73cfb.bin
     python3 esptool.py --chip esp32s2 -p /dev/ttyACM0 --no-stub -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode qio --flash_freq 40m --flash_size 16MB 0x0000 $1
 
 Power OFF/ON the board without pressing BTN.

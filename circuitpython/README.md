@@ -82,3 +82,6 @@ by pressing Ctrl-D at empty prompt:
 
     >>> Ctrl-D
 
+Warning: there is high chance of linux to freeze during restarting
+circuitpython because linux has still some critical bugs at removing and
+inserting USB devices.

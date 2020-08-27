@@ -13,9 +13,9 @@ Pinout:
     IO19 D-
     IO20 D+
     IO5  TMS - BLUE LED - 549ohm - 3.3V
-    IO26 TCK
     IO33 TDI
     IO34 TDO
+    IO36 TCK
 
 See also module internal schematics in
 [ESP32-S2 WROVER datasheet](https://www.espressif.com/sites/default/files/documentation/esp32-s2-wrover_esp32-s2-wrover-i_datasheet_en.pdf)

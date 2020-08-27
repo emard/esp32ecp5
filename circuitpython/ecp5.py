@@ -42,10 +42,10 @@ class ecp5:
     self.tms.deinit()
     self.tdo.deinit()
     self.tdi.deinit()
-    del self.tms
-    del self.tck
-    del self.tdi
-    del self.tdo
+    #del self.tms
+    #del self.tck
+    #del self.tdi
+    #del self.tdo
 
   def bitbang_jtag_input(self):
     self.tms.direction=digitalio.Direction.INPUT
@@ -77,9 +77,6 @@ class ecp5:
     self.flash_erase_size = const(4096) # no ESP32 memory for more at flash_stream()
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
-    #self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
-    self.gpio_led = board.IO4
-    self.gpio_dummy = board.IO2
     self.init_pinout_jtag()
     self.spi_jtag_on()
     self.spi_jtag_off()

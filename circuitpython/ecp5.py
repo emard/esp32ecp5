@@ -16,10 +16,14 @@ def ticks_ms()->int:
 class ecp5:
 
   def init_pinout_jtag(self):
-    self.gpio_tms = board.IO38  # BLUE LED - 549ohm - 3.3V
-    self.gpio_tck = board.IO36
-    self.gpio_tdi = board.IO35
-    self.gpio_tdo = board.IO37
+    self.gpio_tdi = board.IO11
+    self.gpio_tck = board.IO12
+    self.gpio_tdo = board.IO13
+    self.gpio_tms = board.IO14  # BLUE LED - 549ohm - 3.3V
+    #self.gpio_tdi = board.IO35
+    #self.gpio_tck = board.IO36
+    #self.gpio_tdo = board.IO37
+    #self.gpio_tms = board.IO38  # BLUE LED - 549ohm - 3.3V
 
   def bitbang_jtag_on(self):
     #print("bitbang_jtag_on")

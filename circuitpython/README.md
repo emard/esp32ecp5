@@ -17,6 +17,9 @@ Pinout:
     IO33 TDI
     IO34 TDO
 
+See also module internal schematics in
+[ESP32-S2 WROVER datasheet](https://www.espressif.com/sites/default/files/documentation/esp32-s2-wrover_esp32-s2-wrover-i_datasheet_en.pdf)
+
 To upload circuitpython hold BTN and plug in the board to PC USB.
 Serial port "/dev/ttyACM0" should appear on linux, other OS should
 get similar serial device with different name.

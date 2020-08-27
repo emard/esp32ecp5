@@ -12,10 +12,10 @@ Pinout:
     IO18 10k 3.3V (pullup for floating RXD)
     IO19 D-
     IO20 D+
-    IO5  TMS - BLUE LED - 549ohm - 3.3V
-    IO33 TDI
-    IO34 TDO
+    IO35 TDI
     IO36 TCK
+    IO37 TDO
+    IO38 TMS - BLUE LED - 549ohm - 3.3V
 
 See also module internal schematics in
 [ESP32-S2 WROVER datasheet](https://www.espressif.com/sites/default/files/documentation/esp32-s2-wrover_esp32-s2-wrover-i_datasheet_en.pdf)

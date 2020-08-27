@@ -10,9 +10,6 @@ from micropython import const
 from struct import pack, unpack
 from gc import collect
 
-def ticks_ms()->int:
-  return monotonic_ns()//1000000
-
 class ecp5:
 
   def init_pinout_jtag(self):
@@ -189,10 +186,10 @@ class ecp5:
   # TAP returns to "select DR scan" state
   #@micropython.viper
   def runtest_idle(self, count:int, duration_ms:int):
-    leave=int(ticks_ms()) + duration_ms
+    leave=int(monotonic_ns()) + duration_ms*1000000
     for n in range(count):
       self.send_tms(0) # -> idle
-    while int(ticks_ms()) < leave:
+    while int(monotonic_ns()) < leave:
       self.send_tms(0) # -> idle
     self.send_tms(1) # -> select DR scan
   
@@ -463,10 +460,10 @@ class ecp5:
     self.bitbang_jtag_off()
       
   def stopwatch_start(self):
-    self.stopwatch_ms = ticks_ms()
+    self.stopwatch_ns = monotonic_ns()
   
   def stopwatch_stop(self, bytes_uploaded):
-    elapsed_ms = ticks_ms() - self.stopwatch_ms
+    elapsed_ms = (monotonic_ns() - self.stopwatch_ns)//1000000
     transfer_rate_MBps = 0
     if elapsed_ms > 0:
       transfer_rate_kBps = bytes_uploaded // elapsed_ms

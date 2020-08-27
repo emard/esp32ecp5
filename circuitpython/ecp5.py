@@ -22,10 +22,14 @@ class ecp5:
     #self.gpio_tdo = board.IO37
     #self.gpio_tms = board.IO38  # BLUE LED - 549ohm - 3.3V
 
-  def bitbang_jtag_on(self):
-    #print("bitbang_jtag_on")
+  def bitbang_tms_on(self):
     self.tms=digitalio.DigitalInOut(self.gpio_tms)
     self.tms.direction=digitalio.Direction.OUTPUT
+
+  def bitbang_tms_off(self):
+    self.tms.deinit()
+
+  def bitbang_jtag_on(self):
     self.tck=digitalio.DigitalInOut(self.gpio_tck)
     self.tck.direction=digitalio.Direction.OUTPUT
     self.tdi=digitalio.DigitalInOut(self.gpio_tdi)
@@ -34,35 +38,24 @@ class ecp5:
     self.tdo.direction=digitalio.Direction.INPUT
 
   def bitbang_jtag_off(self):
-    #print("bitbang_jtag_off")
     self.tck.deinit()
-    self.tms.deinit()
     self.tdo.deinit()
     self.tdi.deinit()
-    #del self.tms
-    #del self.tck
-    #del self.tdi
-    #del self.tdo
 
   def bitbang_jtag_input(self):
-    self.tms.direction=digitalio.Direction.INPUT
     self.tck.direction=digitalio.Direction.INPUT
+    self.tms.direction=digitalio.Direction.INPUT
     self.tdi.direction=digitalio.Direction.INPUT
     self.tdo.direction=digitalio.Direction.INPUT
 
-  # initialize both hardware accelerated SPI
-  # software SPI on the same pins
   def spi_jtag_on(self):
-    #print("spi_jtag_on")
     self.hwspi=busio.SPI(clock=self.gpio_tck,MOSI=self.gpio_tdi,MISO=self.gpio_tdo)
     while not self.hwspi.try_lock():
       pass
     self.hwspi.configure(baudrate=self.spi_freq,polarity=1,phase=1)
 
   def spi_jtag_off(self):
-    #print("spi_jtag_off")
     self.hwspi.deinit()
-    #self.hwspi.unlock()
     del self.hwspi
 
   def __init__(self):
@@ -79,9 +72,11 @@ class ecp5:
     self.init_pinout_jtag()
     self.spi_jtag_on()
     self.spi_jtag_off()
+    self.bitbang_tms_on()
     self.bitbang_jtag_on()
     self.bitbang_jtag_input()
     self.bitbang_jtag_off()
+    self.bitbang_tms_off()
 
   #def init_reverse_bits(self):
   #  #p8rb=ptr8(addressof(self.rb))
@@ -258,6 +253,7 @@ class ecp5:
       print("0x%08X & 0x%08X != 0x%08X %s" % (response,mask,expected,message))
 
   def idcode(self):
+    self.bitbang_tms_on()
     self.bitbang_jtag_on()
     #self.led.value=1
     self.reset_tap()
@@ -267,10 +263,12 @@ class ecp5:
     self.sdr_response(id_bytes)
     #self.led.value=0
     self.bitbang_jtag_off()
+    self.bitbang_tms_off()
     return unpack("<I", id_bytes)[0]
 
   # common JTAG open for both program and flash
   def common_open(self):
+    self.bitbang_tms_on()
     self.bitbang_jtag_on()
     #self.led.value=1
     self.reset_tap()
@@ -304,9 +302,8 @@ class ecp5:
     # manually walk the TAP
     # we will be sending one long DR command
     self.send_tms(0) # -> capture DR
-    self.send_tms(0) # -> shift DR
-    # switch from bitbanging to SPI mode
-    self.bitbang_jtag_off()
+    #self.send_tms(0) # -> shift DR NOTE will be send during TCK glitch
+    self.bitbang_jtag_off() # NOTE TCK glitch
     self.spi_jtag_on()
     # we are lucky that format of the bitstream tolerates
     # any leading and trailing junk bits. If it weren't so,
@@ -352,6 +349,7 @@ class ecp5:
     #self.led.value=0
     self.bitbang_jtag_input()
     self.bitbang_jtag_off()
+    self.bitbang_tms_off()
     return done
 
   # call this before sending the flash image
@@ -458,6 +456,7 @@ class ecp5:
     #self.led.value=0
     self.bitbang_jtag_input()
     self.bitbang_jtag_off()
+    self.bitbang_tms_off()
       
   def stopwatch_start(self):
     self.stopwatch_ns = monotonic_ns()

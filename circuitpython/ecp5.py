@@ -77,6 +77,8 @@ class ecp5:
     self.flash_erase_size = const(4096) # no ESP32 memory for more at flash_stream()
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
+    #self.rb=bytearray(256) # reverse bits
+    #self.init_reverse_bits()
     self.init_pinout_jtag()
     self.spi_jtag_on()
     self.spi_jtag_off()
@@ -84,21 +86,25 @@ class ecp5:
     self.bitbang_jtag_input()
     self.bitbang_jtag_off()
 
-  # print bytes reverse - appears the same as in SVF file
-  def print_hex_reverse(self, block, head="", tail="\n"):
-    print(head, end="")
-    for n in range(len(block)):
-      print("%02X" % block[len(block)-n-1], end="")
-    print(tail, end="")
+  #def init_reverse_bits(self):
+  #  #p8rb=ptr8(addressof(self.rb))
+  #  p8rb=memoryview(self.rb)
+  #  for i in range(256):
+  #    v=i
+  #    r=0
+  #    for j in range(8):
+  #      r<<=1
+  #      r|=v&1
+  #      v>>=1
+  #    p8rb[i]=r
 
-  #@micropython.viper
-  def bitreverse(self,x:int) -> int:
-    y = 0
-    for i in range(8):
-        if (x >> (7 - i)) & 1:
-            y |= (1 << i)
-    return y
-  
+  # print bytes reverse - appears the same as in SVF file
+  #def print_hex_reverse(self, block, head="", tail="\n"):
+  #  print(head, end="")
+  #  for n in range(len(block)):
+  #    print("%02X" % block[len(block)-n-1], end="")
+  #  print(tail, end="")
+
   #@micropython.viper
   def send_tms(self, tms:int):
     if tms:
@@ -665,8 +671,3 @@ def help():
 
 collect()
 print("IDCODE: 0x%08X" % idcode())
-#prog("blink.bit")
-#prog("http://192.168.4.2/blink.bit")
-#flash("blink.bit")
-#flash("passthru.bit")
-#print(flash_read(addr=0,length=24))

@@ -38,7 +38,7 @@ circuitpython for
 
 Power OFF/ON the board without pressing BTN.
 S2 should now enumerate as USB-serial "/dev/ttyACM0" and 
-USB-storage device "Espressif Saola 1 w/WROVER 1.0" what makes
+USB-storage device "Espressi Saola 1 w/WROVER 1.0" what makes
 it very practical, just copy "ecp5.py" and "blink.bit" to the
 root of its filesystem and connect to its serial port:
 

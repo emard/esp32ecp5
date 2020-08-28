@@ -59,7 +59,7 @@ class ecp5:
     del self.hwspi
 
   def __init__(self):
-    self.spi_freq = const(30000000) # Hz JTAG clk frequency
+    self.spi_freq = const(40000000) # Hz JTAG clk frequency
     # -1 for JTAG over SOFT SPI slow, compatibility
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
@@ -99,10 +99,7 @@ class ecp5:
 
   #@micropython.viper
   def send_tms(self, tms:int):
-    if tms:
-      self.tms.value=1
-    else:
-      self.tms.value=0
+    self.tms.value=tms
     self.tck.value=0
     self.tck.value=1
 
@@ -117,10 +114,7 @@ class ecp5:
       byte = 0
       val = p[i]
       for nf in range(8):
-        if (val >> nf) & 1:
-          self.tdi.value=1
-        else:
-          self.tdi.value=0
+        self.tdi.value=(val >> nf) & 1
         self.tck.value=0
         self.tck.value=1
         if self.tdo.value:
@@ -130,10 +124,7 @@ class ecp5:
     byte = 0
     val = p[l-1] # read last byte
     for nf in range(7): # first 7 bits
-      if (val >> nf) & 1:
-        self.tdi.value=1
-      else:
-        self.tdi.value=0
+      self.tdi.value=(val >> nf) & 1
       self.tck.value=0
       self.tck.value=1
       if self.tdo.value:
@@ -141,10 +132,7 @@ class ecp5:
     # last bit
     if last:
       self.tms.value=1
-    if (val >> 7) & 1:
-      self.tdi.value=1
-    else:
-      self.tdi.value=0
+    self.tdi.value=(val >> 7) & 1
     self.tck.value=0
     self.tck.value=1
     if self.tdo.value:
@@ -156,18 +144,12 @@ class ecp5:
   def send_data_byte_reverse(self, val:int, last:int, bits:int):
     self.tms.value=0
     for nf in range(bits-1):
-      if (val >> (7-nf)) & 1:
-        self.tdi.value=1
-      else:
-        self.tdi.value=0
+      self.tdi.value=(val >> (7-nf)) & 1
       self.tck.value=0
       self.tck.value=1
     if last:
       self.tms.value=1
-    if val & 1:
-      self.tdi.value=1
-    else:
-      self.tdi.value=0
+    self.tdi.value=val & 1
     self.tck.value=0
     self.tck.value=1
     

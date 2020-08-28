@@ -82,11 +82,11 @@ class ecp5:
     #self.init_pinout_sd()
 
   # print bytes reverse - appears the same as in SVF file
-  def print_hex_reverse(self, block, head="", tail="\n"):
-    print(head, end="")
-    for n in range(len(block)):
-      print("%02X" % block[len(block)-n-1], end="")
-    print(tail, end="")
+  #def print_hex_reverse(self, block, head="", tail="\n"):
+  #  print(head, end="")
+  #  for n in range(len(block)):
+  #    print("%02X" % block[len(block)-n-1], end="")
+  #  print(tail, end="")
 
   @micropython.viper
   def bitreverse(self,x:int) -> int:
@@ -299,7 +299,7 @@ class ecp5:
     # manually walk the TAP
     # we will be sending one long DR command
     self.send_tms(0) # -> capture DR
-    self.send_tms(0) # -> shift DR
+    #self.send_tms(0) # -> shift DR # NOTE sent with 1 TCK glitch
     # switch from bitbanging to SPI mode
     self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDI=0
     # we are lucky that format of the bitstream tolerates
@@ -412,46 +412,14 @@ class ecp5:
     self.send_tms(1) # -> select DR scan
     self.flash_wait_status()
 
-  # 256-byte write block is too short for hardware SPI to accelerate
-  # flash_fast_write_block() is actually slower than flash_write_block()
-#  def flash_fast_write_block(self, block, addr=0):
-#    self.sdr(b"\x60") # SPI WRITE ENABLE
-#    self.send_tms(0) # -> capture DR
-#    self.send_tms(0) # -> shift DR
-#    # self.bitreverse(0x40) = 0x02 -> 0x02000000
-#    # send bits of 0x02 before the TCK glitch
-#    self.send_data_byte_reverse(0x02,0,7) # LSB bit 0 not sent now
-#    a = pack(">I", addr)
-#    self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDO=0 as LSB bit
-#    self.hwspi.write(a[1:4]) # send 3-byte address
-#    self.hwspi.write(block[:-1]) # whole block except last byte
-#    # switch from SPI to bitbanging mode
-#    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
-#    self.bitbang_jtag_on()
-#    self.send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
-#    self.send_tms(0) # -> pause DR
-#    self.send_tms(1) # -> exit 2 DR
-#    self.send_tms(1) # -> update DR
-#    self.send_tms(1) # -> select DR scan
-#    self.flash_wait_status()
-
   # data is bytearray of to-be-read length
   def flash_fast_read_block(self, data, addr=0):
-    # 0x0B is SPI flash fast read command
-    sdr = pack(">I", 0x0B000000 | (addr & 0xFFFFFF))
+    # 0x0B is SPI flash fast read command and dummy byte read
+    sdr = pack(">IB", 0x0B000000 | (addr & 0xFFFFFF),0)
     self.send_tms(0) # -> capture DR
-    self.send_tms(0) # -> shift DR
-    self.swspi.write(sdr) # send SPI FLASH read command and address
-    # fast read after address, should read 8 dummy cycles
-    # this is a chance for TCK glitch workaround:
-    # first 7 cycles will be done in bitbang mode
-    # then switch to hardware SPI mode
-    # will add 1 more TCK-glitch cycle
-    for i in range(7):
-      self.tck.off()
-      self.tck.on()
-    # switch from bitbanging to SPI mode
+    #self.send_tms(0) # -> shift DR # NOTE sent with 1 TCK glitch
     self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDI=0
+    self.hwspi.write(sdr) # send SPI FLASH read command and address
     self.hwspi.readinto(data) # retrieve whole block
     # switch from SPI to bitbanging mode
     self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch

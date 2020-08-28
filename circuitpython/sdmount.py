@@ -8,7 +8,8 @@ import board
 import storage
 # pinout http://elm-chan.org/docs/mmc/mmc_e.html
 #   SD   SPI  (looking at contacts)
-#  ------------
+#  ____________
+# |
 # | D1
 # | D0   MISO
 # | GND
@@ -18,7 +19,7 @@ import storage
 # | CMD  MOSI
 # | D3   CSn
 #  \ D2
-#   -----------
+#   \__________
 gpio_csn  = board.IO34 # SD_D3
 gpio_mosi = board.IO35 # SD_CMD
 gpio_sck  = board.IO36 # SD_CLK

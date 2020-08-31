@@ -4,10 +4,10 @@
 # AUTHOR=EMARD
 # LICENSE=BSD
 
-# TODO: flash code here is still for ECP5.
-# for artix7 it should first program
-# the jtag-spi bypass bitstream
-# and then access SPI FLASH chip
+# TODO: FLASH code here is still for ECP5.
+# For ARTIX7 it should first program
+# the JTAG-SPI bypass bitstream
+# and then access SPI FLASH chip.
 
 from time import ticks_ms, sleep_ms
 from machine import SPI, Pin

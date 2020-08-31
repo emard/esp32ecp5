@@ -19,10 +19,16 @@ from gc import collect
 class artix7:
 
   def init_pinout_jtag(self):
-    self.gpio_tms = const(4)
-    self.gpio_tck = const(16)
-    self.gpio_tdi = const(15)
-    self.gpio_tdo = const(2)
+    # FJC-ESP32-V0r2 pluggable
+    #self.gpio_tms = const(4)
+    #self.gpio_tck = const(16)
+    #self.gpio_tdi = const(15)
+    #self.gpio_tdo = const(2)
+    # ESP32-WROVER-E FROGO wired
+    self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    self.gpio_tck = const(18)
+    self.gpio_tdi = const(23)
+    self.gpio_tdo = const(34)
 
   # if JTAG is directed to SD card pins
   # then bus traffic can be monitored using
@@ -72,7 +78,7 @@ class artix7:
     del self.swspi
 
   def __init__(self):
-    self.spi_freq = const(30000000) # Hz JTAG clk frequency
+    self.spi_freq = const(20000000) # Hz JTAG clk frequency
     # -1 for JTAG over SOFT SPI slow, compatibility
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
@@ -82,7 +88,7 @@ class artix7:
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
     self.gpio_led = const(5)
-    self.gpio_dummy = const(17)
+    self.gpio_dummy = const(21)
     self.init_pinout_jtag()
     #self.init_pinout_sd()
 
@@ -301,25 +307,22 @@ class artix7:
     self.led.on()
     self.reset_tap()
     self.runtest_idle(1,0)
-    self.sir(0x3F) # BYPASS
-    self.sir(0x0B) # JPROGRAM
-    self.runtest_idle(1,20)
-    self.check_response(self.sir(0x14), mask=0x10, expected=0x10, message="FAIL ISC_NOOP")
-    self.sir(0x05) # CFG_IN
 
   # call this before sending the bitstram
   # FPGA will enter programming mode
   # after this TAP will be in "shift DR" state
   def prog_open(self):
     self.common_open()
-    #self.sir(b"\x46") # LSC_INIT_ADDRESS
-    #self.sdr_idle(b"\x01",2,10)
-    #self.sir(b"\x7A") # LSC_BITSTREAM_BURST
+    self.sir(0x3F) # BYPASS
+    self.sir(0xB) # JPROGRAM
+    self.runtest_idle(1,20)
+    self.check_response(self.sir(0x14), mask=0x10, expected=0x10, message="FAIL ISC_NOOP")
+    self.sir(5) # CFG_IN
     # ---------- bitstream begin -----------
     # manually walk the TAP
     # we will be sending one long DR command
     self.send_tms(0) # -> capture DR
-    #self.send_tms(0) # -> shift DR # NOTE sent with 1 TCK glitch
+    self.send_tms(0) # -> shift DR # NOTE sent with 1 TCK glitch
     # switch from bitbanging to SPI mode
     self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDI=0
     # we are lucky that format of the bitstream tolerates
@@ -346,10 +349,10 @@ class artix7:
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
-    #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
+    self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
     self.runtest_idle(1,10)
     # ---------- bitstream end -----------
-    self.sir(0x0C) # JSTART
+    self.sir(0xC) # JSTART
     self.runtest_idle(2000,0)
     self.reset_tap()
     self.led.off()
@@ -364,9 +367,9 @@ class artix7:
     self.common_open()
     self.reset_tap()
     self.runtest_idle(1,0)
-    self.sir_idle(b"\xFF",32,0) # BYPASS
-    self.sir(b"\x3A") # LSC_PROG_SPI
-    self.sdr_idle(pack("<H",0x68FE),32,0)
+    #self.sir_idle(b"\xFF",32,0) # BYPASS
+    #self.sir(b"\x3A") # LSC_PROG_SPI
+    #self.sdr_idle(pack("<H",0x68FE),32,0)
     # ---------- flashing begin -----------
     # 0x60 and other SPI flash commands here are bitreverse() values
     # of flash commands found in SPI FLASH datasheet.
@@ -378,6 +381,7 @@ class artix7:
     # read_status_register = pack("<H",0x00A0) # READ STATUS REGISTER
     status_register = bytearray(2)
     while retry > 0:
+      self.sir(2) # USER1
       # always refresh status_register[0], overwitten by response
       status_register[0] = 0xA0 # 0xA0 READ STATUS REGISTER
       self.sdr_response(status_register)
@@ -387,9 +391,11 @@ class artix7:
       retry -= 1
     if retry <= 0:
       print("error flash status %04X & 0xC1 != 0" % (unpack("<H",status_register))[0])
+    self.reset_tap()
     #  self.sdr(pack("<H",0x00A0), mask=pack("<H",0xC100), expected=pack("<H",0)) # READ STATUS REGISTER
 
   def flash_erase_block(self, addr=0):
+    self.sir(2) # USER1
     self.sdr(b"\x60") # SPI WRITE ENABLE
     # some chips won't clear WIP without this:
     status = pack("<H",0x00A0) # READ STATUS REGISTER
@@ -407,6 +413,7 @@ class artix7:
     self.flash_wait_status()
 
   def flash_write_block(self, block, addr=0):
+    self.sir(2) # USER1
     self.sdr(b"\x60") # SPI WRITE ENABLE
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
@@ -422,10 +429,11 @@ class artix7:
 
   # data is bytearray of to-be-read length
   def flash_fast_read_block(self, data, addr=0):
+    self.sir(2) # USER1
     # 0x0B is SPI flash fast read command and dummy byte read
     sdr = pack(">IB", 0x0B000000 | (addr & 0xFFFFFF),0)
     self.send_tms(0) # -> capture DR
-    #self.send_tms(0) # -> shift DR # NOTE sent with 1 TCK glitch
+    self.send_tms(0) # -> shift DR # NOTE sent with 1 TCK glitch
     self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDI=0
     self.hwspi.write(sdr) # send SPI FLASH read command and address
     self.hwspi.readinto(data) # retrieve whole block
@@ -444,12 +452,13 @@ class artix7:
   def flash_close(self):
     # switch from SPI to bitbanging
     # ---------- flashing end -----------
+    self.sir(2) # USER1
     self.sdr(b"\x20") # SPI WRITE DISABLE
-    self.sir_idle(b"\xFF",100,1) # BYPASS
-    self.sir_idle(b"\x26",2,200) # ISC DISABLE
-    self.sir_idle(b"\xFF",2,1) # BYPASS
-    self.sir(b"\x79") # LSC_REFRESH reload the bitstream from flash
-    self.sdr_idle(b"\x00\x00\x00",2,100)
+    self.sir(0xD) # JSHUTDOWN
+    self.sir(0xB) # JPROGRAM
+    self.runtest_idle(2000,20)
+    self.sir(0x3F) # BYPASS
+    self.runtest_idle(2000,0)
     self.spi_jtag_off()
     self.reset_tap()
     self.led.off()

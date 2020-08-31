@@ -1,8 +1,13 @@
 # micropython ESP32
-# ECP5 JTAG programmer
+# ARTIX7 JTAG programmer
 
 # AUTHOR=EMARD
 # LICENSE=BSD
+
+# TODO: flash code here is still for ECP5.
+# for artix7 it should first program
+# the jtag-spi bypass bitstream
+# and then access SPI FLASH chip
 
 from time import ticks_ms, sleep_ms
 from machine import SPI, Pin
@@ -298,13 +303,10 @@ class artix7:
     self.runtest_idle(1,0)
     self.sir(0x3F) # BYPASS
     self.sir(0x0B) # JPROGRAM
-    self.sir(0x14) # ISC_NOOP
-    self.runtest_idle(100000,0)
-    response=self.sir(0x14) # ISC_NOOP
-    self.check_response(response, mask=0x10, expected=0x10, message="FAIL ISC_NOOP")
-    response=self.sir(0x05) # CFG_IN
-    self.check_response(response, mask=0x00, expected=0x00, message="FAIL CFG_IN")
-  
+    self.runtest_idle(1,20)
+    self.check_response(self.sir(0x14), mask=0x10, expected=0x10, message="FAIL ISC_NOOP")
+    self.sir(0x05) # CFG_IN
+
   # call this before sending the bitstram
   # FPGA will enter programming mode
   # after this TAP will be in "shift DR" state

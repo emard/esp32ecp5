@@ -19,17 +19,6 @@ class ecp5:
     self.gpio_tdi = const(23)
     self.gpio_tdo = const(34)
 
-  # if JTAG is directed to SD card pins
-  # then bus traffic can be monitored using
-  # JTAG slave OLED HEX decoder:
-  # https://github.com/emard/ulx3s-misc/tree/master/examples/jtag_slave/proj/ulx3s_jtag_hex_passthru_v
-  #def init_pinout_sd(self):
-  #  self.gpio_tms = 15
-  #  self.gpio_tck = 14
-  #  self.gpio_tdi = 13
-  #  self.gpio_tdo = 12
-
-
   def bitbang_jtag_on(self):
     #self.led=Pin(self.gpio_led,Pin.OUT)
     self.tms=Pin(self.gpio_tms,Pin.OUT)
@@ -67,7 +56,7 @@ class ecp5:
     del self.swspi
 
   def __init__(self):
-    self.spi_freq = const(30000000) # Hz JTAG clk frequency
+    self.spi_freq = const(25000000) # Hz JTAG clk frequency
     # -1 for JTAG over SOFT SPI slow, compatibility
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
@@ -75,26 +64,33 @@ class ecp5:
     self.flash_erase_size = const(4096) # no ESP32 memory for more at flash_stream()
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
+    #self.rb=bytearray(256) # reverse bits
+    #self.init_reverse_bits()
     self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
-    self.gpio_led = const(4)
-    self.gpio_dummy = const(2)
+    #self.gpio_led = const(19)
+    self.gpio_dummy = const(19) # 1,2,3,19,21
     self.init_pinout_jtag()
     #self.init_pinout_sd()
 
   # print bytes reverse - appears the same as in SVF file
-  def print_hex_reverse(self, block, head="", tail="\n"):
-    print(head, end="")
-    for n in range(len(block)):
-      print("%02X" % block[len(block)-n-1], end="")
-    print(tail, end="")
+  #def print_hex_reverse(self, block, head="", tail="\n"):
+  #  print(head, end="")
+  #  for n in range(len(block)):
+  #    print("%02X" % block[len(block)-n-1], end="")
+  #  print(tail, end="")
 
-  @micropython.viper
-  def bitreverse(self,x:int) -> int:
-    y = 0
-    for i in range(8):
-        if (x >> (7 - i)) & 1:
-            y |= (1 << i)
-    return y
+  #@micropython.viper
+  #def init_reverse_bits(self):
+  #  #p8rb=ptr8(addressof(self.rb))
+  #  p8rb=memoryview(self.rb)
+  #  for i in range(256):
+  #    v=i
+  #    r=0
+  #    for j in range(8):
+  #      r<<=1
+  #      r|=v&1
+  #      v>>=1
+  #    p8rb[i]=r
   
   @micropython.viper
   def send_tms(self, tms:int):
@@ -412,51 +408,14 @@ class ecp5:
     self.send_tms(1) # -> select DR scan
     self.flash_wait_status()
 
-  # 256-byte write block is too short for hardware SPI to accelerate
-  # flash_fast_write_block() is actually slower than flash_write_block()
-#  def flash_fast_write_block(self, block, addr=0):
-#    self.sdr(b"\x60") # SPI WRITE ENABLE
-#    self.send_tms(0) # -> capture DR
-#    self.send_tms(0) # -> shift DR
-#    # self.bitreverse(0x40) = 0x02 -> 0x02000000
-#    # send bits of 0x02 before the TCK glitch
-#    self.send_data_byte_reverse(0x02,0,7) # LSB bit 0 not sent now
-#    a = pack(">I", addr)
-#    self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch? TDO=0 as LSB bit
-#    self.hwspi.write(a[1:4]) # send 3-byte address
-#    self.hwspi.write(block[:-1]) # whole block except last byte
-#    # switch from SPI to bitbanging mode
-#    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
-#    self.bitbang_jtag_on()
-#    self.send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
-#    self.send_tms(0) # -> pause DR
-#    self.send_tms(1) # -> exit 2 DR
-#    self.send_tms(1) # -> update DR
-#    self.send_tms(1) # -> select DR scan
-#    self.flash_wait_status()
-
   # data is bytearray of to-be-read length
   def flash_fast_read_block(self, data, addr=0):
     # 0x0B is SPI flash fast read command
-    sdr = pack(">I", 0x0B000000 | (addr & 0xFFFFFF))
+    sdr = pack(">IB",0x0B000000 | (addr & 0xFFFFFF),0)
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.swspi.write(sdr) # send SPI FLASH read command and address
-    # fast read after address, should read 8 dummy cycles
-    # this is a chance for TCK glitch workaround:
-    # first 7 cycles will be done in bitbang mode
-    # then switch to hardware SPI mode
-    # will add 1 more TCK-glitch cycle
-    #for i in range(7):
-    #  self.tck.off()
-    #  self.tck.on()
-    self.swspi.read(1) # no TCK-glitch
-    # switch from bitbanging to SPI mode
-    self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch? TDI=0
-    self.hwspi.readinto(data) # retrieve whole block
-    # switch from SPI to bitbanging mode
-    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
-    self.bitbang_jtag_on()
+    self.swspi.write(sdr) # send SPI FLASH read command and address and dummy byte
+    self.swspi.readinto(data) # retrieve whole block
     self.send_data_byte_reverse(0,1,8) # dummy read byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR

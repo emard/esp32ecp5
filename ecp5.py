@@ -14,21 +14,20 @@ from gc import collect
 class ecp5:
 
   def init_pinout_jtag(self):
+    # ULX3S v3.0.x
     self.gpio_tms = const(21)
     self.gpio_tck = const(18)
     self.gpio_tdi = const(23)
     self.gpio_tdo = const(19)
-
-  # if JTAG is directed to SD card pins
-  # then bus traffic can be monitored using
-  # JTAG slave OLED HEX decoder:
-  # https://github.com/emard/ulx3s-misc/tree/master/examples/jtag_slave/proj/ulx3s_jtag_hex_passthru_v
-  #def init_pinout_sd(self):
-  #  self.gpio_tms = 15
-  #  self.gpio_tck = 14
-  #  self.gpio_tdi = 13
-  #  self.gpio_tdo = 12
-
+    self.gpio_tcknc = const(17) # free pin for SPI workaround
+    self.gpio_led = const(5)
+    # ULX3S v3.1.x
+    #self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    #self.gpio_tck = const(18)
+    #self.gpio_tdi = const(23)
+    #self.gpio_tdo = const(34)
+    #self.gpio_tcknc = const(3) # 1,2,3,19,21 free pin for SPI workaround
+    #self.gpio_led = const(19)
 
   def bitbang_jtag_on(self):
     self.led=Pin(self.gpio_led,Pin.OUT)
@@ -67,7 +66,7 @@ class ecp5:
     del self.swspi
 
   def __init__(self):
-    self.spi_freq = const(30000000) # Hz JTAG clk frequency
+    self.spi_freq = const(25000000) # Hz JTAG clk frequency
     # -1 for JTAG over SOFT SPI slow, compatibility
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
@@ -75,11 +74,10 @@ class ecp5:
     self.flash_erase_size = const(4096) # no ESP32 memory for more at flash_stream()
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
+    #self.rb=bytearray(256) # reverse bits
+    #self.init_reverse_bits()
     self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
-    self.gpio_led = const(5)
-    self.gpio_dummy = const(17)
     self.init_pinout_jtag()
-    #self.init_pinout_sd()
 
   # print bytes reverse - appears the same as in SVF file
   #def print_hex_reverse(self, block, head="", tail="\n"):
@@ -88,13 +86,18 @@ class ecp5:
   #    print("%02X" % block[len(block)-n-1], end="")
   #  print(tail, end="")
 
-  @micropython.viper
-  def bitreverse(self,x:int) -> int:
-    y = 0
-    for i in range(8):
-        if (x >> (7 - i)) & 1:
-            y |= (1 << i)
-    return y
+  #@micropython.viper
+  #def init_reverse_bits(self):
+  #  #p8rb=ptr8(addressof(self.rb))
+  #  p8rb=memoryview(self.rb)
+  #  for i in range(256):
+  #    v=i
+  #    r=0
+  #    for j in range(8):
+  #      r<<=1
+  #      r|=v&1
+  #      v>>=1
+  #    p8rb[i]=r
   
   @micropython.viper
   def send_tms(self, tms:int):
@@ -194,7 +197,7 @@ class ecp5:
     self.send_tms(1) # -> select IR scan
     self.send_tms(0) # -> capture IR
     self.send_tms(0) # -> shift IR
-    self.send_read_data_buf(sir, 1, 0) # -> exit 1 IR
+    self.send_read_data_buf(sir,1,0) # -> exit 1 IR
     self.send_tms(0) # -> pause IR
     self.send_tms(1) # -> exit 2 IR
     self.send_tms(1) # -> update IR
@@ -209,11 +212,11 @@ class ecp5:
     self.send_tms(1) # -> select IR scan
     self.send_tms(0) # -> capture IR
     self.send_tms(0) # -> shift IR
-    self.send_read_data_buf(sir, 1, 0) # -> exit 1 IR
+    self.send_read_data_buf(sir,1,0) # -> exit 1 IR
     self.send_tms(0) # -> pause IR
     self.send_tms(1) # -> exit 2 IR
     self.send_tms(1) # -> update IR
-    self.runtest_idle(n+1, ms) # -> select DR scan
+    self.runtest_idle(n+1,ms) # -> select DR scan
 
   @micropython.viper
   def sdr(self, sdr):
@@ -265,7 +268,7 @@ class ecp5:
   # common JTAG open for both program and flash
   def common_open(self):
     self.spi_jtag_on()
-    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
+    self.hwspi.init(sck=Pin(self.gpio_tcknc)) # avoid TCK-glitch
     self.bitbang_jtag_on()
     self.led.on()
     self.reset_tap()
@@ -299,9 +302,9 @@ class ecp5:
     # manually walk the TAP
     # we will be sending one long DR command
     self.send_tms(0) # -> capture DR
-    #self.send_tms(0) # -> shift DR # NOTE sent with 1 TCK glitch
+    self.send_tms(0) # -> shift DR
     # switch from bitbanging to SPI mode
-    self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDI=0
+    self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch? TDI=0
     # we are lucky that format of the bitstream tolerates
     # any leading and trailing junk bits. If it weren't so,
     # HW SPI JTAG acceleration wouldn't work.
@@ -314,7 +317,7 @@ class ecp5:
 
   def prog_stream_done(self):
     # switch from hardware SPI to bitbanging done after prog_stream()
-    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
+    self.hwspi.init(sck=Pin(self.gpio_tcknc)) # avoid TCK-glitch
     self.spi_jtag_off()
 
   # call this after uploading all of the bitstream blocks,
@@ -327,7 +330,7 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     #self.send_tms(0) # -> idle, disabled here as runtest_idle does the same
-    self.runtest_idle(100, 10)
+    self.runtest_idle(100,10)
     # ---------- bitstream end -----------
     self.sir_idle(b"\xC0",2,1) # read usercode
     usercode = bytearray(4)
@@ -414,16 +417,12 @@ class ecp5:
 
   # data is bytearray of to-be-read length
   def flash_fast_read_block(self, data, addr=0):
-    # 0x0B is SPI flash fast read command and dummy byte read
-    sdr = pack(">IB", 0x0B000000 | (addr & 0xFFFFFF),0)
+    # 0x0B is SPI flash fast read command
+    sdr = pack(">IB",0x0B000000 | (addr & 0xFFFFFF),0)
     self.send_tms(0) # -> capture DR
-    #self.send_tms(0) # -> shift DR # NOTE sent with 1 TCK glitch
-    self.hwspi.init(sck=Pin(self.gpio_tck)) # 1 TCK-glitch TDI=0
-    self.hwspi.write(sdr) # send SPI FLASH read command and address
-    self.hwspi.readinto(data) # retrieve whole block
-    # switch from SPI to bitbanging mode
-    self.hwspi.init(sck=Pin(self.gpio_dummy)) # avoid TCK-glitch
-    self.bitbang_jtag_on()
+    self.send_tms(0) # -> shift DR
+    self.swspi.write(sdr) # send SPI FLASH read command and address and dummy byte
+    self.swspi.readinto(data) # retrieve whole block
     self.send_data_byte_reverse(0,1,8) # dummy read byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
@@ -608,7 +607,7 @@ def prog(filepath, prog_close=True):
     if gz:
       board.prog_stream(filedata,blocksize=4096)
     else:
-      board.prog_stream(filedata,blocksize=16384)
+      board.prog_stream(filedata,blocksize=4096) # 16384 on WROVER
     # NOTE now the SD card can be released before bitstream starts
     if prog_close:
       return board.prog_close() # start the bitstream

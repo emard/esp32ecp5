@@ -15,19 +15,19 @@ class ecp5:
 
   def init_pinout_jtag(self):
     # FJC-ESP32-V0r2 pluggable
-    self.gpio_tms = const(4)
-    self.gpio_tck = const(16)
-    self.gpio_tdi = const(15)
-    self.gpio_tdo = const(2)
-    self.gpio_tcknc = const(21) # 1,2,3,19,21 for SPI workaround
-    self.gpio_led = const(19)
-    # ESP32-WROVER-E FROGO wired
-    #self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
-    #self.gpio_tck = const(18)
-    #self.gpio_tdi = const(23)
-    #self.gpio_tdo = const(34)
+    #self.gpio_tms = const(4)
+    #self.gpio_tck = const(16)
+    #self.gpio_tdi = const(15)
+    #self.gpio_tdo = const(2)
     #self.gpio_tcknc = const(21) # 1,2,3,19,21 for SPI workaround
     #self.gpio_led = const(19)
+    # ESP32-WROVER-E FROGO wired
+    self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    self.gpio_tck = const(18)
+    self.gpio_tdi = const(23)
+    self.gpio_tdo = const(34)
+    self.gpio_tcknc = const(21) # 1,2,3,19,21 for SPI workaround
+    self.gpio_led = const(19)
 
   def bitbang_jtag_on(self):
     self.led=Pin(self.gpio_led,Pin.OUT)
@@ -399,7 +399,8 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    self.flash_wait_status()
+    #self.flash_wait_status()
+    sleep_ms(500)
 
   def flash_write_block(self, block, addr=0):
     self.sdr(b"\x60") # SPI WRITE ENABLE
@@ -413,7 +414,8 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    self.flash_wait_status()
+    #self.flash_wait_status()
+    sleep_ms(50)
 
   # data is bytearray of to-be-read length
   def flash_fast_read_block(self, data, addr=0):

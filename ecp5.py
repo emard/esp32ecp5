@@ -98,7 +98,7 @@ class ecp5:
   #      r|=v&1
   #      v>>=1
   #    p8rb[i]=r
-  
+
   @micropython.viper
   def send_tms(self, tms:int):
     if tms:

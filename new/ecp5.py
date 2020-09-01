@@ -26,7 +26,7 @@ class ecp5:
     self.gpio_tck = const(18)
     self.gpio_tdi = const(23)
     self.gpio_tdo = const(34)
-    self.gpio_tcknc = const(3) # 1,2,3,19,21 free pin for SPI workaround
+    self.gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
     #self.gpio_led = const(19)
 
   def bitbang_jtag_on(self):
@@ -98,7 +98,7 @@ class ecp5:
   #      r|=v&1
   #      v>>=1
   #    p8rb[i]=r
-  
+
   @micropython.viper
   def send_tms(self, tms:int):
     if tms:
@@ -171,7 +171,7 @@ class ecp5:
       self.tdi.off()
     self.tck.off()
     self.tck.on()
-    
+
   # TAP to "reset" state
   @micropython.viper
   def reset_tap(self):
@@ -188,7 +188,7 @@ class ecp5:
     while int(ticks_ms()) < leave:
       self.send_tms(0) # -> idle
     self.send_tms(1) # -> select DR scan
-  
+
   # send SIR command (bytes)
   # TAP should be in "select DR scan" state
   # TAP returns to "select DR scan" state
@@ -289,7 +289,7 @@ class ecp5:
     status = bytearray(4)
     self.sdr_response(status)
     self.check_response(unpack("<I",status)[0], mask=0xB000, expected=0, message="FAIL status")
-  
+
   # call this before sending the bitstram
   # FPGA will enter programming mode
   # after this TAP will be in "shift DR" state
@@ -418,7 +418,7 @@ class ecp5:
   # data is bytearray of to-be-read length
   def flash_fast_read_block(self, data, addr=0):
     # 0x0B is SPI flash fast read command
-    sdr = pack(">IB",0x0B000000 | (addr & 0xFFFFFF),0)
+    sdr = pack(">I",0x03000000 | (addr & 0xFFFFFF))
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.swspi.write(sdr) # send SPI FLASH read command and address and dummy byte
@@ -445,10 +445,10 @@ class ecp5:
     self.reset_tap()
     #self.led.off()
     self.bitbang_jtag_off()
-      
+
   def stopwatch_start(self):
     self.stopwatch_ms = ticks_ms()
-  
+
   def stopwatch_stop(self, bytes_uploaded):
     elapsed_ms = ticks_ms() - self.stopwatch_ms
     transfer_rate_MBps = 0

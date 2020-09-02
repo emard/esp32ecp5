@@ -370,8 +370,8 @@ class ecp5:
     # e.g. 0x1B here is actually 0xD8 in datasheet, 0x60 is is 0x06 etc.
 
   @micropython.viper
-  def flash_wait_status(self):
-    retry=50
+  def flash_wait_status(self,n:int):
+    retry=n
     mask=1 # WIP bit (work-in-progress)
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
@@ -389,14 +389,15 @@ class ecp5:
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
     if retry <= 0:
-      print("error flash status 0x%02X & 0x%02X != 0" % (self.status[0],mask))
+      print("error %d flash status 0x%02X & 0x%02X != 0" % (n,self.status[0],mask))
 
   def flash_erase_block(self, addr=0):
     self.sdr(b"\x60") # SPI WRITE ENABLE
+    self.flash_wait_status(101)
     # some chips won't clear WIP without this:
-    status = pack("<H",0x00A0) # READ STATUS REGISTER
-    self.sdr_response(status)
-    self.check_response(unpack("<H",status)[0],mask=0xC100,expected=0x4000)
+    #status = pack("<H",0x00A0) # READ STATUS REGISTER
+    #self.sdr_response(status)
+    #self.check_response(unpack("<H",status)[0],mask=0xC100,expected=0x4000)
     sdr = pack(">I", (self.flash_erase_cmd << 24) | (addr & 0xFFFFFF))
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
@@ -406,10 +407,11 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    self.flash_wait_status()
+    self.flash_wait_status(102)
 
   def flash_write_block(self, block, addr=0):
     self.sdr(b"\x60") # SPI WRITE ENABLE
+    self.flash_wait_status(103)
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     # self.bitreverse(0x40) = 0x02 -> 0x02000000
@@ -420,7 +422,7 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    self.flash_wait_status()
+    self.flash_wait_status(104)
 
   # data is bytearray of to-be-read length
   def flash_fast_read_block(self, data, addr=0):
@@ -545,6 +547,12 @@ class ecp5:
     self.flash_open()
     bytes_uploaded = 0
     self.stopwatch_start()
+    #if 1:
+    #  print("erase whole FLASH (max 60s)")
+    #  self.sdr(b"\x60") # SPI WRITE ENABLE
+    #  self.flash_wait_status(105)
+    #  self.sdr(b"\xE3") # BULK ERASE (whole chip) self.rb[0x60]=0x06 or self.rb[0xC7]=0xE3
+    #  self.flash_wait_status(60000)
     count_total = 0
     count_erase = 0
     count_write = 0

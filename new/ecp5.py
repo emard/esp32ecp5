@@ -71,7 +71,8 @@ class ecp5:
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
     self.flash_write_size = const(256)
-    self.flash_erase_size = const(262144) # no ESP32 memory for more at flash_stream()
+    self.flash_erase_size = const(65536) # no ESP32 memory for more at flash_stream()
+    #self.flash_erase_size = const(262144) # no ESP32 memory for more at flash_stream()
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8, 262144:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     #self.rb=bytearray(256) # reverse bits
@@ -393,7 +394,7 @@ class ecp5:
 
   def flash_erase_block(self, addr=0):
     self.sdr(b"\x60") # SPI WRITE ENABLE
-    self.flash_wait_status(101)
+    self.flash_wait_status(1001)
     # some chips won't clear WIP without this:
     #status = pack("<H",0x00A0) # READ STATUS REGISTER
     #self.sdr_response(status)
@@ -407,11 +408,11 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    self.flash_wait_status(102)
+    self.flash_wait_status(2002)
 
   def flash_write_block(self, block, addr=0):
     self.sdr(b"\x60") # SPI WRITE ENABLE
-    self.flash_wait_status(103)
+    self.flash_wait_status(1003)
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     # self.bitreverse(0x40) = 0x02 -> 0x02000000
@@ -422,7 +423,7 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    self.flash_wait_status(104)
+    self.flash_wait_status(1004)
 
   # data is bytearray of to-be-read length
   def flash_fast_read_block(self, data, addr=0):
@@ -547,12 +548,12 @@ class ecp5:
     self.flash_open()
     bytes_uploaded = 0
     self.stopwatch_start()
-    if 1:
-      print("erase whole FLASH (max 90s)")
-      self.sdr(b"\x60") # SPI WRITE ENABLE
-      self.flash_wait_status(105)
-      self.sdr(b"\xE3") # BULK ERASE (whole chip) self.rb[0x60]=0x06 or self.rb[0xC7]=0xE3
-      self.flash_wait_status(90000)
+    #if 1:
+    #  print("erase whole FLASH (max 90s)")
+    #  self.sdr(b"\x60") # SPI WRITE ENABLE
+    #  self.flash_wait_status(105)
+    #  self.sdr(b"\xE3") # BULK ERASE (whole chip) self.rb[0x60]=0x06 or self.rb[0xC7]=0xE3
+    #  self.flash_wait_status(90000)
     count_total = 0
     count_erase = 0
     count_write = 0

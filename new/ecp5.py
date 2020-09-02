@@ -72,7 +72,7 @@ class ecp5:
     #  2 is preferred as it has default pinout wired
     self.flash_write_size = const(256)
     self.flash_erase_size = const(4096) # no ESP32 memory for more at flash_stream()
-    flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
+    flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8, 262144:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     #self.rb=bytearray(256) # reverse bits
     #self.init_reverse_bits()

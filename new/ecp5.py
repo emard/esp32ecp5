@@ -15,18 +15,18 @@ class ecp5:
 
   def init_pinout_jtag(self):
     # ULX3S v3.0.x
-    #self.gpio_tms = const(21)
-    #self.gpio_tck = const(18)
-    #self.gpio_tdi = const(23)
-    #self.gpio_tdo = const(19)
-    #self.gpio_tcknc = const(17) # free pin for SPI workaround
-    #self.gpio_led = const(5)
-    # ULX3S v3.1.x
-    self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    self.gpio_tms = const(21)
     self.gpio_tck = const(18)
     self.gpio_tdi = const(23)
-    self.gpio_tdo = const(34)
-    self.gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
+    self.gpio_tdo = const(19)
+    self.gpio_tcknc = const(17) # free pin for SPI workaround
+    #self.gpio_led = const(5)
+    # ULX3S v3.1.x
+    #self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    #self.gpio_tck = const(18)
+    #self.gpio_tdi = const(23)
+    #self.gpio_tdo = const(34)
+    #self.gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
     #self.gpio_led = const(19)
 
   def bitbang_jtag_on(self):
@@ -78,6 +78,8 @@ class ecp5:
     #self.init_reverse_bits()
     self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
     self.init_pinout_jtag()
+    self.read_status=bytearray([5])
+    self.status=bytearray(1)
 
   # print bytes reverse - appears the same as in SVF file
   #def print_hex_reverse(self, block, head="", tail="\n"):
@@ -370,19 +372,24 @@ class ecp5:
   @micropython.viper
   def flash_wait_status(self):
     retry=50
-    # read_status_register = pack("<H",0x00A0) # READ STATUS REGISTER
-    status_register = bytearray(2)
+    mask=1 # WIP bit (work-in-progress)
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
+    self.swspi.write(self.read_status) # READ STATUS REGISTER
     while retry > 0:
-      # always refresh status_register[0], overwitten by response
-      status_register[0] = 0xA0 # 0xA0 READ STATUS REGISTER
-      self.sdr_response(status_register)
-      if (int(status_register[1]) & 0xC1) == 0:
+      self.swspi.readinto(self.status)
+      if (int(self.status[0]) & mask) == 0:
         break
       sleep_ms(1)
       retry -= 1
+    self.send_tms(1) # -> exit 1 DR # exit at byte incomplete
+    #self.send_data_byte_reverse(0,1,8) # exit at byte complete
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
+    self.send_tms(1) # -> select DR scan
     if retry <= 0:
-      print("error flash status %04X & 0xC1 != 0" % (unpack("<H",status_register))[0])
-    #  self.sdr(pack("<H",0x00A0), mask=pack("<H",0xC100), expected=pack("<H",0)) # READ STATUS REGISTER
+      print("error flash status 0x%02X & 0x%02X != 0" % (self.status[0],mask))
 
   def flash_erase_block(self, addr=0):
     self.sdr(b"\x60") # SPI WRITE ENABLE

@@ -14,27 +14,27 @@ from gc import collect
 class ecp5:
 
   def init_pinout_jtag(self):
-    # FJC-ESP32-V0r2 pluggable
-    #self.gpio_tms = const(4)
-    #self.gpio_tck = const(16)
-    #self.gpio_tdi = const(15)
-    #self.gpio_tdo = const(2)
-    #self.gpio_tcknc = const(21) # 1,2,3,19,21 for SPI workaround
-    #self.gpio_led = const(19)
-    # ESP32-WROVER-E FROGO wired
-    self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    # ULX3S v3.0.x
+    self.gpio_tms = const(21)
     self.gpio_tck = const(18)
     self.gpio_tdi = const(23)
-    self.gpio_tdo = const(34)
-    self.gpio_tcknc = const(21) # 1,2,3,19,21 for SPI workaround
-    self.gpio_led = const(19)
+    self.gpio_tdo = const(19)
+    self.gpio_tcknc = const(17) # free pin for SPI workaround
+    self.gpio_led = const(5)
+    # ULX3S v3.1.x
+    #self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    #self.gpio_tck = const(18)
+    #self.gpio_tdi = const(23)
+    #self.gpio_tdo = const(34)
+    #self.gpio_tcknc = const(3) # 1,2,3,19,21 free pin for SPI workaround
+    #self.gpio_led = const(19)
 
   def bitbang_jtag_on(self):
     self.led=Pin(self.gpio_led,Pin.OUT)
     self.tms=Pin(self.gpio_tms,Pin.OUT)
     self.tck=Pin(self.gpio_tck,Pin.OUT)
     self.tdi=Pin(self.gpio_tdi,Pin.OUT)
-    self.tdo=Pin(self.gpio_tdo,Pin.IN,Pin.PULL_DOWN)
+    self.tdo=Pin(self.gpio_tdo,Pin.IN)
 
   def bitbang_jtag_off(self):
     self.led=Pin(self.gpio_led,Pin.IN)
@@ -66,7 +66,7 @@ class ecp5:
     del self.swspi
 
   def __init__(self):
-    self.spi_freq = const(5000000) # Hz JTAG clk frequency
+    self.spi_freq = const(25000000) # Hz JTAG clk frequency
     # -1 for JTAG over SOFT SPI slow, compatibility
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
@@ -171,7 +171,7 @@ class ecp5:
       self.tdi.off()
     self.tck.off()
     self.tck.on()
-    
+
   # TAP to "reset" state
   @micropython.viper
   def reset_tap(self):
@@ -188,7 +188,7 @@ class ecp5:
     while int(ticks_ms()) < leave:
       self.send_tms(0) # -> idle
     self.send_tms(1) # -> select DR scan
-  
+
   # send SIR command (bytes)
   # TAP should be in "select DR scan" state
   # TAP returns to "select DR scan" state
@@ -289,7 +289,7 @@ class ecp5:
     status = bytearray(4)
     self.sdr_response(status)
     self.check_response(unpack("<I",status)[0], mask=0xB000, expected=0, message="FAIL status")
-  
+
   # call this before sending the bitstram
   # FPGA will enter programming mode
   # after this TAP will be in "shift DR" state
@@ -399,8 +399,7 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    #self.flash_wait_status()
-    sleep_ms(500)
+    self.flash_wait_status()
 
   def flash_write_block(self, block, addr=0):
     self.sdr(b"\x60") # SPI WRITE ENABLE
@@ -414,8 +413,7 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    #self.flash_wait_status()
-    sleep_ms(50)
+    self.flash_wait_status()
 
   # data is bytearray of to-be-read length
   def flash_fast_read_block(self, data, addr=0):
@@ -447,10 +445,10 @@ class ecp5:
     self.reset_tap()
     self.led.off()
     self.bitbang_jtag_off()
-      
+
   def stopwatch_start(self):
     self.stopwatch_ms = ticks_ms()
-  
+
   def stopwatch_stop(self, bytes_uploaded):
     elapsed_ms = ticks_ms() - self.stopwatch_ms
     transfer_rate_MBps = 0

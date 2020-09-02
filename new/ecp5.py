@@ -71,8 +71,7 @@ class ecp5:
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
     self.flash_write_size = const(256)
-    self.flash_erase_size = const(65536) # no ESP32 memory for more at flash_stream()
-    #self.flash_erase_size = const(262144) # no ESP32 memory for more at flash_stream()
+    self.flash_erase_size = const(65536)
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8, 262144:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     #self.rb=bytearray(256) # reverse bits
@@ -540,12 +539,12 @@ class ecp5:
   # TODO reduce buffer usage
   # returns status True-OK False-Fail
   def flash_stream(self, filedata, addr=0):
+    self.flash_open()
     addr_mask = self.flash_erase_size-1
     if addr & addr_mask:
       print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (self.flash_erase_size, 0xFFFFFF & ~addr_mask))
-      return
+      return False
     addr = addr & 0xFFFFFF & ~addr_mask # rounded to even 64K (erase block)
-    self.flash_open()
     bytes_uploaded = 0
     self.stopwatch_start()
     #if 1:

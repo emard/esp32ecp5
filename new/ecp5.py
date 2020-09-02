@@ -15,18 +15,18 @@ class ecp5:
 
   def init_pinout_jtag(self):
     # ULX3S v3.0.x
-    self.gpio_tms = const(21)
-    self.gpio_tck = const(18)
-    self.gpio_tdi = const(23)
-    self.gpio_tdo = const(19)
-    self.gpio_tcknc = const(17) # free pin for SPI workaround
-    #self.gpio_led = const(5)
-    # ULX3S v3.1.x
-    #self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    #self.gpio_tms = const(21)
     #self.gpio_tck = const(18)
     #self.gpio_tdi = const(23)
-    #self.gpio_tdo = const(34)
-    #self.gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
+    #self.gpio_tdo = const(19)
+    #self.gpio_tcknc = const(17) # free pin for SPI workaround
+    #self.gpio_led = const(5)
+    # ULX3S v3.1.x
+    self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    self.gpio_tck = const(18)
+    self.gpio_tdi = const(23)
+    self.gpio_tdo = const(34)
+    self.gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
     #self.gpio_led = const(19)
 
   def bitbang_jtag_on(self):
@@ -71,7 +71,7 @@ class ecp5:
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
     self.flash_write_size = const(256)
-    self.flash_erase_size = const(4096) # no ESP32 memory for more at flash_stream()
+    self.flash_erase_size = const(262144) # no ESP32 memory for more at flash_stream()
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8, 262144:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     #self.rb=bytearray(256) # reverse bits
@@ -547,12 +547,12 @@ class ecp5:
     self.flash_open()
     bytes_uploaded = 0
     self.stopwatch_start()
-    #if 1:
-    #  print("erase whole FLASH (max 60s)")
-    #  self.sdr(b"\x60") # SPI WRITE ENABLE
-    #  self.flash_wait_status(105)
-    #  self.sdr(b"\xE3") # BULK ERASE (whole chip) self.rb[0x60]=0x06 or self.rb[0xC7]=0xE3
-    #  self.flash_wait_status(60000)
+    if 1:
+      print("erase whole FLASH (max 90s)")
+      self.sdr(b"\x60") # SPI WRITE ENABLE
+      self.flash_wait_status(105)
+      self.sdr(b"\xE3") # BULK ERASE (whole chip) self.rb[0x60]=0x06 or self.rb[0xC7]=0xE3
+      self.flash_wait_status(90000)
     count_total = 0
     count_erase = 0
     count_write = 0

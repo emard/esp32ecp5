@@ -67,18 +67,21 @@ class artix7:
     del self.swspi
 
   def __init__(self):
-    self.spi_freq = const(5000000) # Hz JTAG clk frequency
+    self.spi_freq = const(25000000) # Hz JTAG clk frequency
     # -1 for JTAG over SOFT SPI slow, compatibility
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
     self.flash_write_size = const(256)
-    self.flash_erase_size = const(4096) # no ESP32 memory for more at flash_stream()
+    self.flash_erase_size = const(4096) # WROOM
+    #self.flash_erase_size = const(65536) # WROVER
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
-    #self.rb=bytearray(256) # reverse bits
-    #self.init_reverse_bits()
+    self.rb=bytearray(256) # reverse bits self.init_reverse_bits()
     self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
     self.init_pinout_jtag()
+    self.dummy4=bytearray(4)
+    self.read_status=bytearray([0x59,0xA6,0x59,0xA6,0,17,5,0])
+    self.status=bytearray(2)
 
   # print bytes reverse - appears the same as in SVF file
   #def print_hex_reverse(self, block, head="", tail="\n"):
@@ -87,18 +90,18 @@ class artix7:
   #    print("%02X" % block[len(block)-n-1], end="")
   #  print(tail, end="")
 
-  #@micropython.viper
-  #def init_reverse_bits(self):
-  #  #p8rb=ptr8(addressof(self.rb))
-  #  p8rb=memoryview(self.rb)
-  #  for i in range(256):
-  #    v=i
-  #    r=0
-  #    for j in range(8):
-  #      r<<=1
-  #      r|=v&1
-  #      v>>=1
-  #    p8rb[i]=r
+  @micropython.viper
+  def init_reverse_bits(self):
+    p8rb=ptr8(addressof(self.rb))
+    #p8rb=memoryview(self.rb)
+    for i in range(256):
+      v=i
+      r=0
+      for j in range(8):
+        r<<=1
+        r|=v&1
+        v>>=1
+      p8rb[i]=r
 
   @micropython.viper
   def send_tms(self, tms:int):
@@ -357,6 +360,11 @@ class artix7:
   # TAP should be in "select DR scan" state
   @micropython.viper
   def flash_open(self):
+    self.prog_stream(self.open_file("bscan7.bit.gz",True))
+    if self.prog_close():
+      print("bscan7.bit ok")
+    else:
+      print("bscan7.bit failed")
     self.common_open()
     self.reset_tap()
     self.runtest_idle(1,0)
@@ -366,67 +374,110 @@ class artix7:
     # e.g. 0x1B here is actually 0xD8 in datasheet, 0x60 is is 0x06 etc.
 
   @micropython.viper
-  def flash_wait_status(self):
-    retry=50
-    # read_status_register = pack("<H",0x00A0) # READ STATUS REGISTER
-    status_register = bytearray(2)
+  def flash_wait_status(self,n:int):
+    retry=n
     while retry > 0:
       self.sir(2) # USER1
-      # always refresh status_register[0], overwitten by response
-      status_register[0] = 0xA0 # 0xA0 READ STATUS REGISTER
-      self.sdr_response(status_register)
-      if (int(status_register[1]) & 0xC1) == 0:
+      self.send_tms(0) # -> capture DR
+      self.send_tms(0) # -> shift DR
+      self.swspi.write(self.read_status) # whole block except last byte
+      self.send_tms(1) # -> exit 1 DR, dummy bit
+      self.send_tms(0) # -> pause DR
+      self.send_tms(1) # -> exit 2 DR
+      self.send_tms(1) # -> update DR
+      self.send_tms(1) # -> select DR scan
+      self.sir(2) # USER1
+      self.send_tms(0) # -> capture DR
+      self.send_tms(0) # -> shift DR
+      self.swspi.readinto(self.status)
+      self.send_tms(1) # -> exit 1 DR, dummy bit
+      self.send_tms(0) # -> pause DR
+      self.send_tms(1) # -> exit 2 DR
+      self.send_tms(1) # -> update DR
+      self.send_tms(1) # -> select DR scan
+      #print(self.status)
+      if (int(self.status[1]) & 1) == 0:
         break
       sleep_ms(1)
       retry -= 1
     if retry <= 0:
-      print("error flash status %04X & 0xC1 != 0" % (unpack("<H",status_register))[0])
-    self.reset_tap()
-    #  self.sdr(pack("<H",0x00A0), mask=pack("<H",0xC100), expected=pack("<H",0)) # READ STATUS REGISTER
+      print("error %d flash status 0x%02X & 1 != 0" % (n,self.status[1]))
 
   def flash_erase_block(self, addr=0):
     self.sir(2) # USER1
-    self.sdr(b"\x60") # SPI WRITE ENABLE
-    # some chips won't clear WIP without this:
-    status = pack("<H",0x00A0) # READ STATUS REGISTER
-    self.sdr_response(status)
-    self.check_response(unpack("<H",status)[0],mask=0xC100,expected=0x4000)
-    sdr = pack(">I", (self.flash_erase_cmd << 24) | (addr & 0xFFFFFF))
+    req=bytearray([0x59,0xA6,0x59,0xA6,0,8,6]) # 6=SPI WRITE ENABLE
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.swspi.write(sdr[:-1])
-    self.send_data_byte_reverse(sdr[-1],1,8) # last byte -> exit 1 DR
+    self.swspi.write(req[:-1])
+    self.send_data_byte_reverse(req[-1],1,8) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    self.flash_wait_status()
-
-  def flash_write_block(self, block, addr=0):
+    self.flash_wait_status(1001)
+    req=bytearray([0x59,0xA6,0x59,0xA6,0,32,self.flash_erase_cmd,addr>>16,addr>>8,addr]) # 6=SPI WRITE ENABLE
     self.sir(2) # USER1
-    self.sdr(b"\x60") # SPI WRITE ENABLE
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    # self.bitreverse(0x40) = 0x02 -> 0x02000000
-    self.swspi.write(pack(">I", 0x02000000 | (addr & 0xFFFFFF)))
+    self.swspi.write(req[:-1])
+    self.send_data_byte_reverse(req[-1],1,8) # last byte -> exit 1 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
+    self.send_tms(1) # -> select DR scan
+    self.flash_wait_status(2002)
+
+  def flash_write_block(self, block, addr=0):
+    wrenable=bytearray([0x59,0xA6,0x59,0xA6,0,8,6])
+    self.sir(2) # USER1
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
+    self.swspi.write(wrenable[:-1]) # whole block except last byte
+    self.send_data_byte_reverse(wrenable[-1],1,8) # last byte -> exit 1 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
+    self.send_tms(1) # -> select DR scan
+    self.flash_wait_status(1014)
+    #bits=5*8=40 # bit-size of req payload
+    # 6 = SPI WRITE ENABLE, 2 = WRITE BLOCK followed by 3-byte address and 256-byte data block
+    bits=(4+len(block))*8
+    req=bytearray([0x59,0xA6,0x59,0xA6,bits>>8,bits,2,addr>>16,addr>>8,addr])
+    self.sir(2) # USER1
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
+    self.swspi.write(req)
     self.swspi.write(block[:-1]) # whole block except last byte
     self.send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    self.flash_wait_status()
+    self.flash_wait_status(1004)
 
   # data is bytearray of to-be-read length
+  # max 2048 bytes
   def flash_fast_read_block(self, data, addr=0):
+    # first is the request
+    bits=(len(data)+4)*8
+    req=bytearray([0x59,0xA6,0x59,0xA6,bits>>8,bits,3,addr>>16,addr>>8,addr])
     self.sir(2) # USER1
-    # 0x0B is SPI flash fast read command and dummy byte read
-    sdr = pack(">IB", 0x0B000000 | (addr & 0xFFFFFF),0)
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.swspi.write(sdr) # send SPI FLASH read command and address
-    self.swspi.readinto(data) # retrieve whole block
-    self.send_data_byte_reverse(0,1,8) # dummy read byte -> exit 1 DR
+    self.swspi.write(req)
+    self.swspi.write(data[:-1]) # dummy data
+    self.send_data_byte_reverse(0,1,8) # last dummy byte -> exit 1 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
+    self.send_tms(1) # -> select DR scan
+    # collects response from previous command
+    self.sir(2) # USER1
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
+    self.swspi.write(self.dummy4) # skip
+    self.swspi.readinto(data) # data received now
+    self.send_tms(1) # -> exit 1 DR, extra dummy bit shifted
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR

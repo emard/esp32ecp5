@@ -4,7 +4,7 @@
 # AUTHOR=EMARD
 # LICENSE=BSD
 
-# TODO: FLASH code is not tested
+# FIXME: FLASH sometimes fails at start
 
 from time import ticks_ms, sleep_ms
 from machine import SPI, Pin
@@ -71,16 +71,18 @@ class artix7:
     # -1 for JTAG over SOFT SPI slow, compatibility
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
+    self.flash_read_size = const(2048)
     self.flash_write_size = const(256)
-    self.flash_erase_size = const(4096) # WROOM
-    #self.flash_erase_size = const(65536) # WROVER
+    #self.flash_erase_size = const(4096) # WROOM
+    self.flash_erase_size = const(65536) # WROVER
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     self.rb=bytearray(256) # reverse bits self.init_reverse_bits()
     self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
     self.init_pinout_jtag()
     self.dummy4=bytearray(4)
-    self.read_status=bytearray([0x59,0xA6,0x59,0xA6,0,17,5,0])
+    self.magic=bytearray([0x59,0xA6,0x59,0xA6])
+    self.read_status=self.magic+bytearray([0,17,5,0])
     self.status=bytearray(2)
 
   # print bytes reverse - appears the same as in SVF file
@@ -361,10 +363,8 @@ class artix7:
   @micropython.viper
   def flash_open(self):
     self.prog_stream(self.open_file("bscan7.bit.gz",True))
-    if self.prog_close():
-      print("bscan7.bit ok")
-    else:
-      print("bscan7.bit failed")
+    if not self.prog_close():
+      print("bscan7.bit.gz failed")
     self.common_open()
     self.reset_tap()
     self.runtest_idle(1,0)
@@ -405,7 +405,7 @@ class artix7:
 
   def flash_erase_block(self, addr=0):
     self.sir(2) # USER1
-    req=bytearray([0x59,0xA6,0x59,0xA6,0,8,6]) # 6=SPI WRITE ENABLE
+    req=self.magic+bytearray([0,8,6]) # 6=SPI WRITE ENABLE
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.swspi.write(req[:-1])
@@ -415,7 +415,7 @@ class artix7:
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
     self.flash_wait_status(1001)
-    req=bytearray([0x59,0xA6,0x59,0xA6,0,32,self.flash_erase_cmd,addr>>16,addr>>8,addr]) # 6=SPI WRITE ENABLE
+    req=self.magic+bytearray([0,32,self.flash_erase_cmd,addr>>16,addr>>8,addr]) # 6=SPI WRITE ENABLE
     self.sir(2) # USER1
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
@@ -428,7 +428,7 @@ class artix7:
     self.flash_wait_status(2002)
 
   def flash_write_block(self, block, addr=0):
-    wrenable=bytearray([0x59,0xA6,0x59,0xA6,0,8,6])
+    wrenable=self.magic+bytearray([0,8,6])
     self.sir(2) # USER1
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
@@ -438,11 +438,11 @@ class artix7:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    self.flash_wait_status(1014)
+    self.flash_wait_status(114)
     #bits=5*8=40 # bit-size of req payload
     # 6 = SPI WRITE ENABLE, 2 = WRITE BLOCK followed by 3-byte address and 256-byte data block
     bits=(4+len(block))*8
-    req=bytearray([0x59,0xA6,0x59,0xA6,bits>>8,bits,2,addr>>16,addr>>8,addr])
+    req=self.magic+bytearray([bits>>8,bits,2,addr>>16,addr>>8,addr])
     self.sir(2) # USER1
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
@@ -457,10 +457,10 @@ class artix7:
 
   # data is bytearray of to-be-read length
   # max 2048 bytes
-  def flash_fast_read_block(self, data, addr=0):
-    # first is the request
+  def flash_read_block(self, data, addr=0):
+    # first is the request 3=READ BLOCK, 3-byte address, 256-byte data
     bits=(len(data)+4)*8
-    req=bytearray([0x59,0xA6,0x59,0xA6,bits>>8,bits,3,addr>>16,addr>>8,addr])
+    req=self.magic+bytearray([bits>>8,bits,3,addr>>16,addr>>8,addr])
     self.sir(2) # USER1
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
@@ -554,18 +554,17 @@ class artix7:
   # data is bytearray of to-be-read length
   def flash_read(self, data, addr=0):
     self.flash_open()
-    self.flash_fast_read_block(data, addr)
+    self.flash_read_block(data, addr)
     self.flash_close()
 
   # accelerated compare flash and file block
   # return value
   # 0-must nothing, 1-must erase, 2-must write, 3-must erase and write
   @micropython.viper
-  def compare_flash_file_buf(self, flash_b, file_b) -> int:
+  def compare_flash_file_buf(self, flash_b, file_b, must:int) -> int:
     flash_block = ptr8(addressof(flash_b))
     file_block = ptr8(addressof(file_b))
     l = int(len(file_b))
-    must = 0
     for i in range(l):
       if (flash_block[i] & file_block[i]) != file_block[i]:
         must = 1
@@ -597,18 +596,22 @@ class artix7:
     count_erase = 0
     count_write = 0
     file_block = bytearray(self.flash_erase_size)
-    flash_block = bytearray(self.flash_erase_size)
+    flash_block = bytearray(self.flash_read_size)
     progress_char="."
     while filedata.readinto(file_block):
       self.led.value((bytes_uploaded >> 12)&1)
       retry = 3
       while retry >= 0:
-        self.flash_fast_read_block(flash_block, addr=addr+bytes_uploaded)
-        must = self.compare_flash_file_buf(flash_block,file_block)
+        must = 0
+        flash_rd = 0
+        while flash_rd<self.flash_erase_size:
+          self.flash_read_block(flash_block,addr+bytes_uploaded+flash_rd)
+          must = self.compare_flash_file_buf(flash_block,file_block[flash_rd:flash_rd+self.flash_read_size],must)
+          flash_rd+=self.flash_read_size
         write_addr = addr+bytes_uploaded
         if must == 0:
           if (write_addr & 0xFFFF) == 0:
-            print("\r0x%06X %dK " % (write_addr, self.flash_erase_size>>10),end="")
+            print("\r0x%06X %dK %c" % (write_addr, self.flash_erase_size>>10, progress_char),end="")
           else:
             print(progress_char,end="")
           progress_char="."

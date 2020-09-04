@@ -15,39 +15,39 @@ class ecp5:
 
   def init_pinout_jtag(self):
     # ULX3S v3.0.x
-    self.gpio_tms = const(21)
-    self.gpio_tck = const(18)
-    self.gpio_tdi = const(23)
-    self.gpio_tdo = const(19)
-    self.gpio_tcknc = const(17) # free pin for SPI workaround
-    self.gpio_led = const(5)
-    # ULX3S v3.1.x
-    #self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    #self.gpio_tms = const(21)
     #self.gpio_tck = const(18)
     #self.gpio_tdi = const(23)
-    #self.gpio_tdo = const(34)
-    #self.gpio_tcknc = const(3) # 1,2,3,19,21 free pin for SPI workaround
+    #self.gpio_tdo = const(19)
+    #self.gpio_tcknc = const(17) # free pin for SPI workaround
+    #self.gpio_led = const(5)
+    # ULX3S v3.1.x
+    self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    self.gpio_tck = const(18)
+    self.gpio_tdi = const(23)
+    self.gpio_tdo = const(34)
+    self.gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
     #self.gpio_led = const(19)
 
   def bitbang_jtag_on(self):
-    self.led=Pin(self.gpio_led,Pin.OUT)
+    #self.led=Pin(self.gpio_led,Pin.OUT)
     self.tms=Pin(self.gpio_tms,Pin.OUT)
     self.tck=Pin(self.gpio_tck,Pin.OUT)
     self.tdi=Pin(self.gpio_tdi,Pin.OUT)
     self.tdo=Pin(self.gpio_tdo,Pin.IN)
 
   def bitbang_jtag_off(self):
-    self.led=Pin(self.gpio_led,Pin.IN)
+    #self.led=Pin(self.gpio_led,Pin.IN)
     self.tms=Pin(self.gpio_tms,Pin.IN)
     self.tck=Pin(self.gpio_tck,Pin.IN)
     self.tdi=Pin(self.gpio_tdi,Pin.IN)
     self.tdo=Pin(self.gpio_tdo,Pin.IN)
-    a = self.led.value()
+    #a = self.led.value()
     a = self.tms.value()
     a = self.tck.value()
     a = self.tdo.value()
     a = self.tdi.value()
-    del self.led
+    #del self.led
     del self.tms
     del self.tck
     del self.tdi
@@ -71,13 +71,15 @@ class ecp5:
     #  1 or 2 for JTAG over HARD SPI fast
     #  2 is preferred as it has default pinout wired
     self.flash_write_size = const(256)
-    self.flash_erase_size = const(4096) # no ESP32 memory for more at flash_stream()
-    flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
+    self.flash_erase_size = const(65536)
+    flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8, 262144:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     #self.rb=bytearray(256) # reverse bits
     #self.init_reverse_bits()
     self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
     self.init_pinout_jtag()
+    self.read_status=bytearray([5])
+    self.status=bytearray(1)
 
   # print bytes reverse - appears the same as in SVF file
   #def print_hex_reverse(self, block, head="", tail="\n"):
@@ -255,13 +257,13 @@ class ecp5:
 
   def idcode(self):
     self.bitbang_jtag_on()
-    self.led.on()
+    #self.led.on()
     self.reset_tap()
     self.runtest_idle(1,0)
     self.sir(b"\xE0")
     id_bytes = bytearray(4)
     self.sdr_response(id_bytes)
-    self.led.off()
+    #self.led.off()
     self.bitbang_jtag_off()
     return unpack("<I", id_bytes)[0]
 
@@ -270,7 +272,7 @@ class ecp5:
     self.spi_jtag_on()
     self.hwspi.init(sck=Pin(self.gpio_tcknc)) # avoid TCK-glitch
     self.bitbang_jtag_on()
-    self.led.on()
+    #self.led.on()
     self.reset_tap()
     self.runtest_idle(1,0)
     #self.sir(b"\xE0") # read IDCODE
@@ -347,7 +349,7 @@ class ecp5:
     if (status & 0x2100) != 0x100:
       done = False
     self.reset_tap()
-    self.led.off()
+    #self.led.off()
     self.bitbang_jtag_off()
     return done
 
@@ -368,28 +370,34 @@ class ecp5:
     # e.g. 0x1B here is actually 0xD8 in datasheet, 0x60 is is 0x06 etc.
 
   @micropython.viper
-  def flash_wait_status(self):
-    retry=50
-    # read_status_register = pack("<H",0x00A0) # READ STATUS REGISTER
-    status_register = bytearray(2)
+  def flash_wait_status(self,n:int):
+    retry=n
+    mask=1 # WIP bit (work-in-progress)
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
+    self.swspi.write(self.read_status) # READ STATUS REGISTER
     while retry > 0:
-      # always refresh status_register[0], overwitten by response
-      status_register[0] = 0xA0 # 0xA0 READ STATUS REGISTER
-      self.sdr_response(status_register)
-      if (int(status_register[1]) & 0xC1) == 0:
+      self.swspi.readinto(self.status)
+      if (int(self.status[0]) & mask) == 0:
         break
       sleep_ms(1)
       retry -= 1
+    self.send_tms(1) # -> exit 1 DR # exit at byte incomplete
+    #self.send_data_byte_reverse(0,1,8) # exit at byte complete
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
+    self.send_tms(1) # -> select DR scan
     if retry <= 0:
-      print("error flash status %04X & 0xC1 != 0" % (unpack("<H",status_register))[0])
-    #  self.sdr(pack("<H",0x00A0), mask=pack("<H",0xC100), expected=pack("<H",0)) # READ STATUS REGISTER
+      print("error %d flash status 0x%02X & 0x%02X != 0" % (n,self.status[0],mask))
 
   def flash_erase_block(self, addr=0):
     self.sdr(b"\x60") # SPI WRITE ENABLE
+    self.flash_wait_status(1001)
     # some chips won't clear WIP without this:
-    status = pack("<H",0x00A0) # READ STATUS REGISTER
-    self.sdr_response(status)
-    self.check_response(unpack("<H",status)[0],mask=0xC100,expected=0x4000)
+    #status = pack("<H",0x00A0) # READ STATUS REGISTER
+    #self.sdr_response(status)
+    #self.check_response(unpack("<H",status)[0],mask=0xC100,expected=0x4000)
     sdr = pack(">I", (self.flash_erase_cmd << 24) | (addr & 0xFFFFFF))
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
@@ -399,10 +407,11 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    self.flash_wait_status()
+    self.flash_wait_status(2002)
 
   def flash_write_block(self, block, addr=0):
     self.sdr(b"\x60") # SPI WRITE ENABLE
+    self.flash_wait_status(1003)
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     # self.bitreverse(0x40) = 0x02 -> 0x02000000
@@ -413,12 +422,12 @@ class ecp5:
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-    self.flash_wait_status()
+    self.flash_wait_status(1004)
 
   # data is bytearray of to-be-read length
   def flash_fast_read_block(self, data, addr=0):
     # 0x0B is SPI flash fast read command
-    sdr = pack(">IB",0x0B000000 | (addr & 0xFFFFFF),0)
+    sdr = pack(">I",0x03000000 | (addr & 0xFFFFFF))
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.swspi.write(sdr) # send SPI FLASH read command and address and dummy byte
@@ -443,7 +452,7 @@ class ecp5:
     self.sdr_idle(b"\x00\x00\x00",2,100)
     self.spi_jtag_off()
     self.reset_tap()
-    self.led.off()
+    #self.led.off()
     self.bitbang_jtag_off()
 
   def stopwatch_start(self):
@@ -530,14 +539,20 @@ class ecp5:
   # TODO reduce buffer usage
   # returns status True-OK False-Fail
   def flash_stream(self, filedata, addr=0):
+    self.flash_open()
     addr_mask = self.flash_erase_size-1
     if addr & addr_mask:
       print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (self.flash_erase_size, 0xFFFFFF & ~addr_mask))
-      return
+      return False
     addr = addr & 0xFFFFFF & ~addr_mask # rounded to even 64K (erase block)
-    self.flash_open()
     bytes_uploaded = 0
     self.stopwatch_start()
+    #if 1:
+    #  print("erase whole FLASH (max 90s)")
+    #  self.sdr(b"\x60") # SPI WRITE ENABLE
+    #  self.flash_wait_status(105)
+    #  self.sdr(b"\xE3") # BULK ERASE (whole chip) self.rb[0x60]=0x06 or self.rb[0xC7]=0xE3
+    #  self.flash_wait_status(90000)
     count_total = 0
     count_erase = 0
     count_write = 0
@@ -545,7 +560,7 @@ class ecp5:
     flash_block = bytearray(self.flash_erase_size)
     progress_char="."
     while filedata.readinto(file_block):
-      self.led.value((bytes_uploaded >> 12)&1)
+      #self.led.value((bytes_uploaded >> 12)&1)
       retry = 3
       while retry >= 0:
         self.flash_fast_read_block(flash_block, addr=addr+bytes_uploaded)

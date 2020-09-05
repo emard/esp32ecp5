@@ -81,10 +81,13 @@ class artix7:
     #self.init_reverse_bits()
     self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
     self.init_pinout_jtag()
-    self.dummy4=bytearray(4)
     self.magic=bytearray([0x59,0xA6,0x59,0xA6])
-    self.read_status=self.magic+bytearray([0,17,5,0])
+    self.wrenable=self.magic+bytearray([0,8,6])
+    self.wrdisable=self.magic+bytearray([0,8,4])
+    self.read_status=self.magic+bytearray([0,16,5,0])
     self.status=bytearray(2)
+    self.dummy4=bytearray(4)
+    self.none=bytearray(0)
 
   # print bytes reverse - appears the same as in SVF file
   #def print_hex_reverse(self, block, head="", tail="\n"):
@@ -224,6 +227,7 @@ class artix7:
   # send SIR command (bytes)
   # TAP should be in "select DR scan" state
   # TAP returns to "select DR scan" state
+  # LSB first
   @micropython.viper
   def sir(self, sir:int)->int:
     self.send_tms(1) # -> select IR scan
@@ -251,6 +255,7 @@ class artix7:
   #  self.send_tms(1) # -> update IR
   #  self.runtest_idle(n+1, ms) # -> select DR scan
 
+  # LSB first
   @micropython.viper
   def sdr(self, sdr):
     self.send_tms(0) # -> capture DR
@@ -261,6 +266,7 @@ class artix7:
     self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
 
+  # LSB first
   @micropython.viper
   def sdr_idle(self, sdr, n:int, ms:int):
     self.send_tms(0) # -> capture DR
@@ -271,12 +277,42 @@ class artix7:
     self.send_tms(1) # -> update DR
     self.runtest_idle(n+1, ms) # -> select DR scan
 
-  # sdr buffer will be overwritten with response
+  # sdr buffer will be overwritten with response LSB first
   @micropython.viper
   def sdr_response(self, sdr):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.send_read_data_buf(sdr,1,addressof(sdr))
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
+    self.send_tms(1) # -> select DR scan
+
+  # USER1 send a+b MSB first
+  # a can be 0-size
+  def user1_send(self,a,b):
+    self.sir(2) # USER1
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
+    self.swspi.write(a)
+    self.swspi.write(b[:-1])
+    self.send_data_byte_reverse(b[-1],1,8) # last byte -> exit 1 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
+    self.send_tms(1) # -> update DR
+    self.send_tms(1) # -> select DR scan
+
+  # USER1 send a, recv b
+  # a can be 0-size
+  # after b, it reads one dummy bit
+  @micropython.viper
+  def user1_send_recv(self,a,b):
+    self.sir(2) # USER1
+    self.send_tms(0) # -> capture DR
+    self.send_tms(0) # -> shift DR
+    self.swspi.write(a)
+    self.swspi.readinto(b)
+    self.send_tms(1) # -> exit 1 DR, dummy bit
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -378,25 +414,8 @@ class artix7:
   def flash_wait_status(self,n:int):
     retry=n
     while retry > 0:
-      self.sir(2) # USER1
-      self.send_tms(0) # -> capture DR
-      self.send_tms(0) # -> shift DR
-      self.swspi.write(self.read_status) # whole block except last byte
-      self.send_tms(1) # -> exit 1 DR, dummy bit
-      self.send_tms(0) # -> pause DR
-      self.send_tms(1) # -> exit 2 DR
-      self.send_tms(1) # -> update DR
-      self.send_tms(1) # -> select DR scan
-      self.sir(2) # USER1
-      self.send_tms(0) # -> capture DR
-      self.send_tms(0) # -> shift DR
-      self.swspi.readinto(self.status)
-      self.send_tms(1) # -> exit 1 DR, dummy bit
-      self.send_tms(0) # -> pause DR
-      self.send_tms(1) # -> exit 2 DR
-      self.send_tms(1) # -> update DR
-      self.send_tms(1) # -> select DR scan
-      #print(self.status)
+      self.user1_send(self.none,self.read_status)
+      self.user1_send_recv(self.none,self.status)
       if (int(self.status[1]) & 1) == 0:
         break
       sleep_ms(1)
@@ -405,55 +424,19 @@ class artix7:
       print("error %d flash status 0x%02X & 1 != 0" % (n,self.status[1]))
 
   def flash_erase_block(self, addr=0):
-    self.sir(2) # USER1
-    req=self.magic+bytearray([0,8,6]) # 6=SPI WRITE ENABLE
-    self.send_tms(0) # -> capture DR
-    self.send_tms(0) # -> shift DR
-    self.swspi.write(req[:-1])
-    self.send_data_byte_reverse(req[-1],1,8) # last byte -> exit 1 DR
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
-    self.send_tms(1) # -> update DR
-    self.send_tms(1) # -> select DR scan
+    self.user1_send(self.none,self.wrenable)
     self.flash_wait_status(1001)
     req=self.magic+bytearray([0,32,self.flash_erase_cmd,addr>>16,addr>>8,addr]) # 6=SPI WRITE ENABLE
-    self.sir(2) # USER1
-    self.send_tms(0) # -> capture DR
-    self.send_tms(0) # -> shift DR
-    self.swspi.write(req[:-1])
-    self.send_data_byte_reverse(req[-1],1,8) # last byte -> exit 1 DR
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
-    self.send_tms(1) # -> update DR
-    self.send_tms(1) # -> select DR scan
+    self.user1_send(self.none,req)
     self.flash_wait_status(2002)
 
   def flash_write_block(self, block, addr=0):
-    wrenable=self.magic+bytearray([0,8,6])
-    self.sir(2) # USER1
-    self.send_tms(0) # -> capture DR
-    self.send_tms(0) # -> shift DR
-    self.swspi.write(wrenable[:-1]) # whole block except last byte
-    self.send_data_byte_reverse(wrenable[-1],1,8) # last byte -> exit 1 DR
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
-    self.send_tms(1) # -> update DR
-    self.send_tms(1) # -> select DR scan
+    self.user1_send(self.none,self.wrenable)
     self.flash_wait_status(114)
-    #bits=5*8=40 # bit-size of req payload
     # 6 = SPI WRITE ENABLE, 2 = WRITE BLOCK followed by 3-byte address and 256-byte data block
     bits=(4+len(block))*8
     req=self.magic+bytearray([bits>>8,bits,2,addr>>16,addr>>8,addr])
-    self.sir(2) # USER1
-    self.send_tms(0) # -> capture DR
-    self.send_tms(0) # -> shift DR
-    self.swspi.write(req)
-    self.swspi.write(block[:-1]) # whole block except last byte
-    self.send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
-    self.send_tms(1) # -> update DR
-    self.send_tms(1) # -> select DR scan
+    self.user1_send(req,block)
     self.flash_wait_status(1004)
 
   # data is bytearray of to-be-read length
@@ -462,27 +445,9 @@ class artix7:
     # first is the request 3=READ BLOCK, 3-byte address, 256-byte data
     bits=(len(data)+4)*8
     req=self.magic+bytearray([bits>>8,bits,3,addr>>16,addr>>8,addr])
-    self.sir(2) # USER1
-    self.send_tms(0) # -> capture DR
-    self.send_tms(0) # -> shift DR
-    self.swspi.write(req)
-    self.swspi.write(data[:-1]) # dummy data
-    self.send_data_byte_reverse(0,1,8) # last dummy byte -> exit 1 DR
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
-    self.send_tms(1) # -> update DR
-    self.send_tms(1) # -> select DR scan
+    self.user1_send(req,data)
     # collects response from previous command
-    self.sir(2) # USER1
-    self.send_tms(0) # -> capture DR
-    self.send_tms(0) # -> shift DR
-    self.swspi.write(self.dummy4) # skip
-    self.swspi.readinto(data) # data received now
-    self.send_tms(1) # -> exit 1 DR, extra dummy bit shifted
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
-    self.send_tms(1) # -> update DR
-    self.send_tms(1) # -> select DR scan
+    self.user1_send_recv(self.dummy4,data)
 
   # call this after uploading all of the flash blocks,
   # this will exit FPGA flashing mode and start the bitstream
@@ -490,8 +455,7 @@ class artix7:
   def flash_close(self):
     # switch from SPI to bitbanging
     # ---------- flashing end -----------
-    self.sir(2) # USER1
-    self.sdr(b"\x20") # SPI WRITE DISABLE
+    self.user1_send(self.none,self.wrdisable)
     self.sir(0xD) # JSHUTDOWN
     self.sir(0xB) # JPROGRAM
     self.runtest_idle(2000,20)

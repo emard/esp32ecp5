@@ -73,8 +73,8 @@ class cyclone5:
     #  2 is preferred as it has default pinout wired
     self.flash_read_size = const(2048)
     self.flash_write_size = const(256)
-    #self.flash_erase_size = const(4096) # WROOM
-    self.flash_erase_size = const(65536) # WROVER
+    self.flash_erase_size = const(4096) # WROOM
+    #self.flash_erase_size = const(65536) # WROVER
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     self.rb=bytearray(256) # reverse bits
@@ -221,7 +221,7 @@ class cyclone5:
       self.send_tms(1) # -> Test Logic Reset
 
   # TAP should be in "idle" state
-  # TAP returns to "select DR scan" state
+  # TAP returns to "idle" state
   @micropython.viper
   def runtest_idle(self, count:int, duration_ms:int):
     leave=int(ticks_ms()) + duration_ms
@@ -229,7 +229,6 @@ class cyclone5:
       self.send_tms(0) # -> idle
     while int(ticks_ms()) < leave:
       self.send_tms(0) # -> idle
-    self.send_tms(1) # -> select DR scan
   
   # send SIR command (bytes)
   # TAP should be in "select DR scan" state
@@ -237,19 +236,7 @@ class cyclone5:
   # LSB first
   @micropython.viper
   def sir(self, sir:int)->int:
-    self.send_tms(1) # -> select IR scan
-    self.send_tms(0) # -> capture IR
-    self.send_tms(0) # -> shift IR
-    r=int(self.send_read_data_byte(sir,1,10)) # -> exit 1 IR
-    self.send_tms(0) # -> pause IR
-    self.send_tms(1) # -> exit 2 IR
-    self.send_tms(1) # -> update IR
     self.send_tms(1) # -> select DR scan
-    return r
-
-  # LSB first
-  @micropython.viper
-  def sir_idle(self, sir:int, n:int, ms:int)->int:
     self.send_tms(1) # -> select IR scan
     self.send_tms(0) # -> capture IR
     self.send_tms(0) # -> shift IR
@@ -257,70 +244,47 @@ class cyclone5:
     self.send_tms(0) # -> pause IR
     self.send_tms(1) # -> exit 2 IR
     self.send_tms(1) # -> update IR
-    self.runtest_idle(n+1, ms) # -> select DR scan
+    self.send_tms(0) # -> idle
     return r
-
-  # send SIR command (bytes)
-  # TAP should be in "select DR scan" state
-  # TAP returns to "select DR scan" state
-  # finish with n idle cycles during minimum of ms time
-  #@micropython.viper
-  #def sir_idle(self, sir:int, n:int, ms:int):
-  #  self.send_tms(1) # -> select IR scan
-  #  self.send_tms(0) # -> capture IR
-  #  self.send_tms(0) # -> shift IR
-  #  self.send_data_byte(sir,1,6) # -> exit 1 IR
-  #  self.send_tms(0) # -> pause IR
-  #  self.send_tms(1) # -> exit 2 IR
-  #  self.send_tms(1) # -> update IR
-  #  self.runtest_idle(n+1, ms) # -> select DR scan
 
   # LSB first
   @micropython.viper
   def sdr(self, sdr):
-    self.send_tms(0) # -> capture DR
-    self.send_tms(0) # -> shift DR
-    self.send_read_data_buf(sdr,1,0)
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
-    self.send_tms(1) # -> update DR
     self.send_tms(1) # -> select DR scan
-
-  # LSB first
-  @micropython.viper
-  def sdr_idle(self, sdr, n:int, ms:int):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.send_read_data_buf(sdr,1,0)
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
+    #self.send_tms(0) # -> pause DR
+    #self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
-    self.runtest_idle(n+1, ms) # -> select DR scan
+    self.send_tms(0) # -> idle
 
   # sdr buffer will be overwritten with response LSB first
   @micropython.viper
   def sdr_response(self, sdr):
+    self.send_tms(1) # -> select DR scan
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.send_read_data_buf(sdr,1,addressof(sdr))
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
+    #self.send_tms(0) # -> pause DR
+    #self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
-    self.send_tms(1) # -> select DR scan
+    self.send_tms(0) # -> idle
 
   # USER1 send a+b MSB first
   # a can be 0-size
   def user1_send(self,a,b):
     self.sir(2) # USER1
+    self.send_tms(1) # -> select DR scan
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.swspi.write(a)
     self.swspi.write(b[:-1])
     self.send_data_byte_reverse(b[-1],1,8) # last byte -> exit 1 DR
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
+    #self.send_tms(0) # -> pause DR
+    #self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
-    self.send_tms(1) # -> select DR scan
+    self.send_tms(0) # -> idle
 
   # USER1 send a, recv b
   # a can be 0-size
@@ -328,15 +292,16 @@ class cyclone5:
   @micropython.viper
   def user1_send_recv(self,a,b):
     self.sir(2) # USER1
+    self.send_tms(1) # -> select DR scan
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.swspi.write(a)
     self.swspi.readinto(b)
     self.send_tms(1) # -> exit 1 DR, dummy bit
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
+    #self.send_tms(0) # -> pause DR
+    #self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
-    self.send_tms(1) # -> select DR scan
+    self.send_tms(0) # -> idle
 
   def check_response(self, response, expected, mask=0xFFFFFFFF, message=""):
     if (response & mask) != expected:
@@ -368,10 +333,12 @@ class cyclone5:
   # after this TAP will be in "shift DR" state
   def prog_open(self):
     self.common_open()
-    self.sir_idle(2,33000,0)
+    self.sir(2)
+    self.runtest_idle(1,2)
     # ---------- bitstream begin -----------
     # manually walk the TAP
     # we will be sending one long DR command
+    self.send_tms(1) # -> select DR scan
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR # NOTE sent with 1 TCK glitch
     # switch from bitbanging to SPI mode
@@ -397,21 +364,20 @@ class cyclone5:
   def prog_close(self):
     self.bitbang_jtag_on()
     self.send_tms(1) # -> exit 1 DR
-    self.send_tms(0) # -> pause DR
-    self.send_tms(1) # -> exit 2 DR
+    #self.send_tms(0) # -> pause DR
+    #self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(0) # -> idle
-    self.runtest_idle(1,0)
     # ---------- bitstream end -----------
-    self.sir_idle(4,165,0)
-    response=bytearray(108)
-    self.sdr_response(response)
-    ok = response==bytearray(108)
-    #if not ok:
-    #  print(response)
-    self.sir_idle(3,135168,0)
-    self.runtest_idle(512,0)
-    self.sir_idle(0x3FF,33000,0) # BYPASS
+    self.sir(4)
+    self.runtest_idle(1,2)
+    errors=bytearray(108)
+    self.sdr_response(errors)
+    ok = errors==bytearray(108)
+    self.sir(3)
+    self.runtest_idle(1,6)
+    self.sir(0x3FF) # BYPASS
+    self.runtest_idle(1,2)
     self.reset_tap()
     self.led.off()
     self.bitbang_jtag_off()
@@ -654,7 +620,7 @@ def prog(filepath, prog_close=True):
     if gz:
       board.prog_stream(filedata,blocksize=4096)
     else:
-      board.prog_stream(filedata,blocksize=16384)
+      board.prog_stream(filedata,blocksize=4096)
     # NOTE now the SD card can be released before bitstream starts
     if prog_close:
       return board.prog_close() # start the bitstream

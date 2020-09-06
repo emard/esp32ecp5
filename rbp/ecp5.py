@@ -14,6 +14,13 @@ from gc import collect
 class ecp5:
 
   def init_pinout_jtag(self):
+    # FJC-ESP32-V0r2 pluggable
+    self.gpio_tms = const(4)
+    self.gpio_tck = const(16)
+    self.gpio_tdi = const(15)
+    self.gpio_tdo = const(2)
+    self.gpio_tcknc = const(21)
+    #self.gpio_led = const(19)
     # ULX3S v3.0.x
     #self.gpio_tms = const(21)
     #self.gpio_tck = const(18)
@@ -22,11 +29,11 @@ class ecp5:
     #self.gpio_tcknc = const(17) # free pin for SPI workaround
     #self.gpio_led = const(5)
     # ULX3S v3.1.x
-    self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
-    self.gpio_tck = const(18)
-    self.gpio_tdi = const(23)
-    self.gpio_tdo = const(34)
-    self.gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
+    #self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    #self.gpio_tck = const(18)
+    #self.gpio_tdi = const(23)
+    #self.gpio_tdo = const(34)
+    #self.gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
     #self.gpio_led = const(19)
 
   def bitbang_jtag_on(self):

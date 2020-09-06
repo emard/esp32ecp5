@@ -622,7 +622,7 @@ def prog(filepath, prog_close=True):
     if gz:
       board.prog_stream(filedata,blocksize=4096)
     else:
-      board.prog_stream(filedata,blocksize=4096)
+      board.prog_stream(filedata,blocksize=16384)
     # NOTE now the SD card can be released before bitstream starts
     if prog_close:
       return board.prog_close() # start the bitstream

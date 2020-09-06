@@ -658,7 +658,7 @@ def passthru():
   board = artix7()
   idcode = board.idcode()
   if idcode != 0 and idcode != 0xFFFFFFFF:
-    filepath = "passthru%08X.bit.gz" % idcode
+    filepath = "passthru%08x.bit.gz" % idcode
     print("artix7.prog(\"%s\")" % filepath)
     filedata = board.open_file(filepath, gz=True)
     board.prog_stream(filedata,blocksize=4096)

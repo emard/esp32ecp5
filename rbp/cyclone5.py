@@ -254,20 +254,21 @@ class cyclone5:
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.send_read_data_buf(sdr,1,0)
-    #self.send_tms(0) # -> pause DR
-    #self.send_tms(1) # -> exit 2 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(0) # -> idle
 
-  # sdr buffer will be overwritten with response LSB first
+  # sdr buffer will be overwritten with response
+  # LSB first
   @micropython.viper
   def sdr_response(self, sdr):
     self.send_tms(1) # -> select DR scan
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.send_read_data_buf(sdr,1,addressof(sdr))
-    #self.send_tms(0) # -> pause DR
-    #self.send_tms(1) # -> exit 2 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(0) # -> idle
 
@@ -281,8 +282,8 @@ class cyclone5:
     self.swspi.write(a)
     self.swspi.write(b[:-1])
     self.send_data_byte_reverse(b[-1],1,8) # last byte -> exit 1 DR
-    #self.send_tms(0) # -> pause DR
-    #self.send_tms(1) # -> exit 2 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(0) # -> idle
 
@@ -298,8 +299,8 @@ class cyclone5:
     self.swspi.write(a)
     self.swspi.readinto(b)
     self.send_tms(1) # -> exit 1 DR, dummy bit
-    #self.send_tms(0) # -> pause DR
-    #self.send_tms(1) # -> exit 2 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(0) # -> idle
 
@@ -334,7 +335,7 @@ class cyclone5:
   def prog_open(self):
     self.common_open()
     self.sir(2)
-    self.runtest_idle(1,2)
+    self.runtest_idle(8,2)
     # ---------- bitstream begin -----------
     # manually walk the TAP
     # we will be sending one long DR command
@@ -364,20 +365,21 @@ class cyclone5:
   def prog_close(self):
     self.bitbang_jtag_on()
     self.send_tms(1) # -> exit 1 DR
-    #self.send_tms(0) # -> pause DR
-    #self.send_tms(1) # -> exit 2 DR
+    self.send_tms(0) # -> pause DR
+    self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
     self.send_tms(0) # -> idle
+    self.runtest_idle(8,2)
     # ---------- bitstream end -----------
     self.sir(4)
-    self.runtest_idle(1,2)
+    self.runtest_idle(165,0)
     errors=bytearray(108)
     self.sdr_response(errors)
-    ok = errors==bytearray(108)
+    ok = (errors[20]&8)==8
     self.sir(3)
-    self.runtest_idle(1,6)
+    self.runtest_idle(8,6)
     self.sir(0x3FF) # BYPASS
-    self.runtest_idle(1,2)
+    self.runtest_idle(8,2)
     self.reset_tap()
     self.led.off()
     self.bitbang_jtag_off()
@@ -656,10 +658,10 @@ def passthru():
 
 def help():
   print("usage:")
-  print("cyclone5.flash(\"blink.rbf.gz\", addr=0x000000)")
+  print("cyclone5.flash(\"blink.bit.gz\", addr=0x000000)")
   print("cyclone5.flash_read(addr=0x000000, length=1)")
-  print("cyclone5.prog(\"http://192.168.4.2/blink.rbf\")")
-  print("cyclone5.prog(\"blink.rbf.gz\") # gzip -9 blink.rbf")
+  print("cyclone5.prog(\"http://192.168.4.2/blink.bit\")")
+  print("cyclone5.prog(\"blink.bit.gz\") # gzip -9 blink.bit")
   print("cyclone5.passthru()")
   print("\"0x%08X\" % cyclone5.idcode()")
   print("0x%08X" % idcode())

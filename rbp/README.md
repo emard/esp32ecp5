@@ -1,4 +1,14 @@
-# FFM/RBP board programmer
+# RBP onboard programmer
+
+Use onboard FJC-ESP32-V0r2 module.
+
+    JTAG  GPIO
+     TMS   4
+     TCK  16
+     TDI  15
+     TDO   2
+
+# FFM external programmer
 
 Connect ESP32-WROVER-E (on FROGO board) with female-female wires
 to 10-pin header on FFM board.
@@ -16,9 +26,16 @@ Pinout:
 
 # ARTIX-7
 
-artix7.prog() uses normal "bit" binary bitstreams and
-it can use bscan bitstream (jtag-spi passthru) for xc3sprog
-[bscan7.bit source](https://github.com/f32c/f32c/tree/master/rtl/proj/xilinx/ffm-a7100/ffm_a7100_jtag_spi_bridge)
+artix7.prog() uses normal "bit" binary bitstreams.
+To write bitstream to config FLASH, ESP32 can use bscan
+bitstream (jtag-spi passthru) for xc3sprog
+[bscan7.bit
+source](https://github.com/f32c/f32c/tree/master/rtl/proj/xilinx/ffm-a7100/ffm_a7100_jtag_spi_bridge),
+compressed with "gzip -9" and named with idcode for example:
+
+    jtagspi%08x.bit.gz % idcode
+    
+    jtagspi13631093.bit.gz
 
 # CYCLONE-5
 

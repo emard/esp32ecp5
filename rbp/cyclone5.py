@@ -77,8 +77,8 @@ class cyclone5:
     #self.flash_erase_size = const(65536) # WROVER
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
     self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
-    self.rb=bytearray(256) # reverse bits
-    self.init_reverse_bits()
+    #self.rb=bytearray(256) # reverse bits
+    #self.init_reverse_bits()
     self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
     self.init_pinout_jtag()
     self.magic=bytearray([0x59,0xA6,0x59,0xA6])
@@ -96,25 +96,25 @@ class cyclone5:
   #    print("%02X" % block[len(block)-n-1], end="")
   #  print(tail, end="")
 
-  @micropython.viper
-  def init_reverse_bits(self):
-    p8rb=ptr8(addressof(self.rb))
-    #p8rb=memoryview(self.rb)
-    for i in range(256):
-      v=i
-      r=0
-      for j in range(8):
-        r<<=1
-        r|=v&1
-        v>>=1
-      p8rb[i]=r
+  #@micropython.viper
+  #def init_reverse_bits(self):
+  #  p8rb=ptr8(addressof(self.rb))
+  #  #p8rb=memoryview(self.rb)
+  #  for i in range(256):
+  #    v=i
+  #    r=0
+  #    for j in range(8):
+  #      r<<=1
+  #      r|=v&1
+  #      v>>=1
+  #    p8rb[i]=r
   
-  @micropython.viper
-  def reverse_bits(self,b,l:int):
-    p8=ptr8(addressof(b))
-    p8rb=ptr8(addressof(self.rb))
-    for i in range(l):
-      p8[i]=p8rb[p8[i]]
+  #@micropython.viper
+  #def reverse_bits(self,b,l:int):
+  #  p8=ptr8(addressof(b))
+  #  p8rb=ptr8(addressof(self.rb))
+  #  for i in range(l):
+  #    p8[i]=p8rb[p8[i]]
 
   @micropython.viper
   def send_tms(self, tms:int):
@@ -474,7 +474,7 @@ class cyclone5:
     block = bytearray(blocksize)
     while True:
       if filedata.readinto(block):
-        self.reverse_bits(block,blocksize)
+        #self.reverse_bits(block,blocksize)
         self.hwspi.write(block)
         bytes_uploaded += len(block)
       else:

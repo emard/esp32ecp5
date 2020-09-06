@@ -399,9 +399,10 @@ class artix7:
   # TAP should be in "select DR scan" state
   @micropython.viper
   def flash_open(self):
-    self.prog_stream(self.open_file("bscan7.bit.gz",True))
+    file="jtagspi%08x.bit.gz" % self.idcode()
+    self.prog_stream(self.open_file(file,True))
     if not self.prog_close():
-      print("bscan7.bit.gz failed")
+      print("%s failed" % file)
     self.common_open()
     self.reset_tap()
     self.runtest_idle(1,0)

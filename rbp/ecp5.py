@@ -568,7 +568,7 @@ class ecp5:
         write_addr = addr+bytes_uploaded
         if must == 0:
           if (write_addr & 0xFFFF) == 0:
-            print("\r0x%06X %dK " % (write_addr, self.flash_erase_size>>10),end="")
+            print("\r0x%06X %dK %c" % (write_addr, self.flash_erase_size>>10, progress_char),end="")
           else:
             print(progress_char,end="")
           progress_char="."
@@ -622,7 +622,7 @@ def prog(filepath, prog_close=True):
     if gz:
       board.prog_stream(filedata,blocksize=4096)
     else:
-      board.prog_stream(filedata,blocksize=4096) # 16384 on WROVER
+      board.prog_stream(filedata,blocksize=16384)
     # NOTE now the SD card can be released before bitstream starts
     if prog_close:
       return board.prog_close() # start the bitstream
@@ -649,7 +649,7 @@ def passthru():
   board = ecp5()
   idcode = board.idcode()
   if idcode != 0 and idcode != 0xFFFFFFFF:
-    filepath = "passthru%08X.bit.gz" % idcode
+    filepath = "passthru%08x.bit.gz" % idcode
     print("ecp5.prog(\"%s\")" % filepath)
     filedata = board.open_file(filepath, gz=True)
     board.prog_stream(filedata,blocksize=4096)

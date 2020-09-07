@@ -13,10 +13,10 @@ so writing to FLASH doesn't work. ESP32-WROVER-E module is required.
 
 There is no free RAM to handle buffering for 64KB FLASH
 erase blocks. 4KB erase block mode can't be used because it doesn't
-work correctly on Spansion 256-mbit FLASH chip.
+work correctly on SPANSION 32MB (256Mbit) FLASH chip.
 
 There's no free RAM for on-the-fly decompression of jtagspi
-bitstream reqired for flashing artix-7.
+bitstream required for flashing ARTIX-7.
 
 # FFM external programmer
 

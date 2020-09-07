@@ -9,8 +9,7 @@ Use onboard FJC-ESP32-V0r2 module.
      TDO   2
 
 This module currently has ESP32-WROOM (without PSRAM expansion),
-so there's no free RAM for on-the fly gzip decompression (32KB)
-and processing 64KB flash erase blocks.
+so writing to FLASH doesn't work. ESP32-WROVER-E module is required.
 
 There is no free RAM to handle buffering for 64KB FLASH
 erase blocks. 4KB erase blocks can't be used because they doesn't

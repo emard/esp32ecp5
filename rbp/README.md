@@ -34,6 +34,11 @@ Pinout:
       23  TDI | 9 10 | GND
                ------
 
+# ECP-5
+
+ecp5.prog() and ecp5.flash() work. jtagspi bypass bitstream
+is not needed for ECP5
+
 # ARTIX-7
 
 artix7.prog() uses normal "bit" binary bitstreams.

@@ -36,8 +36,9 @@ Pinout:
 
 # ECP-5
 
-ecp5.prog() and ecp5.flash() work. jtagspi bypass bitstream
-is not needed for ECP5
+ecp5.prog() and ecp5.flash() work at ESP32-WROVER.
+FLASH doesn't work at ESP32-WROOM for it can't buffer 64KB erase blocks.
+jtagspi bypass bitstream is not needed for ECP5. 
 
 # ARTIX-7
 

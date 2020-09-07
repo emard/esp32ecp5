@@ -8,6 +8,16 @@ Use onboard FJC-ESP32-V0r2 module.
      TDI  15
      TDO   2
 
+This module currently has ESP32-WROOM (without PSRAM expansion),
+so there's no free RAM for on-the fly gzip decompression (32KB)
+and processing 64KB flash erase blocks.
+
+Consequently for FLASH writing will fail because it can't load
+compressed jtagspi bitstream for artix-7. And even if it could or
+doesn't need bitstream like on ECP5, it then fails at 64KB FLASH
+erase blocks. 4KB erase blocks can't be used because they doesn't
+work correctly on Spansion 256-mbit FLASH chip.
+
 # FFM external programmer
 
 Connect ESP32-WROVER-E (on FROGO board) with female-female wires

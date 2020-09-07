@@ -43,7 +43,7 @@ jtagspi bypass bitstream is not needed for ECP5.
 # ARTIX-7
 
 artix7.prog() uses normal "bit" binary bitstreams.
-To write bitstream to config FLASH, ESP32 can use bscan
+To write bitstream to config FLASH, ESP32-WROVER can use bscan
 bitstream (jtag-spi passthru) for xc3sprog
 [bscan7.bit
 source](https://github.com/f32c/f32c/tree/master/rtl/proj/xilinx/ffm-a7100/ffm_a7100_jtag_spi_bridge),

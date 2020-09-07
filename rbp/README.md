@@ -47,10 +47,14 @@ compressed with "gzip -9" and named with idcode for example:
     
     jtagspi13631093.bit.gz
 
-# CYCLONE-5
+# CYCLONE-V
 
 cyclone5.prog() uses raw bitstream which should be extracted
 from "svf" file using "cyclone5_svf2bit.py" tool which does
 byte-reverse and bit-reverse in each byte:
 
     cyclone5_svf2bit.py bitstream.svf bitstream.bit
+
+Currently wiritng to FLASH at CYCLONE-V is not yet supported,
+Still looking for protocol docs/specs or code example that writes
+FLASH thru JTAG.

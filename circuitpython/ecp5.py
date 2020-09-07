@@ -60,9 +60,7 @@ class ecp5:
 
   def __init__(self):
     self.spi_freq = const(40000000) # Hz JTAG clk frequency
-    # -1 for JTAG over SOFT SPI slow, compatibility
-    #  1 or 2 for JTAG over HARD SPI fast
-    #  2 is preferred as it has default pinout wired
+    self.flash_read_size = const(2048)
     self.flash_write_size = const(256)
     self.flash_erase_size = const(4096) # no ESP32 memory for more at flash_stream()
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
@@ -405,13 +403,13 @@ class ecp5:
     self.flash_wait_status()
 
   # data is bytearray of to-be-read length
-  def flash_fast_read_block(self, data, addr=0):
+  def flash_read_block(self, data, addr=0):
     self.send_tms(0) # -> capture DR
     #self.send_tms(0) # -> shift DR NOTE will be sent with bitbang/spi glitch
     self.bitbang_jtag_off() # NOTE TCK glitch
     self.spi_jtag_on()
     # 0x0B is SPI flash fast read command
-    sdr = pack(">IB", 0x0B000000 | (addr & 0xFFFFFF), 0)
+    sdr = pack(">I", 0x03000000 | (addr & 0xFFFFFF))
     self.hwspi.write(sdr)
     self.hwspi.readinto(data)
     self.spi_jtag_off()
@@ -466,9 +464,9 @@ class ecp5:
 
   def open_file(self, filename, gz=False):
     filedata = open(filename, "rb")
-    if gz:
-      import uzlib
-      return uzlib.DecompIO(filedata,31)
+    #if gz:
+    #  import uzlib
+    #  return uzlib.DecompIO(filedata,31)
     return filedata
 
   def open_web(self, url, gz=False):
@@ -485,9 +483,9 @@ class ecp5:
     for i in range(100): # read first 100 lines searching for
       if len(s.readline()) < 3: # first empty line (contains "\r\n")
         break
-    if gz:
-      import uzlib
-      return uzlib.DecompIO(s,31)
+    #if gz:
+    #  import uzlib
+    #  return uzlib.DecompIO(s,31)
     return s
 
   # data is bytearray of to-be-read length
@@ -500,13 +498,10 @@ class ecp5:
   # return value
   # 0-must nothing, 1-must erase, 2-must write, 3-must erase and write
   #@micropython.viper
-  def compare_flash_file_buf(self, flash_b, file_b) -> int:
-    #flash_block = ptr8(addressof(flash_b))
-    #file_block = ptr8(addressof(file_b))
+  def compare_flash_file_buf(self, flash_b, file_b, must:int) -> int:
     flash_block = memoryview(flash_b)
     file_block = memoryview(file_b)
     l = int(len(file_b))
-    must = 0
     for i in range(l):
       if (flash_block[i] & file_block[i]) != file_block[i]:
         must = 1
@@ -538,18 +533,22 @@ class ecp5:
     count_erase = 0
     count_write = 0
     file_block = bytearray(self.flash_erase_size)
-    flash_block = bytearray(self.flash_erase_size)
+    flash_block = bytearray(self.flash_read_size)
     progress_char="."
     while filedata.readinto(file_block):
       #self.led.value((bytes_uploaded >> 12)&1)
       retry = 3
       while retry >= 0:
-        self.flash_fast_read_block(flash_block, addr=addr+bytes_uploaded)
-        must = self.compare_flash_file_buf(flash_block,file_block)
+        must = 0
+        flash_rd = 0
+        while flash_rd<self.flash_erase_size:
+          self.flash_read_block(flash_block,addr+bytes_uploaded+flash_rd)
+          must = self.compare_flash_file_buf(flash_block,file_block[flash_rd:flash_rd+self.flash_read_size],must)
+          flash_rd+=self.flash_read_size
         write_addr = addr+bytes_uploaded
         if must == 0:
           if (write_addr & 0xFFFF) == 0:
-            print("\r0x%06X %dK " % (write_addr, self.flash_erase_size>>10),end="")
+            print("\r0x%06X %dK %c" % (write_addr, self.flash_erase_size>>10, progress_char),end="")
           else:
             print(progress_char,end="")
           progress_char="."
@@ -558,12 +557,10 @@ class ecp5:
           break
         retry -= 1
         if must & 1: # must_erase:
-          #print("from 0x%06X erase %dK" % (write_addr, self.flash_erase_size>>10),end="\r")
           self.flash_erase_block(write_addr)
           count_erase += 1
           progress_char = "e"
         if must & 2: # must_write:
-          #print("from 0x%06X write %dK" % (write_addr, self.flash_erase_size>>10),end="\r")
           block_addr = 0
           next_block_addr = 0
           while next_block_addr < len(file_block):
@@ -625,17 +622,6 @@ def flash_read(addr=0, length=1):
   data = bytearray(length)
   ecp5().flash_read(data, addr)
   return data
-
-def passthru():
-  board = ecp5()
-  idcode = board.idcode()
-  if idcode != 0 and idcode != 0xFFFFFFFF:
-    filepath = "passthru%08X.bit.gz" % idcode
-    print("ecp5.prog(\"%s\")" % filepath)
-    filedata = board.open_file(filepath, gz=True)
-    board.prog_stream(filedata,blocksize=4096)
-    return board.prog_close()
-  return False
 
 def help():
   print("usage:")

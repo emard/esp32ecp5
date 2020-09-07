@@ -12,7 +12,7 @@ This module currently has ESP32-WROOM (without PSRAM expansion),
 so writing to FLASH doesn't work. ESP32-WROVER-E module is required.
 
 There is no free RAM to handle buffering for 64KB FLASH
-erase blocks. 4KB erase blocks can't be used because they doesn't
+erase blocks. 4KB erase block mode can't be used because it doesn't
 work correctly on Spansion 256-mbit FLASH chip.
 
 There's no free RAM for on-the-fly decompression of jtagspi

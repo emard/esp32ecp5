@@ -43,8 +43,11 @@ it very practical, just copy "ecp5.py" and "blink.bit" to the
 root of its filesystem and connect to its serial port:
 
     screen /dev/ttyACM0
-    >>> from ecp5 import idcode,prog,flash,flash_read
-    IDCODE: 0x21111043
+    >>> from jtag import idcode
+    >>> from ecp5p import prog
+    >>> from ecp5f import flash,flashrd
+    >>> print("0x$08x" % idcode())
+    0x21111043
     >>> prog("blink.bit")
     102400 bytes uploaded in 46 ms (2226 kB/s)
     True
@@ -57,7 +60,7 @@ root of its filesystem and connect to its serial port:
 Circuitpython bugs: for the first time, prog("blink.bit")
 may be syntax error, for the second time it will succeed:
 
-    >>> from ecp5 import prog,flash
+    >>> from ecp5p import prog
     IDCODE: 0x21111043
     >>> prog("blink.bit")
     Traceback (most recent call last):
@@ -69,11 +72,12 @@ may be syntax error, for the second time it will succeed:
 
 To load "autostart.bit" bitstream at power ON, make "main.py":
 
-    import ecp5
-    ecp5.prog("autostart.bit")
-    ecp5.idcode()
+    from jtag import idcode
+    from ecp5p import prog
+    prog("autostart.bit")
+    idcode()
 
-Last "ecp5.idcode()" is to release JTAG pins to high-Z mode
+Last "idcode()" is to release JTAG pins to high-Z mode
 and allow other devices sharing JTAG bus to program ECP5 when
 ESP32-S2 is inactive.
 

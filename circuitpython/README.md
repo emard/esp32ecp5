@@ -45,8 +45,9 @@ can be applied to WROVER module and it should work without PSRAM support.
 Power OFF/ON the board without pressing BTN.
 S2 should now enumerate as USB-serial "/dev/ttyACM0" and 
 USB-storage device "Espressi Saola 1 w/WROVER 1.0" what makes
-it very practical, just copy "ecp5.py" and "blink.bit" to the
-root of its filesystem and connect to its serial port:
+it very practical, just copy
+"jtag.py", "ecp5p.py", "ecp5f.py" and "blink.bit"
+to the root of its filesystem and connect to its serial port:
 
     screen /dev/ttyACM0
     >>> from jtag import idcode

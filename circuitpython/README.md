@@ -36,7 +36,7 @@ The latest may not be the one that works best, so here's last known good:
     wget -c https://adafruit-circuit-python.s3.amazonaws.com/bin/espressif_saola_1_wrover/en_US/adafruit-circuitpython-espressif_saola_1_wrover-en_US-20200827-fe73cfb.bin
     python3 esptool.py --chip esp32s2 -p /dev/ttyACM0 --no-stub -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode qio --flash_freq 40m --flash_size 16MB 0x0000 $1
 
-Newer releases have non-functial SPI-DMA.
+Newer WROVER releases have non-functional SPI-DMA.
 
 Alternatively, latest
 [Adafruit CircuitPython Saola-1 WROOM board](https://adafruit-circuit-python.s3.amazonaws.com/index.html?prefix=bin/espressif_saola_1_wroom/en_US/)

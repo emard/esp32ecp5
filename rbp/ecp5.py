@@ -81,11 +81,13 @@ class ecp5:
     self.flash_write_size = const(256)
     self.flash_erase_size = const(65536)
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8, 262144:0xD8 } # erase commands from FLASH PDF
+    self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
     self.flash_era = bytearray([flash_erase_cmd[self.flash_erase_size],0,0])
     #self.rb=bytearray(256) # reverse bits
     #self.init_reverse_bits()
     self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
     self.init_pinout_jtag()
+    self.flash_req=bytearray(4)
     self.read_status=bytearray([5])
     self.status=bytearray(1)
 
@@ -400,11 +402,13 @@ class ecp5:
     if retry <= 0:
       print("error %d flash status 0x%02X & 0x%02X != 0" % (n,self.status[0],mask))
 
-  def flash_erase_block(self, addr=0):
+  @micropython.viper
+  def flash_erase_block(self, addr:int):
     self.sdr(b"\x60") # SPI WRITE ENABLE
     self.flash_wait_status(1001)
-    self.flash_era[1]=addr>>16
-    self.flash_era[2]=addr>>8
+    p8=ptr8(addressof(self.flash_era))
+    p8[1]=addr>>16
+    p8[2]=addr>>8
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.swspi.write(self.flash_era) # except LSB
@@ -415,13 +419,17 @@ class ecp5:
     self.send_tms(1) # -> select DR scan
     self.flash_wait_status(2002)
 
-  def flash_write_block(self, block, addr=0):
+  def flash_write_block(self, block, addr:int):
     self.sdr(b"\x60") # SPI WRITE ENABLE
     self.flash_wait_status(1003)
+    p8=memoryview(self.flash_req)
+    p8[0]=2
+    p8[1]=addr>>16
+    p8[2]=addr>>8
+    p8[3]=addr
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    # self.bitreverse(0x40) = 0x02 -> 0x02000000
-    self.swspi.write(pack(">I", 0x02000000 | (addr & 0xFFFFFF)))
+    self.swspi.write(self.flash_req)
     self.swspi.write(block[:-1]) # whole block except last byte
     self.send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
@@ -431,12 +439,16 @@ class ecp5:
     self.flash_wait_status(1004)
 
   # data is bytearray of to-be-read length
-  def flash_read_block(self, data, addr=0):
-    # 0x0B is SPI flash fast read command
-    sdr = pack(">I",0x03000000 | (addr & 0xFFFFFF))
+  @micropython.viper
+  def flash_read_block(self, data, addr:int):
+    p8=ptr8(addressof(self.flash_req))
+    p8[0]=3
+    p8[1]=addr>>16
+    p8[2]=addr>>8
+    p8[3]=addr
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.swspi.write(sdr) # send SPI FLASH read command and address and dummy byte
+    self.swspi.write(self.flash_req) # send SPI FLASH read command and address and dummy byte
     self.swspi.readinto(data) # retrieve whole block
     self.send_data_byte_reverse(0,1,8) # dummy read byte -> exit 1 DR
     self.send_tms(0) # -> pause DR

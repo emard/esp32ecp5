@@ -17,19 +17,19 @@ class artix7:
 
   def init_pinout_jtag(self):
     # FJC-ESP32-V0r2 pluggable
-    self.gpio_tms = const(4)
-    self.gpio_tck = const(16)
-    self.gpio_tdi = const(15)
-    self.gpio_tdo = const(2)
-    self.gpio_tcknc = const(21)
-    self.gpio_led = const(19)
-    # ESP32-WROVER-E FROGO wired
-    #self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
-    #self.gpio_tck = const(18)
-    #self.gpio_tdi = const(23)
-    #self.gpio_tdo = const(34)
-    #self.gpio_tcknc = const(21) # 1,2,3,19,21 for SPI workaround
+    #self.gpio_tms = const(4)
+    #self.gpio_tck = const(16)
+    #self.gpio_tdi = const(15)
+    #self.gpio_tdo = const(2)
+    #self.gpio_tcknc = const(21)
     #self.gpio_led = const(19)
+    # ESP32-WROVER-E FROGO wired
+    self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    self.gpio_tck = const(18)
+    self.gpio_tdi = const(23)
+    self.gpio_tdo = const(34)
+    self.gpio_tcknc = const(21) # 1,2,3,19,21 for SPI workaround
+    self.gpio_led = const(19)
 
   def bitbang_jtag_on(self):
     self.led=Pin(self.gpio_led,Pin.OUT)
@@ -120,7 +120,7 @@ class artix7:
     self.tck.on()
 
   @micropython.viper
-  def send_read_data_buf(self, buf, last:int, w:ptr8):
+  def send_read_data_lsb1st(self, buf, last:int, w:ptr8):
     p = ptr8(addressof(buf))
     l = int(len(buf))
     val = 0
@@ -165,7 +165,7 @@ class artix7:
       w[l-1] = byte # write last byte
 
   @micropython.viper
-  def send_read_data_byte(self, val:int, last:int, bits:int)->int:
+  def send_read_data_msb1st(self, val:int, last:int, bits:int)->int:
     self.tms.off()
     byte = 0
     for nf in range(bits-1):
@@ -221,7 +221,7 @@ class artix7:
     leave=int(ticks_ms()) + duration_ms
     for n in range(count):
       self.send_tms(0) # -> idle
-    while int(ticks_ms()) < leave:
+    while int(ticks_ms())-leave < 0:
       self.send_tms(0) # -> idle
     self.send_tms(1) # -> select DR scan
   
@@ -234,7 +234,7 @@ class artix7:
     self.send_tms(1) # -> select IR scan
     self.send_tms(0) # -> capture IR
     self.send_tms(0) # -> shift IR
-    r=int(self.send_read_data_byte(sir,1,6)) # -> exit 1 IR
+    r=int(self.send_read_data_msb1st(sir,1,6)) # -> exit 1 IR
     self.send_tms(0) # -> pause IR
     self.send_tms(1) # -> exit 2 IR
     self.send_tms(1) # -> update IR
@@ -261,7 +261,7 @@ class artix7:
   def sdr(self, sdr):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.send_read_data_buf(sdr,1,0)
+    self.send_read_data_lsb1st(sdr,1,0)
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -272,7 +272,7 @@ class artix7:
   def sdr_idle(self, sdr, n:int, ms:int):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.send_read_data_buf(sdr,1,0)
+    self.send_read_data_lsb1st(sdr,1,0)
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -283,7 +283,7 @@ class artix7:
   def sdr_response(self, sdr):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.send_read_data_buf(sdr,1,addressof(sdr))
+    self.send_read_data_lsb1st(sdr,1,addressof(sdr))
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -564,6 +564,7 @@ class artix7:
     count_write = 0
     file_block = bytearray(self.flash_erase_size)
     flash_block = bytearray(self.flash_read_size)
+    fbmv = memoryview(file_block)
     progress_char="."
     while filedata.readinto(file_block):
       self.led.value((bytes_uploaded >> 12)&1)
@@ -573,7 +574,7 @@ class artix7:
         flash_rd = 0
         while flash_rd<self.flash_erase_size:
           self.flash_read_block(flash_block,addr+bytes_uploaded+flash_rd)
-          must = self.compare_flash_file_buf(flash_block,file_block[flash_rd:flash_rd+self.flash_read_size],must)
+          must = self.compare_flash_file_buf(flash_block,fbmv[flash_rd:flash_rd+self.flash_read_size],must)
           flash_rd+=self.flash_read_size
         write_addr = addr+bytes_uploaded
         if must == 0:
@@ -597,7 +598,7 @@ class artix7:
           next_block_addr = 0
           while next_block_addr < len(file_block):
             next_block_addr = block_addr+self.flash_write_size
-            self.flash_write_block(file_block[block_addr:next_block_addr], addr=write_addr)
+            self.flash_write_block(fbmv[block_addr:next_block_addr], addr=write_addr)
             write_addr += self.flash_write_size
             block_addr = next_block_addr
           count_write += 1

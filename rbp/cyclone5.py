@@ -118,8 +118,8 @@ class cyclone5:
   #    p8[i]=p8rb[p8[i]]
 
   @micropython.viper
-  def send_tms(self, tms:int):
-    if tms:
+  def send_tms(self, val:int):
+    if val:
       self.tms.on()
     else:
       self.tms.off()
@@ -127,7 +127,7 @@ class cyclone5:
     self.tck.on()
 
   @micropython.viper
-  def send_read_data_buf(self, buf, last:int, w:ptr8):
+  def send_read_buf_lsb1st(self, buf, last:int, w:ptr8):
     p = ptr8(addressof(buf))
     l = int(len(buf))
     val = 0
@@ -172,7 +172,7 @@ class cyclone5:
       w[l-1] = byte # write last byte
 
   @micropython.viper
-  def send_read_data_byte(self, val:int, last:int, bits:int)->int:
+  def send_read_int_lsb1st(self, val:int, last:int, bits:int)->int:
     self.tms.off()
     byte = 0
     for nf in range(bits-1):
@@ -197,7 +197,7 @@ class cyclone5:
     return byte
 
   @micropython.viper
-  def send_data_byte_reverse(self, val:int, last:int, bits:int):
+  def send_data_int_msb1st(self, val:int, last:int, bits:int):
     self.tms.off()
     for nf in range(bits-1):
       if (val >> (7-nf)) & 1:
@@ -241,7 +241,7 @@ class cyclone5:
     self.send_tms(1) # -> select IR scan
     self.send_tms(0) # -> capture IR
     self.send_tms(0) # -> shift IR
-    r=int(self.send_read_data_byte(sir,1,10)) # -> exit 1 IR
+    r=int(self.send_read_int_lsb1st(sir,1,10)) # -> exit 1 IR
     self.send_tms(0) # -> pause IR
     self.send_tms(1) # -> exit 2 IR
     self.send_tms(1) # -> update IR
@@ -250,11 +250,11 @@ class cyclone5:
 
   # LSB first
   @micropython.viper
-  def sdr(self, sdr):
+  def sdr(self, buf):
     self.send_tms(1) # -> select DR scan
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.send_read_data_buf(sdr,1,0)
+    self.send_read_buf_lsb1st(buf,1,0)
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -263,11 +263,11 @@ class cyclone5:
   # sdr buffer will be overwritten with response
   # LSB first
   @micropython.viper
-  def sdr_response(self, sdr):
+  def sdr_response(self, buf):
     self.send_tms(1) # -> select DR scan
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.send_read_data_buf(sdr,1,addressof(sdr))
+    self.send_read_buf_lsb1st(buf,1,addressof(buf))
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -282,7 +282,7 @@ class cyclone5:
     self.send_tms(0) # -> shift DR
     self.swspi.write(a)
     self.swspi.write(b[:-1])
-    self.send_data_byte_reverse(b[-1],1,8) # last byte -> exit 1 DR
+    self.send_data_int_msb1st(b[-1],1,8) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -353,7 +353,7 @@ class cyclone5:
     #self.hwspi.write(block)
     # SLOW bitbanging mode
     #for byte in block:
-    #  self.send_data_byte_reverse(byte,0)
+    #  self.send_data_int_msb1st(byte,0)
 
   def prog_stream_done(self):
     # switch from hardware SPI to bitbanging done after prog_stream()
@@ -510,7 +510,7 @@ class cyclone5:
     return s
 
   # data is bytearray of to-be-read length
-  def flash_read(self, data, addr=0):
+  def flash_readinto(self, data, addr=0):
     self.flash_open()
     self.flash_read_block(data, addr)
     self.flash_close()
@@ -643,19 +643,8 @@ def flash(filepath, addr=0, flash_close=True):
 
 def flash_read(addr=0, length=1):
   data = bytearray(length)
-  cyclone5().flash_read(data, addr)
+  cyclone5().flash_readinto(data, addr)
   return data
-
-def passthru():
-  board = cyclone5()
-  idcode = board.idcode()
-  if idcode != 0 and idcode != 0xFFFFFFFF:
-    filepath = "passthru%08x.bit.gz" % idcode
-    print("artix7.prog(\"%s\")" % filepath)
-    filedata = board.open_file(filepath, gz=True)
-    board.prog_stream(filedata,blocksize=4096)
-    return board.prog_close()
-  return False
 
 def help():
   print("usage:")

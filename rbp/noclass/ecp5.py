@@ -570,7 +570,7 @@ def flash_stream(filedata, addr=0):
   #if 1:
   #  print("erase whole FLASH (max 90s)")
   #  sdr(b"\x60") # SPI WRITE ENABLE
-  #  flash_wait_status(105)
+  #  flash_wait_status(1005)
   #  sdr(b"\xE3") # BULK ERASE (whole chip) rb[0x60]=0x06 or rb[0xC7]=0xE3
   #  flash_wait_status(90000)
   count_total = 0

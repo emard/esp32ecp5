@@ -190,7 +190,7 @@ class artix7:
     return byte
 
   @micropython.viper
-  def send_data_byte_reverse(self, val:int, last:int, bits:int):
+  def send_data_msb1st(self, val:int, last:int, bits:int):
     self.tms.off()
     for nf in range(bits-1):
       if (val >> (7-nf)) & 1:
@@ -297,7 +297,7 @@ class artix7:
     self.send_tms(0) # -> shift DR
     self.swspi.write(a)
     self.swspi.write(b[:-1])
-    self.send_data_byte_reverse(b[-1],1,8) # last byte -> exit 1 DR
+    self.send_data_msb1st(b[-1],1,8) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -328,7 +328,6 @@ class artix7:
     self.led.on()
     self.reset_tap()
     self.runtest_idle(1,0)
-    self.sir(9)
     id_bytes = bytearray(4)
     self.sdr_response(id_bytes)
     self.led.off()
@@ -369,7 +368,7 @@ class artix7:
     #self.hwspi.write(block)
     # SLOW bitbanging mode
     #for byte in block:
-    #  self.send_data_byte_reverse(byte,0)
+    #  self.send_data_msb1st(byte,0)
 
   def prog_stream_done(self):
     # switch from hardware SPI to bitbanging done after prog_stream()

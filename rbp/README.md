@@ -40,7 +40,8 @@ ecp5.prog() and ecp5.flash() work at ESP32-WROVER.
 FLASH doesn't work at ESP32-WROOM for it can't buffer 64KB erase blocks.
 jtagspi bypass bitstream is not needed for ECP5. 
 FLASH on Spansion 256-mbit chip is sometimes unreliable,
-reasons yet unknown.
+reasons yet unknown. After writing Spansion with openFPGALoader,
+then ecp5.py works too.
 
 # ARTIX-7
 

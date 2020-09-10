@@ -22,19 +22,19 @@ class ecp5:
     #self.gpio_tcknc = const(21)
     #self.gpio_led = const(19)
     # ULX3S v3.0.x
-    self.gpio_tms = const(21)
-    self.gpio_tck = const(18)
-    self.gpio_tdi = const(23)
-    self.gpio_tdo = const(19)
-    self.gpio_tcknc = const(17) # free pin for SPI workaround
-    self.gpio_led = const(5)
-    # ULX3S v3.1.x
-    #self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    #self.gpio_tms = const(21)
     #self.gpio_tck = const(18)
     #self.gpio_tdi = const(23)
-    #self.gpio_tdo = const(34)
-    #self.gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
-    #self.gpio_led = const(19)
+    #self.gpio_tdo = const(19)
+    #self.gpio_tcknc = const(17) # free pin for SPI workaround
+    #self.gpio_led = const(5)
+    # ULX3S v3.1.x
+    self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    self.gpio_tck = const(18)
+    self.gpio_tdi = const(23)
+    self.gpio_tdo = const(34)
+    self.gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
+    self.gpio_led = const(19)
 
   def bitbang_jtag_on(self):
     #self.led=Pin(self.gpio_led,Pin.OUT)
@@ -79,9 +79,9 @@ class ecp5:
     #  2 is preferred as it has default pinout wired
     self.flash_read_size = const(2048)
     self.flash_write_size = const(256)
-    self.flash_erase_size = const(4096)
+    self.flash_erase_size = const(65536)
     flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8, 262144:0xD8 } # erase commands from FLASH PDF
-    self.flash_erase_cmd = flash_erase_cmd[self.flash_erase_size]
+    self.flash_era = bytearray([flash_erase_cmd[self.flash_erase_size],0,0])
     #self.rb=bytearray(256) # reverse bits
     #self.init_reverse_bits()
     self.spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
@@ -403,15 +403,12 @@ class ecp5:
   def flash_erase_block(self, addr=0):
     self.sdr(b"\x60") # SPI WRITE ENABLE
     self.flash_wait_status(1001)
-    # some chips won't clear WIP without this:
-    #status = pack("<H",0x00A0) # READ STATUS REGISTER
-    #self.sdr_response(status)
-    #self.check_response(unpack("<H",status)[0],mask=0xC100,expected=0x4000)
-    sdr = pack(">I", (self.flash_erase_cmd << 24) | (addr & 0xFFFFFF))
+    self.flash_era[1]=addr>>16
+    self.flash_era[2]=addr>>8
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.swspi.write(sdr[:-1])
-    self.send_data_byte_reverse(sdr[-1],1,8) # last byte -> exit 1 DR
+    self.swspi.write(self.flash_era) # except LSB
+    self.send_data_byte_reverse(addr,1,8) # last LSB byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR

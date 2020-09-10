@@ -121,7 +121,7 @@ def send_tms(val:int):
   tck.on()
 
 @micropython.viper
-def send_read_data_lsb1st(buf, last:int, w:ptr8):
+def send_read_buf_lsb1st(buf, last:int, w:ptr8):
   p = ptr8(addressof(buf))
   l = int(len(buf))
   val = 0
@@ -166,7 +166,7 @@ def send_read_data_lsb1st(buf, last:int, w:ptr8):
     w[l-1] = byte # write last byte
 
 @micropython.viper
-def send_data_msb1st(val:int, last:int, bits:int):
+def send_int_msb1st(val:int, last:int, bits:int):
   tms.off()
   for nf in range(bits-1):
     if (val >> (7-nf)) & 1:
@@ -209,7 +209,7 @@ def sir(buf):
   send_tms(1) # -> select IR scan
   send_tms(0) # -> capture IR
   send_tms(0) # -> shift IR
-  send_read_data_lsb1st(buf,1,0) # -> exit 1 IR
+  send_read_buf_lsb1st(buf,1,0) # -> exit 1 IR
   send_tms(0) # -> pause IR
   send_tms(1) # -> exit 2 IR
   send_tms(1) # -> update IR
@@ -224,7 +224,7 @@ def sir_idle(buf, n:int, ms:int):
   send_tms(1) # -> select IR scan
   send_tms(0) # -> capture IR
   send_tms(0) # -> shift IR
-  send_read_data_lsb1st(buf,1,0) # -> exit 1 IR
+  send_read_buf_lsb1st(buf,1,0) # -> exit 1 IR
   send_tms(0) # -> pause IR
   send_tms(1) # -> exit 2 IR
   send_tms(1) # -> update IR
@@ -234,7 +234,7 @@ def sir_idle(buf, n:int, ms:int):
 def sdr(buf):
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
-  send_read_data_lsb1st(buf,1,0)
+  send_read_buf_lsb1st(buf,1,0)
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
@@ -244,7 +244,7 @@ def sdr(buf):
 def sdr_idle(buf, n:int, ms:int):
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
-  send_read_data_lsb1st(buf,1,0)
+  send_read_buf_lsb1st(buf,1,0)
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
@@ -255,7 +255,7 @@ def sdr_idle(buf, n:int, ms:int):
 def sdr_response(buf):
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
-  send_read_data_lsb1st(buf,1,addressof(buf))
+  send_read_buf_lsb1st(buf,1,addressof(buf))
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
@@ -325,7 +325,7 @@ def prog_open():
   #hwspi.write(block)
   # SLOW bitbanging mode
   #for byte in block:
-  #  send_data_msb1st(byte,0)
+  #  send_int_msb1st(byte,0)
 
 def prog_stream_done():
   # switch from hardware SPI to bitbanging done after prog_stream()
@@ -394,7 +394,7 @@ def flash_wait_status(n:int):
     sleep_ms(1)
     retry -= 1
   send_tms(1) # -> exit 1 DR # exit at byte incomplete
-  #send_data_msb1st(0,1,8) # exit at byte complete
+  #send_int_msb1st(0,1,8) # exit at byte complete
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
@@ -412,7 +412,7 @@ def flash_erase_block(addr:int):
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
   swspi.write(flash_era) # except LSB
-  send_data_msb1st(addr,1,8) # last LSB byte -> exit 1 DR
+  send_int_msb1st(addr,1,8) # last LSB byte -> exit 1 DR
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
@@ -432,7 +432,7 @@ def flash_write_block(block, last:int, addr:int):
   send_tms(0) # -> shift DR
   swspi.write(flash_req)
   swspi.write(block) # whole block
-  send_data_msb1st(last,1,8) # last byte -> exit 1 DR
+  send_int_msb1st(last,1,8) # last byte -> exit 1 DR
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
@@ -451,7 +451,7 @@ def flash_read_block(data, addr:int):
   send_tms(0) # -> shift DR
   swspi.write(flash_req) # send SPI FLASH read command and address and dummy byte
   swspi.readinto(data) # retrieve whole block
-  send_data_msb1st(0,1,8) # dummy read byte -> exit 1 DR
+  send_int_msb1st(0,1,8) # dummy read byte -> exit 1 DR
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR

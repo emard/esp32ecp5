@@ -518,7 +518,7 @@ class artix7:
     return s
 
   # data is bytearray of to-be-read length
-  def flash_read(self, data, addr=0):
+  def flash_readinto(self, data, addr=0):
     self.flash_open()
     self.flash_read_block(data, addr)
     self.flash_close()
@@ -652,7 +652,7 @@ def flash(filepath, addr=0, flash_close=True):
 
 def flash_read(addr=0, length=1):
   data = bytearray(length)
-  artix7().flash_read(data, addr)
+  artix7().flash_readinto(data, addr)
   return data
 
 def passthru():

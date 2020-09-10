@@ -5,8 +5,8 @@
 # LICENSE=BSD
 
 # choose one:
-#import ecp5lib as spi
-import artix7lib as spi
+import ecp5lib as spi
+#import artix7lib as spi
 #import cyclone5lib as spi
 
 import jtag

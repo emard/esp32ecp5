@@ -5,8 +5,8 @@
 # LICENSE=BSD
 
 # choose one:
-#import ecp5lib as fpga
-import artix7lib as fpga
+import ecp5lib as fpga
+#import artix7lib as fpga
 #import cyclone5lib as fpga
 
 import jtag

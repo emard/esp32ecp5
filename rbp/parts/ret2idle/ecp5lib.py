@@ -15,7 +15,7 @@ from jtag import *
 
 flash_read_size = const(2048)
 flash_write_size = const(256)
-flash_erase_size = const(4096)
+flash_erase_size = const(65536)
 flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8, 262144:0xD8 } # erase commands from FLASH PDF
 flash_erase_cmd = flash_erase_cmd[flash_erase_size]
 read_status = bytearray([5])
@@ -64,6 +64,7 @@ def prog_open():
   # ---------- bitstream begin -----------
   # manually walk the TAP
   # we will be sending one long DR command
+  send_tms(1) # -> select DR scan
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
   # switch from bitbanging to SPI mode
@@ -134,6 +135,7 @@ def flash_open():
 def flash_wait_status(n:int):
   retry=n
   mask=1 # WIP bit (work-in-progress)
+  send_tms(1) # -> select DR scan
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
   jtag.swspi.write(read_status) # READ STATUS REGISTER
@@ -148,31 +150,34 @@ def flash_wait_status(n:int):
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms(0) # -> idle
   if retry <= 0:
     print("error %d flash status 0x%02X & 0x%02X != 0" % (n,status[0],mask))
 
 def flash_erase_block(addr=0):
+  print("erase")
   sdr(b"\x60") # SPI WRITE ENABLE
   flash_wait_status(1001)
   # some chips won't clear WIP without this:
   #status = pack("<H",0x00A0) # READ STATUS REGISTER
   #sdr_response(status)
   #check_response(unpack("<H",status)[0],mask=0xC100,expected=0x4000)
-  req = pack(">I", (flash_erase_cmd << 24) | (addr & 0xFFFFFF))
+  req = bytearray([flash_erase_cmd,addr>>16,addr>>8]) # except LSB byte
+  send_tms(1) # -> select DR scan
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
-  jtag.swspi.write(req[:-1])
-  send_data_byte_reverse(req[-1],1,8) # last byte -> exit 1 DR
+  jtag.swspi.write(req)
+  send_data_byte_reverse(addr,1,8) # last LSB byte -> exit 1 DR
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms(0) # -> idle
   flash_wait_status(2002)
 
 def flash_write_block(block, addr=0):
   sdr(b"\x60") # SPI WRITE ENABLE
   flash_wait_status(1003)
+  send_tms(1) # -> select DR scan
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
   # bitreverse(0x40) = 0x02 -> 0x02000000
@@ -182,13 +187,14 @@ def flash_write_block(block, addr=0):
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms(0) # -> idle
   flash_wait_status(1004)
 
 # data is bytearray of to-be-read length
 def flash_read_block(data, addr=0):
   # 0x0B is SPI flash fast read command
   sdr = pack(">I",0x03000000 | (addr & 0xFFFFFF))
+  send_tms(1) # -> select DR scan
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
   jtag.swspi.write(sdr) # send SPI FLASH read command and address and dummy byte
@@ -197,7 +203,7 @@ def flash_read_block(data, addr=0):
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms(0) # -> idle
 
 # call this after uploading all of the flash blocks,
 # this will exit FPGA flashing mode and start the bitstream

@@ -4,8 +4,6 @@
 # AUTHOR=EMARD
 # LICENSE=BSD
 
-# FIXME: FLASH sometimes fails at start
-
 from time import ticks_ms, sleep_ms
 from machine import SPI, Pin
 from micropython import const

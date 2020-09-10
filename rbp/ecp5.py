@@ -196,7 +196,7 @@ class ecp5:
     leave=int(ticks_ms()) + duration_ms
     for n in range(count):
       self.send_tms(0) # -> idle
-    while int(ticks_ms()) < leave:
+    while int(ticks_ms())-leave < 0:
       self.send_tms(0) # -> idle
     self.send_tms(1) # -> select DR scan
 
@@ -418,10 +418,11 @@ class ecp5:
     self.send_tms(1) # -> select DR scan
     self.flash_wait_status(2002)
 
-  def flash_write_block(self, block, addr:int):
+  @micropython.viper
+  def flash_write_block(self, block, last:int, addr:int):
     self.sdr(b"\x60") # SPI WRITE ENABLE
     self.flash_wait_status(1003)
-    p8=memoryview(self.flash_req)
+    p8=ptr8(addressof(self.flash_req))
     p8[0]=2
     p8[1]=addr>>16
     p8[2]=addr>>8
@@ -429,8 +430,8 @@ class ecp5:
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.swspi.write(self.flash_req)
-    self.swspi.write(block[:-1]) # whole block except last byte
-    self.send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
+    self.swspi.write(block) # whole block
+    self.send_data_byte_reverse(last,1,8) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -574,6 +575,7 @@ class ecp5:
     count_write = 0
     file_block = bytearray(self.flash_erase_size)
     flash_block = bytearray(self.flash_read_size)
+    fbmv=memoryview(file_block)
     progress_char="."
     while filedata.readinto(file_block):
       #self.led.value((bytes_uploaded >> 12)&1)
@@ -607,7 +609,7 @@ class ecp5:
           next_block_addr = 0
           while next_block_addr < len(file_block):
             next_block_addr = block_addr+self.flash_write_size
-            self.flash_write_block(file_block[block_addr:next_block_addr], addr=write_addr)
+            self.flash_write_block(fbmv[block_addr:next_block_addr-1], fbmv[next_block_addr-1], write_addr)
             write_addr += self.flash_write_size
             block_addr = next_block_addr
           count_write += 1

@@ -119,8 +119,9 @@ class ecp5:
     self.tck.off()
     self.tck.on()
 
+  # LSB 1st
   @micropython.viper
-  def send_read_data_buf(self, buf, last:int, w:ptr8):
+  def send_read_data_lsb1st(self, buf, last:int, w:ptr8):
     p = ptr8(addressof(buf))
     l = int(len(buf))
     val = 0
@@ -165,7 +166,7 @@ class ecp5:
       w[l-1] = byte # write last byte
 
   @micropython.viper
-  def send_data_byte_reverse(self, val:int, last:int, bits:int):
+  def send_data_byte_msb1st(self, val:int, last:int, bits:int):
     self.tms.off()
     for nf in range(bits-1):
       if (val >> (7-nf)) & 1:
@@ -208,7 +209,7 @@ class ecp5:
     self.send_tms(1) # -> select IR scan
     self.send_tms(0) # -> capture IR
     self.send_tms(0) # -> shift IR
-    self.send_read_data_buf(sir,1,0) # -> exit 1 IR
+    self.send_read_data_lsb1st(sir,1,0) # -> exit 1 IR
     self.send_tms(0) # -> pause IR
     self.send_tms(1) # -> exit 2 IR
     self.send_tms(1) # -> update IR
@@ -223,7 +224,7 @@ class ecp5:
     self.send_tms(1) # -> select IR scan
     self.send_tms(0) # -> capture IR
     self.send_tms(0) # -> shift IR
-    self.send_read_data_buf(sir,1,0) # -> exit 1 IR
+    self.send_read_data_lsb1st(sir,1,0) # -> exit 1 IR
     self.send_tms(0) # -> pause IR
     self.send_tms(1) # -> exit 2 IR
     self.send_tms(1) # -> update IR
@@ -233,7 +234,7 @@ class ecp5:
   def sdr(self, sdr):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.send_read_data_buf(sdr,1,0)
+    self.send_read_data_lsb1st(sdr,1,0)
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -243,7 +244,7 @@ class ecp5:
   def sdr_idle(self, sdr, n:int, ms:int):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.send_read_data_buf(sdr,1,0)
+    self.send_read_data_lsb1st(sdr,1,0)
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -254,7 +255,7 @@ class ecp5:
   def sdr_response(self, sdr):
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
-    self.send_read_data_buf(sdr,1,addressof(sdr))
+    self.send_read_data_lsb1st(sdr,1,addressof(sdr))
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -324,7 +325,7 @@ class ecp5:
     #self.hwspi.write(block)
     # SLOW bitbanging mode
     #for byte in block:
-    #  self.send_data_byte_reverse(byte,0)
+    #  self.send_data_byte_msb1st(byte,0)
 
   def prog_stream_done(self):
     # switch from hardware SPI to bitbanging done after prog_stream()
@@ -393,7 +394,7 @@ class ecp5:
       sleep_ms(1)
       retry -= 1
     self.send_tms(1) # -> exit 1 DR # exit at byte incomplete
-    #self.send_data_byte_reverse(0,1,8) # exit at byte complete
+    #self.send_data_byte_msb1st(0,1,8) # exit at byte complete
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -411,7 +412,7 @@ class ecp5:
     self.send_tms(0) # -> capture DR
     self.send_tms(0) # -> shift DR
     self.swspi.write(self.flash_era) # except LSB
-    self.send_data_byte_reverse(addr,1,8) # last LSB byte -> exit 1 DR
+    self.send_data_byte_msb1st(addr,1,8) # last LSB byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -431,7 +432,7 @@ class ecp5:
     self.send_tms(0) # -> shift DR
     self.swspi.write(self.flash_req)
     self.swspi.write(block) # whole block
-    self.send_data_byte_reverse(last,1,8) # last byte -> exit 1 DR
+    self.send_data_byte_msb1st(last,1,8) # last byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR
@@ -450,7 +451,7 @@ class ecp5:
     self.send_tms(0) # -> shift DR
     self.swspi.write(self.flash_req) # send SPI FLASH read command and address and dummy byte
     self.swspi.readinto(data) # retrieve whole block
-    self.send_data_byte_reverse(0,1,8) # dummy read byte -> exit 1 DR
+    self.send_data_byte_msb1st(0,1,8) # dummy read byte -> exit 1 DR
     self.send_tms(0) # -> pause DR
     self.send_tms(1) # -> exit 2 DR
     self.send_tms(1) # -> update DR

@@ -41,6 +41,9 @@ Newer WROVER releases have non-functional SPI-DMA.
 Alternatively, latest
 [Adafruit CircuitPython Saola-1 WROOM board](https://adafruit-circuit-python.s3.amazonaws.com/index.html?prefix=bin/espressif_saola_1_wroom/en_US/)
 can be applied to WROVER module and it should work without PSRAM support.
+Here's last known good:
+
+    wget -c https://adafruit-circuit-python.s3.amazonaws.com/bin/espressif_saola_1_wroom/en_US/adafruit-circuitpython-espressif_saola_1_wroom-en_US-20200911-9256e6b.bin
 
 Power OFF/ON the board without pressing BTN.
 S2 should now enumerate as USB-serial "/dev/ttyACM0" and 

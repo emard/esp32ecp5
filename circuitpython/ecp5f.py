@@ -17,6 +17,8 @@ flash_write_size = const(256)
 flash_erase_size = const(4096) # WROOM
 flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8 } # erase commands from FLASH PDF
 flash_erase_cmd = flash_erase_cmd[flash_erase_size]
+flash_req = bytearray(4)
+flash_reqmv = memoryview(flash_req)
 
 # call this before sending the flash image
 # FPGA will enter flashing mode
@@ -27,36 +29,36 @@ def flash_open():
   runtest_idle(1,0)
   sir_idle(b"\xFF",32,0) # BYPASS
   sir(b"\x3A") # LSC_PROG_SPI
-  sdr_idle(pack("<H",0x68FE),32,0)
+  flash_req[0]=0xFE
+  flash_req[1]=0x68
+  sdr_idle(flash_reqmv[0:2],32,0)
 
 def flash_wait_status():
   retry=50
   # read_status_register = pack("<H",0x00A0) # READ STATUS REGISTER
-  status_register = bytearray(2)
   while retry > 0:
     # always refresh status_register[0], overwitten by response
-    status_register[0] = 0xA0 # 0xA0 READ STATUS REGISTER
-    sdr_response(status_register)
-    if (int(status_register[1]) & 0xC1) == 0:
+    flash_reqmv[0] = 0xA0 # 0xA0 READ STATUS REGISTER
+    sdr_response(flash_reqmv[0:2])
+    if (flash_reqmv[1] & 0xC1) == 0:
       break
     sleep(0.001)
     retry -= 1
   if retry <= 0:
-    print("error flash status %04X & 0xC1 != 0" % (unpack("<H",status_register))[0])
+    print("error flash status 0x%04X & 0xC1 != 0" % (flash_reqmv[1]))
 
 def flash_erase_block(addr=0):
   sdr(b"\x60") # SPI WRITE ENABLE
   # some chips won't clear WIP without this:
-  status = bytearray(pack("<H",0x00A0)) # READ STATUS REGISTER
-  sdr_response(status)
-  check_response(unpack("<H",status)[0],mask=0xC100,expected=0x4000)
-  data = pack(">I", (flash_erase_cmd << 24) | (addr & 0xFFFFFF))
+  flash_reqmv[0]=0xA0 # READ STATUS
+  sdr_response(flash_reqmv[0:2])
+  check_response(flash_reqmv[1],mask=0xC1,expected=0x40,message="WRITE ENABLE FAIL")
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
-  send_data_byte_reverse(data[0],0,8)
-  send_data_byte_reverse(data[1],0,8)
-  send_data_byte_reverse(data[2],0,8)
-  send_data_byte_reverse(data[-1],1,8) # last byte -> exit 1 DR
+  send_int_msb1st(flash_erase_cmd,0,8)
+  send_int_msb1st(addr>>16,0,8)
+  send_int_msb1st(addr>>8,0,8)
+  send_int_msb1st(addr,1,8) # last byte -> exit 1 DR
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
@@ -69,12 +71,15 @@ def flash_write_block(block, addr=0):
   #send_tms(0) # -> shift DR NOTE will be send during TCK glitch
   bitbang_jtag_off() # NOTE TCK glitch
   spi_jtag_on()
-  # bitreverse(0x40) = 0x02 -> 0x02000000
-  jtag.hwspi.write(pack(">I", 0x02000000 | (addr & 0xFFFFFF)))
+  flash_req[0]=2
+  flash_req[1]=(addr>>16)&0xFF
+  flash_req[2]=(addr>>8)&0xFF
+  flash_req[3]=(addr)&0xFF
+  jtag.hwspi.write(flash_req)
   jtag.hwspi.write(block[:-1]) # whole block except last byte
   spi_jtag_off()
   bitbang_jtag_on()
-  send_data_byte_reverse(block[-1],1,8) # last byte -> exit 1 DR
+  send_int_msb1st(block[-1],1,8) # last byte -> exit 1 DR
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
@@ -88,12 +93,15 @@ def flash_read_block(data, addr=0):
   bitbang_jtag_off() # NOTE TCK glitch
   spi_jtag_on()
   # 0x03 is SPI flash read command
-  req = pack(">I", 0x03000000 | (addr & 0xFFFFFF))
-  jtag.hwspi.write(req)
+  flash_req[0]=3
+  flash_req[1]=(addr>>16)&0xFF
+  flash_req[2]=(addr>>8)&0xFF
+  flash_req[3]=(addr)&0xFF
+  jtag.hwspi.write(flash_req)
   jtag.hwspi.readinto(data)
   spi_jtag_off()
   bitbang_jtag_on()
-  send_data_byte_reverse(0,1,8) # dummy read byte -> exit 1 DR
+  send_int_msb1st(0,1,8) # dummy read byte -> exit 1 DR
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
@@ -149,11 +157,12 @@ def flash_stream(filedata, addr=0):
   count_write = 0
   file_block = bytearray(flash_erase_size)
   flash_block = bytearray(flash_read_size)
+  file_blockmv=memoryview(file_block)
   progress_char="."
   while filedata.readinto(file_block):
     #led.value((bytes_uploaded >> 12)&1)
     retry = 3
-    while retry >= 0:
+    while retry > 0:
       must = 0
       flash_rd = 0
       while flash_rd<flash_erase_size:
@@ -182,17 +191,17 @@ def flash_stream(filedata, addr=0):
         next_block_addr = 0
         while next_block_addr < len(file_block):
           next_block_addr = block_addr+flash_write_size
-          flash_write_block(file_block[block_addr:next_block_addr], addr=write_addr)
+          flash_write_block(file_blockmv[block_addr:next_block_addr], addr=write_addr)
           write_addr += flash_write_size
           block_addr = next_block_addr
         count_write += 1
         progress_char = "w"
-    if retry < 0:
+    if retry <= 0:
       break
   print("\r",end="")
   stopwatch_stop(bytes_uploaded)
   print("%dK blocks: %d total, %d erased, %d written." % (flash_erase_size>>10, count_total, count_erase, count_write))
-  return retry >= 0 # True if successful
+  return retry > 0 # True if successful
 
 def flash(filepath, addr=0, close=True):
   filedata, gz = filedata_gz(filepath)

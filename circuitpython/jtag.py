@@ -75,7 +75,7 @@ def send_tms(val:int):
   tck.value=0
   tck.value=1
 
-def send_read_data_buf(buf, last:int, w):
+def send_read_buf_lsb1st(buf, last:int, w):
   #global tck,tms,tdi,tdo
   p = memoryview(buf)
   l = int(len(buf))
@@ -111,7 +111,7 @@ def send_read_data_buf(buf, last:int, w):
   if w:
     w[l-1] = byte # write last byte
 
-def send_data_byte_reverse(val:int, last:int, bits:int):
+def send_int_msb1st(val:int, last:int, bits:int):
   #global tck,tms,tdi,tdo
   tms.value=0
   for nf in range(bits-1):
@@ -148,7 +148,7 @@ def sir(data):
   send_tms(1) # -> select IR scan
   send_tms(0) # -> capture IR
   send_tms(0) # -> shift IR
-  send_read_data_buf(data,1,None) # -> exit 1 IR
+  send_read_buf_lsb1st(data,1,None) # -> exit 1 IR
   send_tms(0) # -> pause IR
   send_tms(1) # -> exit 2 IR
   send_tms(1) # -> update IR
@@ -162,7 +162,7 @@ def sir_idle(data, n:int, ms:int):
   send_tms(1) # -> select IR scan
   send_tms(0) # -> capture IR
   send_tms(0) # -> shift IR
-  send_read_data_buf(data,1,None) # -> exit 1 IR
+  send_read_buf_lsb1st(data,1,None) # -> exit 1 IR
   send_tms(0) # -> pause IR
   send_tms(1) # -> exit 2 IR
   send_tms(1) # -> update IR
@@ -171,7 +171,7 @@ def sir_idle(data, n:int, ms:int):
 def sdr(data):
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
-  send_read_data_buf(data,1,None)
+  send_read_buf_lsb1st(data,1,None)
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
@@ -180,7 +180,7 @@ def sdr(data):
 def sdr_idle(data, n:int, ms:int):
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
-  send_read_data_buf(data,1,None)
+  send_read_buf_lsb1st(data,1,None)
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
@@ -190,7 +190,7 @@ def sdr_idle(data, n:int, ms:int):
 def sdr_response(data):
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
-  send_read_data_buf(data,1,memoryview(data))
+  send_read_buf_lsb1st(data,1,memoryview(data))
   send_tms(0) # -> pause DR
   send_tms(1) # -> exit 2 DR
   send_tms(1) # -> update DR
@@ -206,7 +206,7 @@ def idcode():
   #led.value=1
   reset_tap()
   runtest_idle(1,0)
-  sir(b"\xE0")
+  #sir(b"\xE0")
   id_bytes = bytearray(4)
   sdr_response(id_bytes)
   #led.value=0

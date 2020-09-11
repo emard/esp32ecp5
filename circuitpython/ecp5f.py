@@ -167,7 +167,7 @@ def flash_stream(filedata, addr=0):
       flash_rd = 0
       while flash_rd<flash_erase_size:
         flash_read_block(flash_block,addr+bytes_uploaded+flash_rd)
-        must = compare_flash_file_buf(flash_block,file_block[flash_rd:flash_rd+flash_read_size],must)
+        must = compare_flash_file_buf(flash_block,file_blockmv[flash_rd:flash_rd+flash_read_size],must)
         flash_rd+=flash_read_size
       write_addr = addr+bytes_uploaded
       if must == 0:

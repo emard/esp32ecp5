@@ -578,7 +578,7 @@ def flash_stream(filedata, addr=0):
   count_write = 0
   file_block = bytearray(flash_erase_size)
   flash_block = bytearray(flash_read_size)
-  fbmv=memoryview(file_block)
+  file_blockmv=memoryview(file_block)
   progress_char="."
   while filedata.readinto(file_block):
     #led.value((bytes_uploaded >> 12)&1)
@@ -588,7 +588,7 @@ def flash_stream(filedata, addr=0):
       flash_rd = 0
       while flash_rd<flash_erase_size:
         flash_read_block(flash_block,addr+bytes_uploaded+flash_rd)
-        must = compare_flash_file_buf(flash_block,file_block[flash_rd:flash_rd+flash_read_size],must)
+        must = compare_flash_file_buf(flash_block,file_blockmv[flash_rd:flash_rd+flash_read_size],must)
         flash_rd+=flash_read_size
       write_addr = addr+bytes_uploaded
       if must == 0:
@@ -612,7 +612,7 @@ def flash_stream(filedata, addr=0):
         next_block_addr = 0
         while next_block_addr < len(file_block):
           next_block_addr = block_addr+flash_write_size
-          flash_write_block(fbmv[block_addr:next_block_addr-1], fbmv[next_block_addr-1], write_addr)
+          flash_write_block(file_blockmv[block_addr:next_block_addr-1], file_blockmv[next_block_addr-1], write_addr)
           write_addr += flash_write_size
           block_addr = next_block_addr
         count_write += 1

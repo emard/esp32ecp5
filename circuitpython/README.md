@@ -53,15 +53,12 @@ it very practical, just copy
 to the root of its filesystem and connect to its serial port:
 
     screen /dev/ttyACM0
-    >>> from jtag import idcode
-    >>> from ecp5p import prog
-    >>> from ecp5f import flash,flashrd
-    >>> print("0x$08x" % idcode())
+    >>> import jtag; print("0x%08x" % jtag.idcode())
     0x21111043
-    >>> prog("blink.bit")
+    >>> import ecp5p; ecp5p.prog("blink.bit")
     102400 bytes uploaded in 46 ms (2226 kB/s)
     True
-    >>> flash("blink.bit")
+    >>> import ecp5f; ecp5f.flash("blink.bit")
     102400 bytes uploaded in 16320 ms (6 kB/s)
     4K blocks: 25 total, 25 erased, 25 written.
     True
@@ -71,7 +68,6 @@ Circuitpython bugs: for the first time, prog("blink.bit")
 may be syntax error, for the second time it will succeed:
 
     >>> from ecp5p import prog
-    IDCODE: 0x21111043
     >>> prog("blink.bit")
     Traceback (most recent call last):
     File "<stdin>", line 1
@@ -82,10 +78,9 @@ may be syntax error, for the second time it will succeed:
 
 To load "autostart.bit" bitstream at power ON, make "main.py":
 
-    from jtag import idcode
-    from ecp5p import prog
-    prog("autostart.bit")
-    idcode()
+    import ecp5p,ecp5f
+    ecp5p.prog("autostart.bit")
+    ecp5p.idcode()
 
 Last "idcode()" is to release JTAG pins to high-Z mode
 and allow other devices sharing JTAG bus to program ECP5 when

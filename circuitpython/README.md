@@ -64,18 +64,6 @@ to the root of its filesystem and connect to its serial port:
     True
     >>>
 
-Circuitpython bugs: for the first time, prog("blink.bit")
-may be syntax error, for the second time it will succeed:
-
-    >>> from ecp5p import prog
-    >>> prog("blink.bit")
-    Traceback (most recent call last):
-    File "<stdin>", line 1
-    SyntaxError: invalid syntax
-    >>> prog("blink.bit")
-    102400 bytes uploaded in 45 ms (2275 kB/s)
-    True
-
 To load "autostart.bit" bitstream at power ON, make "main.py":
 
     import ecp5p,ecp5f
@@ -95,3 +83,15 @@ by pressing Ctrl-D at empty prompt:
 Warning: there is high chance of linux to freeze during restarting
 circuitpython because linux has still some critical bugs at removing and
 inserting USB devices.
+
+Circuitpython bugs: for the first time, prog("blink.bit")
+may be syntax error, for the second time it will succeed:
+
+    >>> from ecp5p import prog
+    >>> prog("blink.bit")
+    Traceback (most recent call last):
+    File "<stdin>", line 1
+    SyntaxError: invalid syntax
+    >>> prog("blink.bit")
+    102400 bytes uploaded in 45 ms (2275 kB/s)
+    True

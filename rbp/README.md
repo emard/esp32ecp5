@@ -39,10 +39,12 @@ Pinout:
 ecp5.prog() and ecp5.flash() work at ESP32-WROVER.
 FLASH doesn't work at ESP32-WROOM for it can't buffer 64KB erase blocks.
 jtagspi bypass bitstream is not needed for ECP5. 
-If power is shut down while writing to Spansion 256-mbit chip
-attempt to write again from ecp5.py will fail.
-Current fix is to write Spansion with openFPGALoader,
-after that ecp5.py will work too.
+
+To use external programmer (ESP32) instead of onboard FT4232,
+4 switches near 14-pin connector have to be
+all in position away from 14-pin connector.
+To use onboard FT4232, 4 switches have to be
+all in position towrads 14-pin connector.
 
 # ARTIX-7
 

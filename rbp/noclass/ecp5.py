@@ -9,7 +9,7 @@
 from time import ticks_ms, sleep_ms
 from machine import SPI, Pin
 from micropython import const
-from struct import pack, unpack
+from struct import unpack
 from uctypes import addressof
 from gc import collect
 
@@ -373,11 +373,13 @@ def flash_open():
   runtest_idle(1,0)
   sir_idle(b"\xFF",32,0) # BYPASS
   sir(b"\x3A") # LSC_PROG_SPI
-  sdr_idle(pack("<H",0x68FE),32,0)
+  sdr_idle(b"\xFE\x68",32,0)
   # ---------- flashing begin -----------
-  # 0x60 and other SPI flash commands here are bitreverse() values
-  # of flash commands found in SPI FLASH datasheet.
-  # e.g. 0x1B here is actually 0xD8 in datasheet, 0x60 is is 0x06 etc.
+  # sdr("\x60") and other SPI FLASH commands
+  # here are bitreverse() values of FLASH commands
+  # found in datasheet. e.g.
+  # \x1B -> 0xD8
+  # \x60 -> 0x06 ...
 
 @micropython.viper
 def flash_wait_status(n:int):

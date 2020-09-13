@@ -27,11 +27,11 @@ gpio_mosi = board.IO35 # SD_CMD
 gpio_sck  = board.IO36 # SD_CLK
 gpio_miso = board.IO37 # SD_D0
 # Connect to the card and mount the filesystem.
-cs = digitalio.DigitalInOut(gpio_csn)
-cs.direction=digitalio.Direction.OUTPUT
-cs.value = 1 # do not select SD before initialization
+csn = digitalio.DigitalInOut(gpio_csn)
+csn.direction = digitalio.Direction.OUTPUT
+csn.value = 1 # do not select SD before initialization
 spi = busio.SPI(clock=gpio_sck, MOSI=gpio_mosi, MISO=gpio_miso)
-sdcard = adafruit_sdcard.SDCard(spi, cs)
+sdcard = adafruit_sdcard.SDCard(spi, csn)
 vfs = storage.VfsFat(sdcard)
 storage.mount(vfs, "/sd")
 

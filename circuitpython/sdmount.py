@@ -26,6 +26,12 @@ gpio_csn  = board.IO34 # SD_D3
 gpio_mosi = board.IO35 # SD_CMD
 gpio_sck  = board.IO36 # SD_CLK
 gpio_miso = board.IO37 # SD_D0
+# pinout for LILYGO TTGO T8 ESP32-S2 V1.1 ST77789 http://www.lilygo.cn/claprod_view.aspx?TypeId=21&Id=1322
+# source https://github.com/Xinyuan-LilyGO/LilyGo-esp32s2-base/blob/master/main/app_main.c
+#gpio_csn  = board.IO10 # SD_D3
+#gpio_mosi = board.IO11 # SD_CMD
+#gpio_sck  = board.IO12 # SD_CLK
+#gpio_miso = board.IO13 # SD_D0
 # Connect to the card and mount the filesystem.
 csn = digitalio.DigitalInOut(gpio_csn)
 csn.direction = digitalio.Direction.OUTPUT

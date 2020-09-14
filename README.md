@@ -359,11 +359,11 @@ memory situation will be better for ecp5.flash() from "webrepl"
 
 # LOW RAM on ESP32-WROOM -> use ESP32-WROVER
 
-ecp5, ftp, gzip decompression and other things in use
-allocates RAM. For everything there won't be enough
-free RAM on ESP32-WROOM. Best is to obrain ESP32-WROVER
-with 2MB additional RAM or WROOM workaround is to avoid
-using gzip or ftp.
+ecp5, ftp, gzip decompression, buffers and other things in use
+allocate RAM. Sometimes there won't be enough
+free RAM for everything on ESP32-WROOM.
+Best is to obrain ESP32-WROVER with 2MB additional RAM
+or WROOM workaround is to avoid using gzip or ftp.
 
 # JTAG info
 

@@ -15,8 +15,8 @@ Choose appropriate for your board and ECP5 chip and upload passthru bitstream to
 
 Download [micropython for ESP32](https://micropython.org/download#esp32)
 "Stable" version [esp32-idf3-20200902-v1.13.bin](https://micropython.org/resources/firmware/esp32-idf3-20200902-v1.13.bin) should work.
-Or use idf3 or idf4 daily fresh version. idf3 versions leaves slighty
-more free RAM, important for ESP32-WROOM modules.
+Or use idf3 or idf4 daily fresh version. idf3 leaves slighty
+more free RAM than idf4, and ESP32-WROOM modules always need more RAM.
 
     wget https://micropython.org/resources/firmware/esp32-idf3-20200902-v1.13.bin
 
@@ -356,6 +356,14 @@ memory situation will be better for ecp5.flash() from "webrepl"
     ... webrepl
     import ecp5
     ecp5.flash("blink.bit.gz")
+
+# LOW RAM on ESP32-WROOM -> use ESP32-WROVER
+
+ecp5, ftp, gzip decompression and other things in use
+allocates RAM. For everything there won't be enough
+free RAM on ESP32-WROOM. Best is to obrain ESP32-WROVER
+with 2MB additional RAM or WROOM workaround is to avoid
+using gzip or ftp.
 
 # JTAG info
 

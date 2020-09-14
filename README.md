@@ -365,7 +365,8 @@ ecp5, ftp, gzip decompression, buffers and other things in use
 allocate RAM. Sometimes there won't be enough
 free RAM for everything on ESP32-WROOM.
 Best is to obrain ESP32-WROVER which has 2MB additional PSRAM.
-ESP32-WROOM workaround is to avoid using gzip or ftp.
+ESP32-WROOM workaround is to avoid using gzip'd files or
+don't import uftpd.
 
 # JTAG info
 

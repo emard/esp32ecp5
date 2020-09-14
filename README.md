@@ -14,11 +14,10 @@ Choose appropriate for your board and ECP5 chip and upload passthru bitstream to
     ujprog -j flash passthru.bit
 
 Download [micropython for ESP32](https://micropython.org/download#esp32)
-"Stable" version [esp32-idf3-20191220-v1.13.bin](https://micropython.org/resources/firmware/esp32-idf3-20200902-v1.13.bin) should work.
-Or use idf3 daily fresh version like in this example, but I can't link
-as filenames "20191220" change every day. 
+"Stable" version [esp32-idf3-20200902-v1.13.bin](https://micropython.org/resources/firmware/esp32-idf3-20200902-v1.13.bin) should work.
+Or use idf3 or idf4 daily fresh version.
 
-    wget https://micropython.org/resources/firmware/esp32-idf3-20191220-v1.12.bin
+    wget https://micropython.org/resources/firmware/esp32-idf3-20200902-v1.13.bin
 
 Upload micropython to ESP32
 

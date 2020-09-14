@@ -357,13 +357,15 @@ memory situation will be better for ecp5.flash() from "webrepl"
     import ecp5
     ecp5.flash("blink.bit.gz")
 
-# LOW RAM on ESP32-WROOM -> use ESP32-WROVER
+# LOW RAM
+
+Instead of ESP32-WROOM, use ESP32-WROVER :)
 
 ecp5, ftp, gzip decompression, buffers and other things in use
 allocate RAM. Sometimes there won't be enough
 free RAM for everything on ESP32-WROOM.
-Best is to obrain ESP32-WROVER with 2MB additional RAM
-or WROOM workaround is to avoid using gzip or ftp.
+Best is to obrain ESP32-WROVER which has 2MB additional PSRAM.
+ESP32-WROOM workaround is to avoid using gzip or ftp.
 
 # JTAG info
 

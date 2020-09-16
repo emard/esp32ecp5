@@ -165,9 +165,9 @@ access points at power-on and uses password from file "wifiman.conf":
 
 Then "main.py" should be only this
 
-    from ntptime import settime
     import wifiman
     import uftpd
+    from ntptime import settime
     try:
       settime()
     except:

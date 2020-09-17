@@ -14,8 +14,9 @@ Choose appropriate for your board and ECP5 chip and upload passthru bitstream to
     ujprog -j flash passthru.bit
 
 Download [micropython for ESP32](https://micropython.org/download#esp32)
-"Stable" version [esp32-idf3-20200902-v1.13.bin](https://micropython.org/resources/firmware/esp32-idf3-20200902-v1.13.bin) should work.
-Or use idf3 or idf4 daily fresh version. idf3 leaves slighty
+"Stable" version [esp32-idf3-20191220-v1.12.bin](https://micropython.org/resources/firmware/esp32-idf3-20191220-v1.12.bin)
+is known to work well. Versions v1.13 have bug with uftpd file listing,
+last line is listed wrong. idf3 leaves slighty
 more free RAM than idf4, and ESP32-WROOM modules always need more RAM.
 
     wget https://micropython.org/resources/firmware/esp32-idf3-20200902-v1.13.bin

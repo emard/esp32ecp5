@@ -24,7 +24,6 @@ from gc import collect
 from time import sleep_ms, localtime
 from micropython import alloc_emergency_exception_buf
 from machine import SDCard, Pin
-import sdraw, ecp5
 
 # constant definitions
 _CHUNK_SIZE = const(1024)
@@ -333,10 +332,12 @@ class FTP_client:
           data_client = self.open_dataclient()
           cl.sendall("150 Opened data connection.\r\n")
           if path == "/fpga":
+            import ecp5
             ecp5.prog_stream(data_client,_CHUNK_SIZE)
             result = ecp5.prog_close()
             data_client.close()
           elif path.startswith("/flash@"):
+            import ecp5
             dummy, addr = path.split("@")
             addr = int(addr)
             result = ecp5.flash_stream(data_client,addr)
@@ -344,6 +345,7 @@ class FTP_client:
             del addr, dummy
             data_client.close()
           elif path.startswith("/sd@"):
+            import sdraw
             dummy, addr = path.split("@")
             addr = int(addr)
             sd_raw = sdraw.sdraw()
@@ -431,10 +433,12 @@ class FTP_client:
           else:
             cl.sendall('550 Fail\r\n')
         elif path == "/passthru":
+          import ecp5
           ecp5.passthru()
           cl.sendall('250 OK passthru\r\n')
         elif path.endswith(".bit") or path.endswith(".bit.gz"):
           try:
+            import ecp5
             if ecp5.prog(path, prog_close=False):
               if path.startswith("/sd/"):
                 try:

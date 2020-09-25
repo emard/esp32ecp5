@@ -1,4 +1,4 @@
-# circuitpython ESP32S2
+  # circuitpython ESP32S2
 # ECP5 JTAG programmer
 
 # AUTHOR=EMARD
@@ -9,18 +9,14 @@ import board, busio, digitalio
 from micropython import const
 from struct import pack, unpack
 
-gpio_tdi = board.IO11
-gpio_tck = board.IO12
-gpio_tdo = board.IO13
-gpio_tms = board.IO14  # BLUE LED - 549ohm - 3.3V
-#gpio_tdi = board.IO35
-#gpio_tck = board.IO36
-#gpio_tdo = board.IO37
-#gpio_tms = board.IO38  # BLUE LED - 549ohm - 3.3V
-
-tck=digitalio.DigitalInOut(gpio_tck)
-tdi=digitalio.DigitalInOut(gpio_tdi)
-tdo=digitalio.DigitalInOut(gpio_tdo)
+#gpio_tdi = board.IO11
+#gpio_tck = board.IO12
+#gpio_tdo = board.IO13
+#gpio_tms = board.IO14  # BLUE LED - 549ohm - 3.3V
+gpio_tdi = board.IO35
+gpio_tck = board.IO36
+gpio_tdo = board.IO37
+gpio_tms = board.IO38  # BLUE LED - 549ohm - 3.3V
 
 spi_freq = const(40000000) # Hz JTAG clk frequency
 hwspi=None

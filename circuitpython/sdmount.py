@@ -14,14 +14,18 @@ import storage
 # |
 # | D1
 # | D0   MISO
-# | GND
+# | GND  GND
 # | CLK  CLK
-# | VCC
-# | GND
+# | VCC  3.3V
+# | GND  GND
 # | CMD  MOSI
 # | D3   CSn
 #  \ D2
 #   \__________
+# Works with only listed SD card pins connected directly to ESP32-S2.
+# SD card pins D1,D2 are not connected.
+# Additional pull up resistors are not used.
+#
 #gpio_csn  = board.IO34 # SD_D3
 #gpio_mosi = board.IO35 # SD_CMD
 #gpio_sck  = board.IO36 # SD_CLK

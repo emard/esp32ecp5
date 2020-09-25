@@ -42,4 +42,4 @@ vfs = storage.VfsFat(sdcard)
 storage.mount(vfs, "/sd")
 
 import os
-os.listdir("/sd")
+print(os.listdir("/sd"))

@@ -1,6 +1,6 @@
 # download latest 6.x mpy bundle
 # https://github.com/adafruit/Adafruit_CircuitPython_Bundle/releases/
-# cp -r adafruit_sdcard.py adafruit_bus_device /media/user/CIRCUITPY/
+# cp -r adafruit_sdcard.mpy adafruit_bus_device /media/user/CIRCUITPY/
 import adafruit_sdcard
 import busio
 import digitalio

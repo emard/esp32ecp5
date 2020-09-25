@@ -95,3 +95,58 @@ may be syntax error, for the second time it will succeed:
     >>> prog("blink.bit")
     102400 bytes uploaded in 45 ms (2275 kB/s)
     True
+
+# SD card
+
+Use supplied example "sdmount.py" to mount SD card.
+SD card is tested connected directly to pins without any additional pull up resistors.
+
+    pinout http://elm-chan.org/docs/mmc/mmc_e.html
+      SD   SPI  (looking at contacts)
+     ____________
+    |
+    | D1
+    | D0   MISO
+    | GND
+    | CLK  CLK
+    | VCC
+    | GND
+    | CMD  MOSI
+    | D3   CSn
+     \ D2
+      \__________
+
+    # download latest 6.x mpy bundle
+    # https://github.com/adafruit/Adafruit_CircuitPython_Bundle/releases/
+    # cp -r adafruit_sdcard.mpy adafruit_bus_device /media/user/CIRCUITPY/
+
+    import adafruit_sdcard
+    import busio
+    import digitalio
+    import board
+    import storage
+
+    gpio_csn  = board.IO10 # SD_D3
+    gpio_mosi = board.IO11 # SD_CMD
+    gpio_sck  = board.IO12 # SD_CLK
+    gpio_miso = board.IO13 # SD_D0
+    
+    csn = digitalio.DigitalInOut(gpio_csn)
+    csn.direction = digitalio.Direction.OUTPUT
+    csn.value = 1 # do not select SD before initialization
+    spi = busio.SPI(clock=gpio_sck, MOSI=gpio_mosi, MISO=gpio_miso)
+    sdcard = adafruit_sdcard.SDCard(spi, csn)
+    vfs = storage.VfsFat(sdcard)
+    storage.mount(vfs, "/sd")
+    
+    import os
+    print(os.listdir("/sd"))
+
+Known good is
+"adafruit-circuitpython-espressif_saola_1_wrover-en_US-20200925-2b856db.bin"
+downloaded from
+[Adafruit CircuitPython Saola-1 WROVER board](https://adafruit-circuit-python.s3.amazonaws.com/index.html?prefix=bin/espressif_saola_1_wrover/en_US/)
+and
+"adafruit-circuitpython-bundle-6.x-mpy-20200925.zip"
+downloaded from
+[Adafruit_CircuitPython_Bundle](https://github.com/adafruit/Adafruit_CircuitPython_Bundle/releases/)

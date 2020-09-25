@@ -33,10 +33,8 @@ Using the latest esptool.py v3.0-dev upload the circuitpython for
 [Adafruit CircuitPython Saola-1 WROVER board](https://adafruit-circuit-python.s3.amazonaws.com/index.html?prefix=bin/espressif_saola_1_wrover/en_US/).
 The latest may not be the one that works best, so here's last known good:
 
-    wget -c https://adafruit-circuit-python.s3.amazonaws.com/bin/espressif_saola_1_wrover/en_US/adafruit-circuitpython-espressif_saola_1_wrover-en_US-20200827-fe73cfb.bin
+    wget -c https://adafruit-circuit-python.s3.amazonaws.com/bin/espressif_saola_1_wrover/en_US/adafruit-circuitpython-espressif_saola_1_wrover-en_US-20200925-2b856db.bin
     python3 esptool.py --chip esp32s2 -p /dev/ttyACM0 --no-stub -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode qio --flash_freq 40m --flash_size 16MB 0x0000 $1
-
-Newer WROVER releases have non-functional SPI-DMA.
 
 Alternatively, latest
 [Adafruit CircuitPython Saola-1 WROOM board](https://adafruit-circuit-python.s3.amazonaws.com/index.html?prefix=bin/espressif_saola_1_wroom/en_US/)
@@ -107,10 +105,10 @@ SD card is tested connected directly to pins without any additional pull up resi
     |
     | D1
     | D0   MISO
-    | GND
+    | GND  GND
     | CLK  CLK
-    | VCC
-    | GND
+    | VCC  3.3V
+    | GND  GND
     | CMD  MOSI
     | D3   CSn
      \ D2

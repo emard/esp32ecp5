@@ -71,6 +71,13 @@ def send_tms(val:int):
   tck.value=0
   tck.value=1
 
+# exit 1 DR -> select DR scan
+def send_tms0111():
+  send_tms(0) # -> pause DR
+  send_tms(1) # -> exit 2 DR
+  send_tms(1) # -> update DR
+  send_tms(1) # -> select DR scan
+
 def send_read_buf_lsb1st(buf, last:int, w):
   #global tck,tms,tdi,tdo
   p = memoryview(buf)
@@ -145,10 +152,7 @@ def sir(data):
   send_tms(0) # -> capture IR
   send_tms(0) # -> shift IR
   send_read_buf_lsb1st(data,1,None) # -> exit 1 IR
-  send_tms(0) # -> pause IR
-  send_tms(1) # -> exit 2 IR
-  send_tms(1) # -> update IR
-  send_tms(1) # -> select DR scan
+  send_tms0111() # -> select DR scan
 
 # send SIR command (bytes)
 # TAP should be in "select DR scan" state
@@ -168,10 +172,7 @@ def sdr(data):
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
   send_read_buf_lsb1st(data,1,None)
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms0111() # -> select DR scan
 
 def sdr_idle(data, n:int, ms:int):
   send_tms(0) # -> capture DR
@@ -187,10 +188,7 @@ def sdr_response(data):
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
   send_read_buf_lsb1st(data,1,memoryview(data))
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms0111() # -> select DR scan
 
 def check_response(response, expected, mask=0xFFFFFFFF, message=""):
   if (response & mask) != expected:

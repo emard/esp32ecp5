@@ -59,10 +59,7 @@ def flash_erase_block(addr=0):
   send_int_msb1st(addr>>16,0,8)
   send_int_msb1st(addr>>8,0,8)
   send_int_msb1st(addr,1,8) # last byte -> exit 1 DR
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms0111() # -> select DR scan
   flash_wait_status()
 
 def flash_write_block(block, addr=0):
@@ -80,10 +77,7 @@ def flash_write_block(block, addr=0):
   spi_jtag_off()
   bitbang_jtag_on()
   send_int_msb1st(block[-1],1,8) # last byte -> exit 1 DR
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms0111() # -> select DR scan
   flash_wait_status()
 
 # data is bytearray of to-be-read length
@@ -102,10 +96,7 @@ def flash_read_block(data, addr=0):
   spi_jtag_off()
   bitbang_jtag_on()
   send_int_msb1st(0,1,8) # dummy read byte -> exit 1 DR
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms0111() # -> select DR scan
 
 def flash_close():
   sdr(b"\x20") # SPI WRITE DISABLE

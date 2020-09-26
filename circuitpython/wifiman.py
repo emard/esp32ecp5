@@ -43,8 +43,8 @@ def get_connection():
 
     # sort from strongest to weakest
     for net in sorted(networks, key=lambda x: x.rssi, reverse=True):
-      print("trying",net.ssid)
       if net.ssid in profiles:
+        print("trying",net.ssid)
         password = profiles[net.ssid]
         connected = do_connect(net.ssid, password)
       if connected:

@@ -543,8 +543,7 @@ def compare_flash_file_buf(flash_b, file_b, must:int)->int:
 
 # clever = read-compare-erase-write
 # prevents flash wear when overwriting the same data
-# needs more buffers: 4K erase block is max that fits on ESP32
-# TODO reduce buffer usage
+# 4K erase block is max that fits on ESP32-WROOM
 # returns status True-OK False-Fail
 def flash_stream(filedata, addr=0):
   flash_open()

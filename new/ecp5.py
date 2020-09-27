@@ -120,6 +120,13 @@ def send_tms(val:int):
   tck.off()
   tck.on()
 
+# exit 1 DR -> select DR scan
+def send_tms0111():
+  send_tms(0) # -> pause DR
+  send_tms(1) # -> exit 2 DR
+  send_tms(1) # -> update DR
+  send_tms(1) # -> select DR scan
+
 @micropython.viper
 def send_read_buf_lsb1st(buf, last:int, w:ptr8):
   p = ptr8(addressof(buf))
@@ -210,10 +217,7 @@ def sir(buf):
   send_tms(0) # -> capture IR
   send_tms(0) # -> shift IR
   send_read_buf_lsb1st(buf,1,0) # -> exit 1 IR
-  send_tms(0) # -> pause IR
-  send_tms(1) # -> exit 2 IR
-  send_tms(1) # -> update IR
-  send_tms(1) # -> select DR scan
+  send_tms0111() # -> select DR scan
 
 # send SIR command (bytes)
 # TAP should be in "select DR scan" state
@@ -235,10 +239,7 @@ def sdr(buf):
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
   send_read_buf_lsb1st(buf,1,0)
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms0111() # -> select DR scan
 
 @micropython.viper
 def sdr_idle(buf, n:int, ms:int):
@@ -256,10 +257,7 @@ def sdr_response(buf):
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
   send_read_buf_lsb1st(buf,1,addressof(buf))
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms0111() # -> select DR scan
 
 def check_response(response, expected, mask=0xFFFFFFFF, message=""):
   if (response & mask) != expected:
@@ -397,10 +395,7 @@ def flash_wait_status(n:int):
     retry -= 1
   send_tms(1) # -> exit 1 DR # exit at byte incomplete
   #send_int_msb1st(0,1,8) # exit at byte complete
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms0111() # -> select DR scan
   if retry <= 0:
     print("error %d flash status 0x%02X & 0x%02X != 0" % (n,status[0],mask))
 
@@ -415,10 +410,7 @@ def flash_erase_block(addr:int):
   send_tms(0) # -> shift DR
   swspi.write(flash_era) # except LSB
   send_int_msb1st(addr,1,8) # last LSB byte -> exit 1 DR
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms0111() # -> select DR scan
   flash_wait_status(2002)
 
 @micropython.viper
@@ -435,10 +427,7 @@ def flash_write_block(block, last:int, addr:int):
   swspi.write(flash_req)
   swspi.write(block) # whole block
   send_int_msb1st(last,1,8) # last byte -> exit 1 DR
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms0111() # -> select DR scan
   flash_wait_status(1004)
 
 # data is bytearray of to-be-read length
@@ -454,10 +443,7 @@ def flash_read_block(data, addr:int):
   swspi.write(flash_req) # send SPI FLASH read command and address and dummy byte
   swspi.readinto(data) # retrieve whole block
   send_int_msb1st(0,1,8) # dummy read byte -> exit 1 DR
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms0111() # -> select DR scan
 
 # call this after uploading all of the flash blocks,
 # this will exit FPGA flashing mode and start the bitstream

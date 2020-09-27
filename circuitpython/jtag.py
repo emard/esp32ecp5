@@ -1,10 +1,10 @@
-  # circuitpython ESP32S2
+# circuitpython ESP32S2
 # ECP5 JTAG programmer
 
 # AUTHOR=EMARD
 # LICENSE=BSD
 
-from time import sleep,monotonic_ns
+from time import sleep, monotonic_ns
 import board, busio, digitalio
 from micropython import const
 from struct import pack, unpack

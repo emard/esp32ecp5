@@ -36,7 +36,7 @@ def bitbang_jtag_on():
   tck=digitalio.DigitalInOut(gpio_tck)
   tdi=digitalio.DigitalInOut(gpio_tdi)
   tdo=digitalio.DigitalInOut(gpio_tdo)
-  tck.direction=digitalio.Direction.OUTPUT
+  tck.switch_to_output(value=True)
   tdi.direction=digitalio.Direction.OUTPUT
   tdo.direction=digitalio.Direction.INPUT
 

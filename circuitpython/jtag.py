@@ -36,9 +36,9 @@ def bitbang_jtag_on():
   tck=digitalio.DigitalInOut(gpio_tck)
   tdi=digitalio.DigitalInOut(gpio_tdi)
   tdo=digitalio.DigitalInOut(gpio_tdo)
-  tck.direction=digitalio.Direction.OUTPUT
-  tdi.direction=digitalio.Direction.OUTPUT
-  tdo.direction=digitalio.Direction.INPUT
+  tck.switch_to_output(value=True)
+  tdi.switch_to_output(value=True)
+  tdo.switch_to_input()
 
 def bitbang_jtag_off():
   global tck,tdo,tdi
@@ -48,10 +48,10 @@ def bitbang_jtag_off():
   del tck,tdo,tdi
 
 def bitbang_jtag_input():
-  tck.direction=digitalio.Direction.INPUT
-  tms.direction=digitalio.Direction.INPUT
-  tdi.direction=digitalio.Direction.INPUT
-  tdo.direction=digitalio.Direction.INPUT
+  tck.switch_to_input(pull=None)
+  tms.switch_to_input(pull=None)
+  tdi.switch_to_input(pull=None)
+  tdo.switch_to_input(pull=None)
 
 def spi_jtag_on():
   global hwspi

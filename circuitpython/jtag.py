@@ -21,6 +21,7 @@ gpio_tms = board.IO38  # BLUE LED - 549ohm - 3.3V
 spi_freq = const(40000000) # Hz JTAG clk frequency
 hwspi=None
 
+
 def bitbang_tms_on():
   global tms
   tms=digitalio.DigitalInOut(gpio_tms)
@@ -29,7 +30,7 @@ def bitbang_tms_on():
 def bitbang_tms_off():
   global tms
   tms.deinit()
-  del tms
+  #del tms
 
 def bitbang_jtag_on():
   global tck,tdo,tdi
@@ -42,10 +43,13 @@ def bitbang_jtag_on():
 
 def bitbang_jtag_off():
   global tck,tdo,tdi
+  #tck.switch_to_input(pull=digitalio.Pull.UP)
+  #tdo.switch_to_input(pull=digitalio.Pull.UP)
+  #tdi.switch_to_input(pull=digitalio.Pull.UP)
   tck.deinit()
   tdo.deinit()
   tdi.deinit()
-  del tck,tdo,tdi
+  #del tck,tdo,tdi
 
 def bitbang_jtag_input():
   tck.switch_to_input(pull=None)

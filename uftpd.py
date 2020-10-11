@@ -439,14 +439,14 @@ class FTP_client:
         elif path.endswith(".bit") or path.endswith(".bit.gz"):
           try:
             import ecp5
-            if ecp5.prog(path, prog_close=False):
+            if ecp5.prog(path, close=False):
               if path.startswith("/sd/"):
                 try:
                   self.umount()
                   cl.sendall('111 umount /sd OK\r\n')
                 except:
                   cl.sendall('411 umount /sd Fail\r\n')
-              if ecp5.ecp5().prog_close():
+              if ecp5.prog_close():
                 cl.sendall('250 OK\r\n')
               else:
                 cl.sendall('550 Fail\r\n')

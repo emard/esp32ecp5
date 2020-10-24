@@ -501,6 +501,7 @@ def open_web(url, gz=False):
   port = 80
   if ( len(host.split(':')) == 2 ):
     host, port = host.split(':', 2)
+    port = int(port)
   print("host = %s, port = %d, path = %s" % (host, port, path))
   addr = socket.getaddrinfo(host, port)[0][-1]
   s = socket.socket()

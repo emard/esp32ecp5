@@ -359,6 +359,14 @@ memory situation will be better for ecp5.flash() from "webrepl"
     import ecp5
     ecp5.flash("blink.bit.gz")
 
+# Onboard Editor
+
+ESP32 can run small [VT100 terminal editor](https://github.com/robert-hh/Micropython-Editor)
+Upload files "pye_sml.py" and "help.txt".
+
+    from pye_sml import pye
+    pye("help.txt")
+
 # LOW RAM
 
 Instead of ESP32-WROOM, use ESP32-WROVER :)

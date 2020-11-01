@@ -367,6 +367,16 @@ Upload files "pye_sml.py" and "help.txt".
     from pye_sml import pye
     pye("help.txt")
 
+connected with fujprog -t
+
+    ctrl-q quit
+    ctrl-s save
+
+connected with screen /dev/ttyUSB0 115200
+
+    ctrl-a q quit
+    ctrl-a s save
+
 # LOW RAM
 
 Instead of ESP32-WROOM, use ESP32-WROVER :)

@@ -369,13 +369,13 @@ Upload files "pye_sml.py" and "help.txt".
 
 connected with fujprog -t
 
-    ctrl-q quit
-    ctrl-s save
+    QUIT: ctrl-q
+    SAVE: ctrl-s
 
 connected with screen /dev/ttyUSB0 115200
 
-    ctrl-a q quit
-    ctrl-a s save
+    QUIT: ctrl-a q
+    SAVE: ctrl-a s
 
 # LOW RAM
 

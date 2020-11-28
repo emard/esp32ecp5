@@ -21,19 +21,19 @@ from gc import collect
 #gpio_tcknc = const(21)
 #gpio_led = const(19)
 # ULX3S v3.0.x
-gpio_tms = const(21)
-gpio_tck = const(18)
-gpio_tdi = const(23)
-gpio_tdo = const(19)
-gpio_tcknc = const(17) # free pin for SPI workaround
-gpio_led = const(5)
-# ULX3S v3.1.x
-#gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+#gpio_tms = const(21)
 #gpio_tck = const(18)
 #gpio_tdi = const(23)
-#gpio_tdo = const(34)
-#gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
-#gpio_led = const(19)
+#gpio_tdo = const(19)
+#gpio_tcknc = const(17) # free pin for SPI workaround
+#gpio_led = const(5)
+# ULX3S v3.1.x
+gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+gpio_tck = const(18)
+gpio_tdi = const(23)
+gpio_tdo = const(34)
+gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
+gpio_led = const(19)
 
 spi_freq = const(25000000) # Hz JTAG clk frequency
 # -1 for JTAG over SOFT SPI slow, compatibility
@@ -501,6 +501,7 @@ def open_web(url, gz=False):
   port = 80
   if ( len(host.split(':')) == 2 ):
     host, port = host.split(':', 2)
+    port = int(port)
   print("host = %s, port = %d, path = %s" % (host, port, path))
   addr = socket.getaddrinfo(host, port)[0][-1]
   s = socket.socket()

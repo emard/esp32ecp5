@@ -1,6 +1,6 @@
 # ecp5.py for new pinout
 
-This is new pinout for future ULX3S boards.
+This is new pinout for v3.1.4 and future ULX3S boards.
 It uses different JTAG pinout to free fixed
 pins reserved for RMII Ethernet adater.
 

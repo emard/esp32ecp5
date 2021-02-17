@@ -14,8 +14,10 @@ Choose appropriate for your board and ECP5 chip and upload passthru bitstream to
     ujprog -j flash passthru.bit
 
 Download [micropython for ESP32](https://micropython.org/download#esp32)
-"Stable" version [esp32-idf3-20191220-v1.12.bin](https://micropython.org/resources/firmware/esp32-idf3-20191220-v1.12.bin)
-is known to work well. If in version v1.13 appears a bug with uftpd file listing,
+"Stable" versions
+[esp32-idf3-20191220-v1.12.bin](https://micropython.org/resources/firmware/esp32-idf3-20191220-v1.12.bin) and
+[esp32-idf3-20210202-v1.14.bin](https://micropython.org/resources/firmware/esp32-idf3-20210202-v1.14.bin)
+are known to work well. If in version v1.13 appears a bug with uftpd file listing,
 as last line is listed wrong, as the name of current directory, then a possible fix
 can be to backup all SD files and directories, delete them from SD and restore from backup. 
 idf3 leaves slighty more free RAM than idf4, and ESP32-WROOM modules always need more RAM.

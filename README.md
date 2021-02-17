@@ -22,12 +22,12 @@ as last line is listed wrong, as the name of current directory, then a possible 
 can be to backup all SD files and directories, delete them from SD and restore from backup. 
 idf3 leaves slighty more free RAM than idf4, and ESP32-WROOM modules always need more RAM.
 
-    wget https://micropython.org/resources/firmware/esp32-idf3-20200902-v1.13.bin
+    wget https://micropython.org/resources/firmware/esp32-idf3-20210202-v1.14.bin
 
 Upload micropython to ESP32
 
     esptool.py --chip esp32 --port /dev/ttyUSB0 erase_flash
-    esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460800 write_flash -z 0x1000 esp32-idf3-20191103-v1.11-549-gf2ecfe8b8.bin
+    esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460800 write_flash -z 0x1000 esp32-idf3-20210202-v1.14.bin
 
 Power off and on ESP32
 

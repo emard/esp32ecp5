@@ -163,6 +163,7 @@ List directory to see if the files are uploaded:
 
 "wifiman.py" is a simple WiFi roaming manager which scans WiFi
 access points at power-on and uses password from file "wifiman.conf":
+(newline char after each line, no comments, no emtpy lines)
 
     accesspoint1:password1
     accesspoint2:password2

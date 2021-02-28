@@ -11,7 +11,7 @@ If you have ESP32 on [ULX3S board](https://github.com/emard/ulx3s), you need to
 download [passthru bitstream for ULX3S](https://github.com/emard/ulx3s-bin/tree/master/fpga/passthru),
 Choose appropriate for your board and ECP5 chip and upload passthru bitstream to flash
 
-    ujprog -j flash passthru.bit
+    fujprog -j flash passthru.bit
 
 Download [micropython for ESP32](https://micropython.org/download#esp32)
 "Stable" versions

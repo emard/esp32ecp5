@@ -22,11 +22,18 @@ class artix7:
     #self.gpio_tcknc = const(21)
     #self.gpio_led = const(19)
     # ESP32-WROVER-E FROGO wired
+    #self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+    #self.gpio_tck = const(18)
+    #self.gpio_tdi = const(23)
+    #self.gpio_tdo = const(34)
+    #self.gpio_tcknc = const(21) # 1,2,3,19,21 for SPI workaround
+    #self.gpio_led = const(19)
+    # ULX3S v3.1.x
     self.gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
     self.gpio_tck = const(18)
     self.gpio_tdi = const(23)
     self.gpio_tdo = const(34)
-    self.gpio_tcknc = const(21) # 1,2,3,19,21 for SPI workaround
+    self.gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
     self.gpio_led = const(19)
 
   def bitbang_jtag_on(self):

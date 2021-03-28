@@ -4,8 +4,6 @@
 # AUTHOR=EMARD
 # LICENSE=BSD
 
-# FIXME spansion flash write unreliable
-
 from time import ticks_ms, sleep_ms
 from machine import SPI, Pin
 from micropython import const
@@ -41,7 +39,7 @@ spi_freq = const(25000000) # Hz JTAG clk frequency
 #  2 is preferred as it has default pinout wired
 flash_read_size = const(2048)
 flash_write_size = const(256)
-flash_erase_size = const(4096)
+flash_erase_size = const(4096) # 4096 default, 65536 for FFM 32MB spansion flash
 flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8, 262144:0xD8 } # erase commands from FLASH PDF
 flash_era = bytearray([flash_erase_cmd[flash_erase_size],0,0])
 #rb=bytearray(256) # reverse bits

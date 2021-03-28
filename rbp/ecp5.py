@@ -669,3 +669,5 @@ def help():
   print("ecp5.passthru()")
   print("\"0x%08X\" % ecp5.idcode()")
   print("0x%08X" % idcode())
+
+collect()

@@ -4,6 +4,7 @@
 # AUTHOR=EMARD
 # LICENSE=BSD
 
+# FIXME: esp32 serial line traffic stops after prog()
 # TODO: FLASH code not yet implemented, see artix7
 
 from time import ticks_ms, sleep_ms
@@ -125,8 +126,14 @@ def send_tms(val:int):
   tck.off()
   tck.on()
 
+def send_tms0110():
+  send_tms(0) # -> pause DR
+  send_tms(1) # -> exit 2 DR
+  send_tms(1) # -> update DR
+  send_tms(0) # -> idle
+
 @micropython.viper
-def send_read_buf_lsb1st(buf, last:int, w:ptr8):
+def send_read_buf_lsb1st(buf, last:int, w:int):
   p = ptr8(addressof(buf))
   l = int(len(buf))
   val = 0
@@ -143,8 +150,8 @@ def send_read_buf_lsb1st(buf, last:int, w:ptr8):
       tck.on()
       if tdo.value():
         byte |= 1 << nf
-    if int(w):
-      w[i] = byte # write byte
+    if w:
+      p[i] = byte # write byte
   byte = 0
   val = p[l-1] # read last byte
   for nf in range(7): # first 7 bits
@@ -167,8 +174,8 @@ def send_read_buf_lsb1st(buf, last:int, w:ptr8):
   tck.on()
   if tdo.value():
     byte |= 1 << 7
-  if int(w):
-    w[l-1] = byte # write last byte
+  if w:
+    p[l-1] = byte # write last byte
 
 @micropython.viper
 def send_read_int_lsb1st(val:int, last:int, bits:int)->int:
@@ -241,10 +248,7 @@ def sir(sir:int)->int:
   send_tms(0) # -> capture IR
   send_tms(0) # -> shift IR
   r=int(send_read_int_lsb1st(sir,1,10)) # -> exit 1 IR
-  send_tms(0) # -> pause IR
-  send_tms(1) # -> exit 2 IR
-  send_tms(1) # -> update IR
-  send_tms(0) # -> idle
+  send_tms0110() # -> idle
   return r
 
 # LSB first
@@ -254,10 +258,7 @@ def sdr(buf):
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
   send_read_buf_lsb1st(buf,1,0)
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(0) # -> idle
+  send_tms0110() # -> idle
 
 # sdr buffer will be overwritten with response
 # LSB first
@@ -266,11 +267,8 @@ def sdr_response(buf):
   send_tms(1) # -> select DR scan
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
-  send_read_buf_lsb1st(buf,1,addressof(buf))
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(0) # -> idle
+  send_read_buf_lsb1st(buf,1,1)
+  send_tms0110() # -> idle
 
 # USER1 send a+b MSB first
 # a can be 0-size
@@ -282,10 +280,7 @@ def user1_send(a,b):
   swspi.write(a)
   swspi.write(b[:-1])
   send_data_int_msb1st(b[-1],1,8) # last byte -> exit 1 DR
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(0) # -> idle
+  send_tms0110() # -> idle
 
 # USER1 send a, recv b
 # a can be 0-size
@@ -299,10 +294,7 @@ def user1_send_recv(a,b):
   swspi.write(a)
   swspi.readinto(b)
   send_tms(1) # -> exit 1 DR, dummy bit
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(0) # -> idle
+  send_tms0110() # -> idle
 
 def check_response(response, expected, mask=0xFFFFFFFF, message=""):
   if (response & mask) != expected:
@@ -365,10 +357,7 @@ def prog_stream_done():
 def prog_close():
   bitbang_jtag_on()
   send_tms(1) # -> exit 1 DR
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(0) # -> idle
+  send_tms0110() # -> idle
   runtest_idle(8,2)
   # ---------- bitstream end -----------
   sir(4)

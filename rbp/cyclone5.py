@@ -39,19 +39,19 @@ spi_freq = const(25000000) # Hz JTAG clk frequency
 # -1 for JTAG over SOFT SPI slow, compatibility
 #  1 or 2 for JTAG over HARD SPI fast
 #  2 is preferred as it has default pinout wired
-flash_read_size = const(2048)
-flash_write_size = const(256)
-flash_erase_size = const(4096)
-flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8, 262144:0xD8 } # erase commands from FLASH PDF
-flash_era = bytearray([flash_erase_cmd[flash_erase_size],0,0])
+spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
 #rb=bytearray(256) # reverse bits
 #init_reverse_bits()
-spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
-flash_req=bytearray(4)
-magic=bytearray([0x59,0xA6,0x59,0xA6])
-wrenable=magic+bytearray([0,8,6])
-wrdisable=magic+bytearray([0,8,4])
-read_status=magic+bytearray([0,16,5,0])
+#flash_read_size = const(2048)
+#flash_write_size = const(256)
+#flash_erase_size = const(4096)
+#flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8, 262144:0xD8 } # erase commands from FLASH PDF
+#flash_era = bytearray([flash_erase_cmd[flash_erase_size],0,0])
+#flash_req=bytearray(4)
+#magic=bytearray([0x59,0xA6,0x59,0xA6])
+#wrenable=magic+bytearray([0,8,6])
+#wrdisable=magic+bytearray([0,8,4])
+#read_status=magic+bytearray([0,16,5,0])
 status=bytearray(2)
 dummy4=bytearray(4)
 none=bytearray(0)

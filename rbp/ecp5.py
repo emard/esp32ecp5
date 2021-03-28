@@ -18,7 +18,7 @@ from gc import collect
 #gpio_tdo = const(2)
 #gpio_tcknc = const(21)
 #gpio_led = const(19)
-# ULX3S v3.0.x
+# ULX3S v3.0.x or FFC-RBP V0r12
 #gpio_tms = const(21)
 #gpio_tck = const(18)
 #gpio_tdi = const(23)
@@ -37,14 +37,14 @@ spi_freq = const(25000000) # Hz JTAG clk frequency
 # -1 for JTAG over SOFT SPI slow, compatibility
 #  1 or 2 for JTAG over HARD SPI fast
 #  2 is preferred as it has default pinout wired
+spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
+#rb=bytearray(256) # reverse bits
+#init_reverse_bits()
 flash_read_size = const(2048)
 flash_write_size = const(256)
 flash_erase_size = const(65536) # 4096 default, 65536 for FFM 32MB spansion flash
 flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8, 262144:0xD8 } # erase commands from FLASH PDF
 flash_era = bytearray([flash_erase_cmd[flash_erase_size],0,0])
-#rb=bytearray(256) # reverse bits
-#init_reverse_bits()
-spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
 flash_req=bytearray(4)
 read_status=bytearray([5])
 status=bytearray(1)

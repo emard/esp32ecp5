@@ -27,7 +27,7 @@ from gc import collect
 #gpio_tdo = const(34)
 #gpio_tcknc = const(21) # 1,2,3,19,21 for SPI workaround
 #gpio_led = const(19)
-# ULX3S v3.1.x
+# ULX3S v3.1.x or FFC-RBP V0r12
 gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
 gpio_tck = const(18)
 gpio_tdi = const(23)

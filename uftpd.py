@@ -101,10 +101,7 @@ class FTP_client:
                           if (stat[0] & 0o170000 == 0o040000)
                           else "-rw-r--r--")
       file_size = stat[6]
-      mtime = stat[7];
-      while mtime >= 0x80000000:
-        mtime -= 0x100000000
-      tm = localtime(mtime)
+      tm = localtime(stat[7] if stat[7]<0x80000000 else stat[7]-0x100000000)
       if tm[0] != localtime()[0]:
         description = "{} 1 owner group {:>10} {} {:2} {:>5} {}\r\n".\
           format(file_permissions, file_size,

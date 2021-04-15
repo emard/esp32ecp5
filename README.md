@@ -16,11 +16,9 @@ Choose appropriate for your board and ECP5 chip and upload passthru bitstream to
 Download [micropython for ESP32](https://micropython.org/download#esp32)
 "Stable" versions
 [esp32-idf3-20191220-v1.12.bin](https://micropython.org/resources/firmware/esp32-idf3-20191220-v1.12.bin)
-is known to work well. If in versions v1.13 or v1.14 appears a bug with uftpd file listing,
-as last line is listed wrong, with the name of current directory instead of actual directory
-which is hidden but still exists, it can be changed to with "cd", then a possible fix
-can be to backup all SD files and directories, delete them from SD and restore from backup. 
-idf3 leaves slighty more free RAM than idf4, and ESP32-WROOM modules always need more RAM.
+or later, versions v1.13 or v1.14 should work too,
+idf3 build leaves slighty more free RAM than idf4 build,
+and ESP32-WROOM modules always need more RAM.
 
     wget https://micropython.org/resources/firmware/esp32-idf3-20191220-v1.12.bin
 

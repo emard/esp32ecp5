@@ -4,14 +4,14 @@
 # AUTHOR=EMARD
 # LICENSE=BSD
 
-# FIXME spansion flash write unreliable
+# FIXME spansion flash 4K erase block write unreliable
 
 from time import ticks_ms, sleep_ms
 from machine import SPI, Pin
 from micropython import const
 from struct import unpack
 from uctypes import addressof
-from gc import collect
+#from gc import collect
 
 # FJC-ESP32-V0r2 pluggable
 #gpio_tms = const(4)
@@ -39,17 +39,17 @@ spi_freq = const(20000000) # Hz JTAG clk frequency
 # -1 for JTAG over SOFT SPI slow, compatibility
 #  1 or 2 for JTAG over HARD SPI fast
 #  2 is preferred as it has default pinout wired
+spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
 flash_read_size = const(2048)
 flash_write_size = const(256)
 flash_erase_size = const(4096)
 flash_erase_cmd = { 4096:0x20, 32768:0x52, 65536:0xD8, 262144:0xD8 } # erase commands from FLASH PDF
 flash_era = bytearray([flash_erase_cmd[flash_erase_size],0,0])
-#rb=bytearray(256) # reverse bits
-#init_reverse_bits()
-spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
 flash_req=bytearray(4)
 read_status=bytearray([5])
 status=bytearray(1)
+#rb=bytearray(256) # reverse bits
+#init_reverse_bits()
 
 def bitbang_jtag_on():
   global tck,tms,tdi,tdo,led

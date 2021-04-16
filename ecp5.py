@@ -35,7 +35,7 @@ gpio_led = const(5)
 #gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
 #gpio_led = const(19)
 
-spi_freq = const(25000000) # Hz JTAG clk frequency
+spi_freq = const(20000000) # Hz JTAG clk frequency
 # -1 for JTAG over SOFT SPI slow, compatibility
 #  1 or 2 for JTAG over HARD SPI fast
 #  2 is preferred as it has default pinout wired

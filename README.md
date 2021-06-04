@@ -17,8 +17,8 @@ Download [micropython for ESP32](https://micropython.org/download#esp32)
 "Stable" version.
 For WROOM modules use non-SPIRAM versions like:
 [esp32-idf3-20210202-v1.14.bin](https://micropython.org/resources/firmware/esp32-idf3-20210202-v1.14.bin).
-For WROVER modules non-SPIRAM will also work,
-but to use extra RAM, it needs SPIRAM versions like:
+Non-SPIRAM will work WROVER modules too,
+but to use extra RAM, WROVER modules need SPIRAM versions like:
 [esp32spiram-idf3-20210202-v1.14.bin](https://micropython.org/resources/firmware/esp32spiram-idf3-20210202-v1.14.bin).
 Versions v1.12, v1.13, v1.14, v1.15 built with idf3 and idf4 should all work,
 but idf3 builds are recommended as they don't reboot at SD card

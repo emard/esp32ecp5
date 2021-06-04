@@ -26,7 +26,7 @@ but idf3 builds are recommended as they don't reboot at SD card
 deinit and they leave slighty more free RAM than idf4 builds,
 and ESP32-WROOM modules always need more RAM.
 
-    wget https://micropython.org/resources/firmware/esp32-idf3-20191220-v1.12.bin
+    wget https://micropython.org/resources/firmware/esp32-idf3-20210202-v1.14.bin
 
 Upload micropython to ESP32
 

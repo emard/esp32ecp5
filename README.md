@@ -16,7 +16,7 @@ Choose appropriate for your board and ECP5 chip and upload passthru bitstream to
 Download [micropython for ESP32](https://micropython.org/download#esp32)
 "Stable" versions
 [esp32-idf3-20191220-v1.12.bin](https://micropython.org/resources/firmware/esp32-idf3-20191220-v1.12.bin)
-or later, versions v1.13 or v1.14 should work too,
+or later, versions v1.13, v1.14, v1.15 should work too,
 idf3 build leaves slighty more free RAM than idf4 build,
 and ESP32-WROOM modules always need more RAM.
 

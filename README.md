@@ -14,13 +14,14 @@ Choose appropriate for your board and ECP5 chip and upload passthru bitstream to
     fujprog -j flash passthru.bit
 
 Download [micropython for ESP32](https://micropython.org/download#esp32)
-"Stable" versions for WROOM modules like
-[esp32-idf3-20191220-v1.12.bin](https://micropython.org/resources/firmware/esp32-idf3-20191220-v1.12.bin)
-[esp32-idf3-20210202-v1.14.bin](https://micropython.org/resources/firmware/esp32-idf3-20210202-v1.14.bin)
-or later, versions v1.12, v1.13, v1.14, v1.15 should all work.
-For WROVER modules use SPIRAM versions like
-[esp32spiram-idf3-20210202-v1.14.bin](https://micropython.org/resources/firmware/esp32spiram-idf3-20210202-v1.14.bin)
-idf3 builds are recommended as they don't reboot at SD card
+"Stable" version.
+For WROOM modules use non-SPIRAM versions like:
+[esp32-idf3-20191220-v1.12.bin](https://micropython.org/resources/firmware/esp32-idf3-20191220-v1.12.bin),
+[esp32-idf3-20210202-v1.14.bin](https://micropython.org/resources/firmware/esp32-idf3-20210202-v1.14.bin).
+For WROVER modules use SPIRAM versions like:
+[esp32spiram-idf3-20210202-v1.14.bin](https://micropython.org/resources/firmware/esp32spiram-idf3-20210202-v1.14.bin).
+Versions v1.12, v1.13, v1.14, v1.15 built with idf3 and idf4 should all work,
+but idf3 builds are recommended as they don't reboot at SD card
 deinit and they leave slighty more free RAM than idf4 builds,
 and ESP32-WROOM modules always need more RAM.
 

@@ -16,7 +16,6 @@ Choose appropriate for your board and ECP5 chip and upload passthru bitstream to
 Download [micropython for ESP32](https://micropython.org/download#esp32)
 "Stable" version.
 For WROOM modules use non-SPIRAM versions like:
-[esp32-idf3-20191220-v1.12.bin](https://micropython.org/resources/firmware/esp32-idf3-20191220-v1.12.bin),
 [esp32-idf3-20210202-v1.14.bin](https://micropython.org/resources/firmware/esp32-idf3-20210202-v1.14.bin).
 For WROVER modules non-SPIRAM will also work,
 but to use extra RAM, it needs SPIRAM versions like:

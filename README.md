@@ -20,9 +20,10 @@ For WROOM modules use non-SPIRAM versions like:
 Non-SPIRAM will work for WROVER modules too,
 but to use extra RAM, WROVER modules need SPIRAM versions like:
 [esp32spiram-idf3-20210202-v1.14.bin](https://micropython.org/resources/firmware/esp32spiram-idf3-20210202-v1.14.bin).
-Versions v1.12, v1.13, v1.14, v1.15 built with idf3 and idf4 should all work,
-but idf3 builds are recommended as they don't reboot at SD card
-deinit and they leave slighty more free RAM than idf4 builds,
+Versions v1.12 - v1.16 built with idf3 and idf4 should all work.
+idf3 v1.14 build is recommended as the latest version 
+which can mount and unmount SD card multiple times.
+idf3 leaves slighty more free RAM than idf4 builds,
 and ESP32-WROOM modules always need more RAM.
 
     wget https://micropython.org/resources/firmware/esp32-idf3-20210202-v1.14.bin

@@ -415,5 +415,5 @@ don't import uftpd.
     [x] ftp put fpga/flash reports Done/Fail
     [x] mount/umount SD card from ftp prompt (just cd to /sd)?
     [x] specify flash address ftp> put file.bit flash@0x200000
-    [ ] "site" command execute some python script
-    [ ] site mount, exit, site umount Fail
+    [x] site mount, exit, site umount Fail
+    [ ] "site" command should execute some python script

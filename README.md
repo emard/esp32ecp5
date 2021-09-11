@@ -426,3 +426,5 @@ don't import uftpd.
     [x] specify flash address ftp> put file.bit flash@0x200000
     [x] site mount, exit, site umount Fail
     [ ] "site" command should execute some python script
+    [ ] upip installation https://packaging.python.org/tutorials/packaging-projects/
+

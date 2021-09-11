@@ -96,7 +96,15 @@ some WiFi clients may have problem connecting to ESP32:
 It will prompt to ask few questions:
 Enable "webrepl" by choosing "E".
 Type and repeat any password you like, "webrepl" client will later ask for this password.
-Finally agree to reboot ESP32. After reboot and successful WiFi connection,
+Finally agree to reboot ESP32. It will automatically create "boot.py" file:
+
+    # This file is executed on every boot (including wake-boot from deepsleep)
+    #import esp
+    #esp.osdebug(None)
+    import webrepl
+    webrepl.start()
+
+After reboot and successful WiFi connection,
 it will print its IP address (192.168.4.1).
 
     I (1554) network: CONNECTED

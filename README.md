@@ -427,4 +427,6 @@ don't import uftpd.
     [x] site mount, exit, site umount Fail
     [ ] "site" command should execute some python script
     [ ] upip installation https://packaging.python.org/tutorials/packaging-projects/
+        https://docs.micropython.org/en/latest/reference/packages.html
+
 

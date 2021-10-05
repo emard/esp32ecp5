@@ -261,6 +261,19 @@ def check_response(response, expected, mask=0xFFFFFFFF, message=""):
   if (response & mask) != expected:
     print("0x%08X & 0x%08X != 0x%08X %s" % (response,mask,expected,message))
 
+def idcode():
+  bitbang_jtag_on()
+  led.on()
+  reset_tap()
+  runtest_idle(1,0)
+  #sir(b"\xE0")
+  id_bytes = bytearray(4)
+  sdr_response(id_bytes)
+  led.off()
+  bitbang_jtag_off()
+  return unpack("<I", id_bytes)[0]
+
+
 # common JTAG open for both program and flash
 def common_open():
   spi_jtag_on()
@@ -361,5 +374,31 @@ def is25lp128(prot=0x06):
   sdr(bytearray([rb[0x06]])) # SPI WRITE ENABLE
   flash_wait_status(1021)
   sdr(bytearray([rb[0x01],rb[prot<<2]])) # status reg = prot<<2
+  flash_wait_status(2022)
+  flash_close()
+
+# write protection tool for W25Q128JV, see datasheet p.18, p.26
+# https://www.winbond.com/resource-files/w25q128jv%20revf%2003272018%20plus.pdf
+# prot= 0: unprotect  
+# prot=12: protecting first 2MB
+# BUG: it doesn't work
+def w25q128jv(prot=12):
+  flash_open()
+  # datasheed p.17 f.4c
+  wr_en=0x06 # non-volatile (persistent after power off/on)
+  #wr_en=0x50 # volatile (not parsistent after power off/on)
+  sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
+  flash_wait_status(1021)
+  sdr(bytearray([rb[0x11],rb[0xC0]])) # status reg 3 = 0x00 DRV=25%, WPS=0
+  flash_wait_status(2022)
+  # datasheet p.18 s.7.1.8, p.26
+  sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
+  flash_wait_status(1011)
+  sdr(bytearray([rb[0x01],rb[prot<<2]])) # status reg 1 = prot<<2
+  flash_wait_status(2012)
+  # datasheet p.16 f.4b, p.15 s.7.1.1
+  sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
+  flash_wait_status(1021)
+  sdr(bytearray([rb[0x31],rb[0x01]])) # status reg 2 = 0x01 CMP=0 SRL=1
   flash_wait_status(2022)
   flash_close()

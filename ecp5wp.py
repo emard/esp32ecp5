@@ -358,7 +358,7 @@ def flash_close():
 # https://www.issi.com/WW/pdf/IS25LP128.pdf
 # prot=0: unprotect
 # prot=6: protect first 2MB
-def is25lp128(prot=0x06):
+def is25lp128(prot=6):
   flash_open()
   # write function register
   # factory default is protecting the top (... - 0xFFFFFF)

@@ -381,10 +381,10 @@ def is25lp128(prot=0x06):
 # https://www.winbond.com/resource-files/w25q128jv%20revf%2003272018%20plus.pdf
 # prot= 0: unprotect  
 # prot=12: protecting first 2MB
-# BUG: it doesn't work
+# BUG: it doesn't work (no protection, still writeable)
 def w25q128jv(prot=12):
   flash_open()
-  # datasheed p.17 f.4c
+  # datasheet p.17 f.4c
   wr_en=0x06 # non-volatile (persistent after power off/on)
   #wr_en=0x50 # volatile (not parsistent after power off/on)
   sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE

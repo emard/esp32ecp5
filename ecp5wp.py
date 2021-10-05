@@ -381,24 +381,52 @@ def is25lp128(prot=6):
 # https://www.winbond.com/resource-files/w25q128jv%20revf%2003272018%20plus.pdf
 # prot= 0: unprotect  
 # prot=12: protecting first 2MB
-# BUG: it doesn't work (no protection, still writeable)
+# BUG: not tested, may permanently lock the chip
 def w25q128jv(prot=12):
   flash_open()
   # datasheet p.17 f.4c
-  wr_en=0x06 # non-volatile (persistent after power off/on)
-  #wr_en=0x50 # volatile (not parsistent after power off/on)
-  sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
-  flash_wait_status(1021)
-  sdr(bytearray([rb[0x11],rb[0xC0]])) # status reg 3 = 0x00 DRV=25%, WPS=0
-  flash_wait_status(2022)
-  # datasheet p.18 s.7.1.8, p.26
-  sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
-  flash_wait_status(1011)
-  sdr(bytearray([rb[0x01],rb[prot<<2]])) # status reg 1 = prot<<2
-  flash_wait_status(2012)
+  #wr_en=0x06 # non-volatile (persistent after power off/on)
+  wr_en=0x50 # volatile (not parsistent after power off/on)
   # datasheet p.16 f.4b, p.15 s.7.1.1
-  sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
-  flash_wait_status(1021)
-  sdr(bytearray([rb[0x31],rb[0x01]])) # status reg 2 = 0x01 CMP=0 SRL=1
-  flash_wait_status(2022)
+  if 1:
+    sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
+    #flash_wait_status(1021)
+    sdr(bytearray([rb[0x31],rb[0x00]])) # status reg 2 = 0x00 CMP=0 SRL=0
+    #flash_wait_status(2022)
+  if 1:
+    sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
+    #flash_wait_status(1021)
+    sdr(bytearray([rb[0x11],rb[0x60]])) # status reg 3 = 0x00 DRV=25%, WPS=0
+    #flash_wait_status(2022)
+  # datasheet p.18 s.7.1.8, p.26
+  if 1:
+    sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
+    #flash_wait_status(1011)
+    sdr(bytearray([rb[0x01],rb[prot<<2]])) # status reg 1 = prot<<2
+    #flash_wait_status(2012)
+  # datasheet p.16 f.4b, p.15 s.7.1.1
+  if 1:
+    sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
+    #flash_wait_status(1021)
+    sdr(bytearray([rb[0x31],rb[0x01]])) # status reg 2 = 0x01 CMP=0 SRL=1
+    #flash_wait_status(2022)
+  # read status1
+  send_tms(0) # -> capture DR
+  send_tms(0) # -> shift DR
+  swspi.write(read_status)
+  swspi.readinto(status)
+  send_tms0111() # -> select DR scan
+  # read status2
+  send_tms(0) # -> capture DR
+  send_tms(0) # -> shift DR
+  swspi.write(read_status2)
+  swspi.readinto(status2)
+  send_tms0111() # -> select DR scan
+  # read status3
+  send_tms(0) # -> capture DR
+  send_tms(0) # -> shift DR
+  swspi.write(read_status3)
+  swspi.readinto(status3)
+  send_tms0111() # -> select DR scan
   flash_close()
+  return bytearray([status[0],status2[0],status3[0]])

@@ -361,9 +361,9 @@ def flash_close():
 def is25lp128(prot=0x06):
   flash_open()
   # write function register
-  # factory default is protecting the bottom (... - 0xFFFFFF)
-  # now set to protect the top (0x000000 - ...).
-  # NOTE: once set to protect the top, can't be reset back to protect the bottom!
+  # factory default is protecting the top (... - 0xFFFFFF)
+  # now set to protect the bottom (0x000000 - ...).
+  # NOTE: once set to protect the bottom, can't be reset back to protect the top
   # see datasheet p.17 t.6.5, p.50 s.8.19
   sdr(bytearray([rb[0x06]])) # SPI WRITE ENABLE
   flash_wait_status(1011)

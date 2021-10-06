@@ -19,19 +19,19 @@ from uctypes import addressof
 #gpio_tcknc = const(21)
 #gpio_led = const(19)
 # ULX3S v3.0.x
-gpio_tms = const(21)
-gpio_tck = const(18)
-gpio_tdi = const(23)
-gpio_tdo = const(19)
-gpio_tcknc = const(17) # free pin for SPI workaround
-gpio_led = const(5)
-# ULX3S v3.1.x
-#gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+#gpio_tms = const(21)
 #gpio_tck = const(18)
 #gpio_tdi = const(23)
-#gpio_tdo = const(34)
-#gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
-#gpio_led = const(19)
+#gpio_tdo = const(19)
+#gpio_tcknc = const(17) # free pin for SPI workaround
+#gpio_led = const(5)
+# ULX3S v3.1.x
+gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+gpio_tck = const(18)
+gpio_tdi = const(23)
+gpio_tdo = const(34)
+gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
+gpio_led = const(19)
 
 #@micropython.viper
 def init_reverse_bits():
@@ -311,7 +311,7 @@ def flash_open():
   sir(b"\x3A") # LSC_PROG_SPI
   sdr_idle(b"\xFE\x68",32,0)
   # ---------- flashing begin -----------
-  # sdr("\x60") and other SPI FLASH commands
+  # sdr(b"\x60") and other SPI FLASH commands
   # here are bitreverse() values of FLASH commands
   # found in datasheet. e.g.
   # \x1B -> 0xD8
@@ -354,6 +354,24 @@ def flash_close():
   led.off()
   bitbang_jtag_off()
 
+def flash_send(seq):
+  send_tms(0) # -> capture DR
+  send_tms(0) # -> shift DR
+  if len(seq)>1:
+    swspi.write(seq[:-1]) # all except last byte
+  send_int_msb1st(seq[-1],1,8) # last byte -> exit 1 DR
+  send_tms0111() # -> select DR scan
+
+def flash_sendrecv(seq):
+  send_tms(0) # -> capture DR
+  send_tms(0) # -> shift DR
+  swspi.write(seq)
+  swspi.readinto(status)
+  send_tms(1) # -> exit 1 DR # exit at byte incomplete
+  #send_int_msb1st(0,1,8) # complete dummy byte and exit
+  send_tms0111() # -> select DR scan
+  return status[0]
+
 # write protection tool for IS25LP128
 # https://www.issi.com/WW/pdf/IS25LP128.pdf
 # prot=0: unprotect
@@ -375,7 +393,7 @@ def is25lp128(prot=6):
   flash_wait_status(1021)
   sdr(bytearray([rb[0x01],rb[prot<<2]])) # status reg = prot<<2
   flash_wait_status(2022)
-  flash_close()
+  flash_close(0)
 
 # write protection tool for W25Q128JV, see datasheet p.18, p.26
 # https://www.winbond.com/resource-files/w25q128jv%20revf%2003272018%20plus.pdf
@@ -428,5 +446,88 @@ def w25q128jv(prot=12):
   swspi.write(read_status3)
   swspi.readinto(status3)
   send_tms0111() # -> select DR scan
-  flash_close()
+  flash_close(0)
   return bytearray([status[0],status2[0],status3[0]])
+
+def winbond():
+  flash_open()
+  flash_send(b"\x50") # temporary write status
+  #flash_wait_status(1021)
+  flash_send(b"\x01\x30") # status1=0x30 protect lower 2MB
+  #flash_wait_status(1021)
+  flash_send(b"\x50") # temporary write status
+  #flash_wait_status(1021)
+  flash_send(b"\x11\x60") # status3=0x60 WPS=0
+  #flash_wait_status(1021)
+  flash_send(b"\x50") # temporary write status
+  #flash_wait_status(1021)
+  flash_send(b"\x31\x01") # status2=0x01 lock status
+  #flash_wait_status(1021)
+  status_regs=bytearray(3)
+  status_regs[0]=flash_sendrecv(b"\x05")
+  status_regs[1]=flash_sendrecv(b"\x35")
+  status_regs[2]=flash_sendrecv(b"\x15")
+  flash_close()
+  return status_regs
+
+def int2bin(a):
+  bin=bytearray(8)
+  for i in range(8):
+    bin[7-i]=48+(a&1)
+    a>>=1
+  return bin
+
+def winbond_status():
+  flash_open()
+  status_reg=bytearray(3)
+  status_reg[0]=flash_sendrecv(b"\x05")
+  status_reg[1]=flash_sendrecv(b"\x35")
+  status_reg[2]=flash_sendrecv(b"\x15")
+  flash_close()
+  noyes_txt=("No","Yes")
+  print("Read 0x05: Status Register-1 = 0x%02X" % status_reg[0])
+  SRP=(status_reg[0]>>7) & 1
+  SEC=(status_reg[0]>>6) & 1
+  SEC_txt=("64KB Blocks","4KB Sectors")
+  TB=(status_reg[0]>>5) & 1
+  TB_txt=("Top","Bottom")
+  BP=(status_reg[0]>>2) & 7
+  CMP=(status_reg[1]>>6) & 1
+  SEC_size=(128*1024,2048)
+  range_bytes = SEC_size[SEC]<<BP
+  if BP:
+    if TB:
+      if CMP:
+        range="0x%06X - 0xFFFFFF" % (range_bytes)
+      else: # CMP=0
+        range="0x000000 - 0x%06X" % (range_bytes-1)
+    else: # TB=0
+      if CMP:
+        range="0x000000 - 0x%06X" % (0xFFFFFF-range_bytes)
+      else: # CMP=0
+        range="0x%06X - 0xFFFFFF" % (0x1000000-range_bytes)
+  else: # BP=0
+    range="None"
+  print(int2bin(status_reg[0]).decode())
+  print("x....... SRP Status Reg Protect by WP pin: %s" % noyes_txt[SRP])
+  print(".x...... SEC Sector/Block Protect        : %s" % SEC_txt[SEC])
+  print("..x..... TB  Top/Bottom Protect          : %s" % TB_txt[TB])
+  print("...xxx.. BP  Protected Range             : %s" % range)
+  print("Read 0x35: Status Register-2 = 0x%02X" % status_reg[1])
+  #CMP=(status_reg[1]>>6) & 1
+  LB=(status_reg[1]>>3) & 7
+  QE=(status_reg[1]>>1) & 1
+  SRL=status_reg[1] & 1
+  print("%s OTP warning value 1 can't reset to 0" % int2bin(status_reg[1]).decode())
+  print(".x...... CMP Complement Protect          : %s" % noyes_txt[CMP])
+  print("..xxx... LB  Security Register Lock Bits : %d" % LB)
+  print("......x. QE  Quad Enable                 : %s" % noyes_txt[QE])
+  print(".......x SRL STATUS REGISTER LOCK        : %s" % noyes_txt[SRL])
+  print("Read 0x15: Status Register-3 = 0x%02X" % status_reg[2])
+  print(int2bin(status_reg[2]).decode())
+  WPS=(status_reg[2]>>2) & 1
+  WPS_txt=("Defined by Register-1 and 2","Individual Sectors")
+  DRV=(status_reg[2]>>5) & 3
+  DRV_strength=bytearray([100,75,50,25]) # %
+  print(".xx..... DRV Output Driver Strength      : %d%%" % DRV_strength[DRV])
+  print(".....x.. WPS Write Protection Scheme     : %s" % WPS_txt[WPS])

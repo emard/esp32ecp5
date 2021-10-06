@@ -362,15 +362,14 @@ def flash_send(seq):
   send_int_msb1st(seq[-1],1,8) # last byte -> exit 1 DR
   send_tms0111() # -> select DR scan
 
-def flash_sendrecv(seq):
+def flash_sendrecv(send,recv):
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
-  swspi.write(seq)
-  swspi.readinto(status)
+  swspi.write(send)
+  swspi.readinto(recv)
   send_tms(1) # -> exit 1 DR # exit at byte incomplete
   #send_int_msb1st(0,1,8) # complete dummy byte and exit
   send_tms0111() # -> select DR scan
-  return status[0]
 
 # write protection tool for IS25LP128
 # https://www.issi.com/WW/pdf/IS25LP128.pdf
@@ -477,22 +476,24 @@ def int2bin(a):
     a>>=1
   return bin
 
-def winbond_status():
+def w25q128jv_status():
   flash_open()
-  status_reg=bytearray(3)
-  status_reg[0]=flash_sendrecv(b"\x05")
-  status_reg[1]=flash_sendrecv(b"\x35")
-  status_reg[2]=flash_sendrecv(b"\x15")
+  status_reg1=bytearray(1)
+  status_reg2=bytearray(1)
+  status_reg3=bytearray(1)
+  flash_sendrecv(b"\x05",status_reg1)
+  flash_sendrecv(b"\x35",status_reg2)
+  flash_sendrecv(b"\x15",status_reg3)
   flash_close()
   noyes_txt=("No","Yes")
-  print("Read 0x05: Status Register-1 = 0x%02X" % status_reg[0])
-  SRP=(status_reg[0]>>7) & 1
-  SEC=(status_reg[0]>>6) & 1
+  print("Read 0x05: Status Register-1 = 0x%02X" % status_reg1[0])
+  SRP=(status_reg1[0]>>7) & 1
+  SEC=(status_reg1[0]>>6) & 1
   SEC_txt=("64KB Blocks","4KB Sectors")
-  TB=(status_reg[0]>>5) & 1
+  TB=(status_reg1[0]>>5) & 1
   TB_txt=("Top","Bottom")
-  BP=(status_reg[0]>>2) & 7
-  CMP=(status_reg[1]>>6) & 1
+  BP=(status_reg1[0]>>2) & 7
+  CMP=(status_reg2[0]>>6) & 1
   SEC_size=(128*1024,2048)
   range_bytes = SEC_size[SEC]<<BP
   if BP:
@@ -508,26 +509,26 @@ def winbond_status():
         range="0x%06X - 0xFFFFFF" % (0x1000000-range_bytes)
   else: # BP=0
     range="None"
-  print(int2bin(status_reg[0]).decode())
+  print(int2bin(status_reg1[0]).decode())
   print("x....... SRP Status Reg Protect by WP pin: %s" % noyes_txt[SRP])
   print(".x...... SEC Sector/Block Protect        : %s" % SEC_txt[SEC])
   print("..x..... TB  Top/Bottom Protect          : %s" % TB_txt[TB])
   print("...xxx.. BP  Protected Range             : %s" % range)
-  print("Read 0x35: Status Register-2 = 0x%02X" % status_reg[1])
-  #CMP=(status_reg[1]>>6) & 1
-  LB=(status_reg[1]>>3) & 7
-  QE=(status_reg[1]>>1) & 1
-  SRL=status_reg[1] & 1
-  print("%s OTP warning value 1 can't reset to 0" % int2bin(status_reg[1]).decode())
+  print("Read 0x35: Status Register-2 = 0x%02X" % status_reg2[0])
+  #CMP=(status_reg2[0]>>6) & 1
+  LB=(status_reg2[0]>>3) & 7
+  QE=(status_reg2[0]>>1) & 1
+  SRL=status_reg2[0] & 1
+  print("%s OTP warning value 1 can't reset to 0" % int2bin(status_reg2[0]).decode())
   print(".x...... CMP Complement Protect          : %s" % noyes_txt[CMP])
   print("..xxx... LB  Security Register Lock Bits : %d" % LB)
   print("......x. QE  Quad Enable                 : %s" % noyes_txt[QE])
   print(".......x SRL STATUS REGISTER LOCK        : %s" % noyes_txt[SRL])
-  print("Read 0x15: Status Register-3 = 0x%02X" % status_reg[2])
-  print(int2bin(status_reg[2]).decode())
-  WPS=(status_reg[2]>>2) & 1
+  print("Read 0x15: Status Register-3 = 0x%02X" % status_reg3[0])
+  print(int2bin(status_reg3[0]).decode())
+  WPS=(status_reg3[0]>>2) & 1
   WPS_txt=("Defined by Register-1 and 2","Individual Sectors")
-  DRV=(status_reg[2]>>5) & 3
+  DRV=(status_reg3[0]>>5) & 3
   DRV_strength=bytearray([100,75,50,25]) # %
   print(".xx..... DRV Output Driver Strength      : %d%%" % DRV_strength[DRV])
   print(".....x.. WPS Write Protection Scheme     : %s" % WPS_txt[WPS])

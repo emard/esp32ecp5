@@ -367,15 +367,15 @@ def flash_sendrecv(send,recv):
   send_tms(0) # -> shift DR
   swspi.write(send)
   swspi.readinto(recv)
-  send_tms(1) # -> exit 1 DR # exit at byte incomplete
-  #send_int_msb1st(0,1,8) # complete dummy byte and exit
+  #send_tms(1) # -> exit 1 DR # exit at byte incomplete
+  send_int_msb1st(0,1,8) # complete dummy byte and exit
   send_tms0111() # -> select DR scan
 
 # write protection tool for IS25LP128
 # https://www.issi.com/WW/pdf/IS25LP128.pdf
 # prot=0: unprotect
 # prot=6: protect first 2MB
-def is25lp128(prot=6):
+def is25lp128_protect(prot=6):
   flash_open()
   # write function register
   # factory default is protecting the top (... - 0xFFFFFF)
@@ -392,82 +392,31 @@ def is25lp128(prot=6):
   flash_wait_status(1021)
   sdr(bytearray([rb[0x01],rb[prot<<2]])) # status reg = prot<<2
   flash_wait_status(2022)
-  flash_close(0)
+  flash_close()
 
 # write protection tool for W25Q128JV, see datasheet p.18, p.26
 # https://www.winbond.com/resource-files/w25q128jv%20revf%2003272018%20plus.pdf
 # prot= 0: unprotect  
 # prot=12: protecting first 2MB
-# BUG: not tested, may permanently lock the chip
-def w25q128jv(prot=12):
+def w25q128jv_protect(prot=12):
   flash_open()
-  # datasheet p.17 f.4c
-  #wr_en=0x06 # non-volatile (persistent after power off/on)
-  wr_en=0x50 # volatile (not parsistent after power off/on)
-  # datasheet p.16 f.4b, p.15 s.7.1.1
-  if 1:
-    sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
-    #flash_wait_status(1021)
-    sdr(bytearray([rb[0x31],rb[0x00]])) # status reg 2 = 0x00 CMP=0 SRL=0
-    #flash_wait_status(2022)
-  if 1:
-    sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
-    #flash_wait_status(1021)
-    sdr(bytearray([rb[0x11],rb[0x60]])) # status reg 3 = 0x00 DRV=25%, WPS=0
-    #flash_wait_status(2022)
-  # datasheet p.18 s.7.1.8, p.26
-  if 1:
-    sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
-    #flash_wait_status(1011)
-    sdr(bytearray([rb[0x01],rb[prot<<2]])) # status reg 1 = prot<<2
-    #flash_wait_status(2012)
-  # datasheet p.16 f.4b, p.15 s.7.1.1
-  if 1:
-    sdr(bytearray([rb[wr_en]])) # SPI WRITE ENABLE
-    #flash_wait_status(1021)
-    sdr(bytearray([rb[0x31],rb[0x01]])) # status reg 2 = 0x01 CMP=0 SRL=1
-    #flash_wait_status(2022)
-  # read status1
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
-  swspi.write(read_status)
-  swspi.readinto(status)
-  send_tms0111() # -> select DR scan
-  # read status2
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
-  swspi.write(read_status2)
-  swspi.readinto(status2)
-  send_tms0111() # -> select DR scan
-  # read status3
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
-  swspi.write(read_status3)
-  swspi.readinto(status3)
-  send_tms0111() # -> select DR scan
-  flash_close(0)
-  return bytearray([status[0],status2[0],status3[0]])
-
-def winbond():
-  flash_open()
-  flash_send(b"\x50") # temporary write status
+  flash_wait_status(1021)
+  flash_send(b"\x06") # permanent write
+  flash_wait_status(1021)
+  flash_send(bytearray([1,prot<<2])) # status reg1=0x30 protect lower 2MB
+  flash_wait_status(1021)
+  flash_send(b"\x06") # permanent write
+  flash_wait_status(1021)
+  flash_send(b"\x11\x60") # status reg3=0x60 WPS=0
+  flash_wait_status(1021)
+  #flash_send(b"\x50") # temporary write
   #flash_wait_status(1021)
-  flash_send(b"\x01\x30") # status1=0x30 protect lower 2MB
+  #flash_send(b"\x31\x01") # status reg2=0x01 lock status
   #flash_wait_status(1021)
-  flash_send(b"\x50") # temporary write status
-  #flash_wait_status(1021)
-  flash_send(b"\x11\x60") # status3=0x60 WPS=0
-  #flash_wait_status(1021)
-  flash_send(b"\x50") # temporary write status
-  #flash_wait_status(1021)
-  flash_send(b"\x31\x01") # status2=0x01 lock status
-  #flash_wait_status(1021)
-  status_regs=bytearray(3)
-  status_regs[0]=flash_sendrecv(b"\x05")
-  status_regs[1]=flash_sendrecv(b"\x35")
-  status_regs[2]=flash_sendrecv(b"\x15")
+  #status_reg1=bytearray(1)
+  #flash_sendrecv(b"\x05",status_reg1)
   flash_close()
-  return status_regs
+  #return status_reg1[0]
 
 def int2bin(a):
   bin=bytearray(8)
@@ -485,6 +434,7 @@ def w25q128jv_status():
   flash_sendrecv(b"\x35",status_reg2)
   flash_sendrecv(b"\x15",status_reg3)
   flash_close()
+  sleep_ms(100)
   noyes_txt=("No","Yes")
   print("Read 0x05: Status Register-1 = 0x%02X" % status_reg1[0])
   SRP=(status_reg1[0]>>7) & 1
@@ -532,3 +482,31 @@ def w25q128jv_status():
   DRV_strength=bytearray([100,75,50,25]) # %
   print(".xx..... DRV Output Driver Strength      : %d%%" % DRV_strength[DRV])
   print(".....x.. WPS Write Protection Scheme     : %s" % WPS_txt[WPS])
+
+def detect():
+  flash_open()
+  manuf_dev_id=bytearray(2)
+  flash_sendrecv(b"\x90\x00\x00\x00",manuf_dev_id)
+  jedec_id=bytearray(3)
+  flash_sendrecv(b"\x9F",jedec_id)
+  unique_id=bytearray(8)
+  flash_sendrecv(b"\x4B\x00\x00\x00\x00",unique_id)
+  flash_close()
+  sleep_ms(100)
+  print("Read 0x90: Manufacture/Device ID: %02X %02X" %
+    (manuf_dev_id[0],manuf_dev_id[1]))
+  print("Read 0x9F: JEDEC              ID: %02X %02X %02X" %
+    (jedec_id[0],jedec_id[1],jedec_id[2]))
+  print("Read 0x4B: Unique             ID: %02X %02X %02X %02X %02X %02X %02X %02X" %
+    (unique_id[0],unique_id[1],unique_id[2],unique_id[3],unique_id[4],unique_id[5],unique_id[6],unique_id[7]))
+  if jedec_id==b"\xEF\x40\x18":
+    print("Winbond W25Q128JV")
+    sleep_ms(100) # SRL=0 before
+    w25q128jv_status()
+    print("ecp5wp.w25q128jv_protect()")
+  if jedec_id==b"\xD5\x60\x18":
+    print("ISSI IS25LP128")
+  if jedec_id==b"\xD5\x60\x16":
+    print("ISSI IS25LP032")
+
+detect()

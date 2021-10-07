@@ -411,7 +411,8 @@ def is25lp128_status():
   flash_sendrecv(b"\x05",status_reg1)
   flash_sendrecv(b"\x48",status_reg2)
   flash_close()
-  sleep_ms(100)
+  if discard:
+    sleep_ms(1000)
   noyes_txt=("No","Yes")
   TBS=(status_reg2[0]>>1) & 1
   TBS_txt=("Top","Bottom")
@@ -468,7 +469,8 @@ def w25q128jv_status():
   flash_sendrecv(b"\x35",status_reg2)
   flash_sendrecv(b"\x15",status_reg3)
   flash_close()
-  sleep_ms(100)
+  if discard:
+    sleep_ms(1000)
   noyes_txt=("No","Yes")
   print("Read 0x05: Status Register-1 = 0x%02X" % status_reg1[0])
   SRP=(status_reg1[0]>>7) & 1
@@ -531,7 +533,8 @@ def detect():
   unique_id=bytearray(8)
   flash_sendrecv(b"\x4B\x00\x00\x00\x00",unique_id)
   flash_close()
-  sleep_ms(100)
+  if discard:
+    sleep_ms(1000)
   print("Read 0x90: Manufacture/Device ID: %02X %02X" %
     (manuf_dev_id[0],manuf_dev_id[1]))
   print("Read 0x9F: JEDEC              ID: %02X %02X %02X" %
@@ -543,19 +546,22 @@ def detect():
     print("with SYSCONFIG MASTER_SPI_PORT=ENABLE in .lpf, without USRMCLK in .v")
   if jedec_id==b"\xEF\x40\x18":
     print("Winbond W25Q128JV")
-    sleep_ms(100) # SRL=0 before
+    if discard:
+      sleep_ms(1000)
     w25q128jv_status()
     print("ecp5wp.w25q128jv_protect()")
     print("ecp5wp.w25q128jv_status()")
   if jedec_id==b"\x9D\x60\x18":
     print("ISSI IS25LP128")
-    sleep_ms(100) # SRL=0 before
+    if discard:
+      sleep_ms(1000)
     is25lp128_status()
     print("ecp5wp.is25lp128_protect()")
     print("ecp5wp.is25lp128_status()")
   if jedec_id==b"\x9D\x60\x16":
     print("ISSI IS25LP032")
-    sleep_ms(100) # SRL=0 before
+    if discard:
+      sleep_ms(1000)
     is25lp128_status()
     print("write protection not supported")
 

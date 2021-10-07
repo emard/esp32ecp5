@@ -544,6 +544,9 @@ def detect():
   if jedec_id==b"\x00\x00\x00":
     print("Load ESP32 passthru that doesn't access FLASH,")
     print("with SYSCONFIG MASTER_SPI_PORT=ENABLE in .lpf, without USRMCLK in .v")
+  if jedec_id==b"\xFF\xFF\xFF":
+    print("JTAG can't access SPI FLASH. Edit this source and try")
+    print("ecp5wp.discard=1")
   if jedec_id==b"\xEF\x40\x18":
     print("Winbond W25Q128JV")
     if discard:

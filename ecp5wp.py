@@ -34,17 +34,17 @@ gpio_led = const(5)
 #gpio_led = const(19)
 
 #@micropython.viper
-def init_reverse_bits():
-  #p8rb=ptr8(addressof(rb))
-  p8rb=memoryview(rb)
-  for i in range(256):
-    v=i
-    r=0
-    for j in range(8):
-      r<<=1
-      r|=v&1
-      v>>=1
-    p8rb[i]=r
+#def init_reverse_bits():
+#  #p8rb=ptr8(addressof(rb))
+#  p8rb=memoryview(rb)
+#  for i in range(256):
+#    v=i
+#    r=0
+#    for j in range(8):
+#      r<<=1
+#      r|=v&1
+#      v>>=1
+#    p8rb[i]=r
 
 spi_freq = const(20000000) # Hz JTAG clk frequency
 # -1 for JTAG over SOFT SPI slow, compatibility
@@ -59,8 +59,8 @@ spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
 #flash_req=bytearray(4)
 read_status=bytearray([5])
 status=bytearray(1)
-rb=bytearray(256) # reverse bits
-init_reverse_bits()
+#rb=bytearray(256) # reverse bits
+#init_reverse_bits()
 discard=const(0) # discard running bitstream
 
 def bitbang_jtag_on():
@@ -533,6 +533,9 @@ def detect():
     (jedec_id[0],jedec_id[1],jedec_id[2]))
   print("Read 0x4B: Unique             ID: %02X %02X %02X %02X %02X %02X %02X %02X" %
     (unique_id[0],unique_id[1],unique_id[2],unique_id[3],unique_id[4],unique_id[5],unique_id[6],unique_id[7]))
+  if jedec_id==b"\x00\x00\x00":
+    print("Load ESP32 passthru that doesn't access FLASH,")
+    print("with SYSCONFIG MASTER_SPI_PORT=ENABLE in .lpf, without USRMCLK in .v")
   if jedec_id==b"\xEF\x40\x18":
     print("Winbond W25Q128JV")
     sleep_ms(100) # SRL=0 before

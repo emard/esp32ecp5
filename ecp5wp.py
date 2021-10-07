@@ -61,6 +61,7 @@ read_status=bytearray([5])
 status=bytearray(1)
 rb=bytearray(256) # reverse bits
 init_reverse_bits()
+discard=const(0) # discard running bitstream
 
 def bitbang_jtag_on():
   global tck,tms,tdi,tdo,led
@@ -284,20 +285,21 @@ def common_open():
   runtest_idle(1,0)
   #sir(b"\xE0") # read IDCODE
   #sdr(pack("<I",0), expected=pack("<I",0), message="IDCODE")
-  sir(b"\x1C") # LSC_PRELOAD: program Bscan register
-  sdr(bytearray([0xFF for i in range(64)]))
-  sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
-  sdr_idle(b"\x00",2,10)
-  sir_idle(b"\x3C",2,1) # LSC_READ_STATUS
-  status = bytearray(4)
-  sdr_response(status)
-  check_response(unpack("<I",status)[0], mask=0x24040, expected=0, message="FAIL status")
-  sir(b"\x0E") # ISC_ERASE: Erase the SRAM
-  sdr_idle(b"\x01",2,10)
-  sir_idle(b"\x3C",2,1) # LSC_READ_STATUS
-  status = bytearray(4)
-  sdr_response(status)
-  check_response(unpack("<I",status)[0], mask=0xB000, expected=0, message="FAIL status")
+  if discard:
+    sir(b"\x1C") # LSC_PRELOAD: program Bscan register
+    sdr(bytearray([0xFF for i in range(64)]))
+    sir(b"\xC6") # ISC ENABLE: Enable SRAM programming mode
+    sdr_idle(b"\x00",2,10)
+    sir_idle(b"\x3C",2,1) # LSC_READ_STATUS
+    status = bytearray(4)
+    sdr_response(status)
+    check_response(unpack("<I",status)[0], mask=0x24040, expected=0, message="FAIL status")
+    sir(b"\x0E") # ISC_ERASE: Erase the SRAM
+    sdr_idle(b"\x01",2,10)
+    sir_idle(b"\x3C",2,1) # LSC_READ_STATUS
+    status = bytearray(4)
+    sdr_response(status)
+    check_response(unpack("<I",status)[0], mask=0xB000, expected=0, message="FAIL status")
 
 # call this before sending the flash image
 # FPGA will enter flashing mode
@@ -307,7 +309,8 @@ def flash_open():
   common_open()
   reset_tap()
   runtest_idle(1,0)
-  sir_idle(b"\xFF",32,0) # BYPASS
+  if discard:
+    sir_idle(b"\xFF",32,0) # BYPASS
   sir(b"\x3A") # LSC_PROG_SPI
   sdr_idle(b"\xFE\x68",32,0)
   # ---------- flashing begin -----------
@@ -345,10 +348,11 @@ def flash_close():
   # ---------- flashing end -----------
   sdr(b"\x20") # SPI WRITE DISABLE
   sir_idle(b"\xFF",100,1) # BYPASS
-  sir_idle(b"\x26",2,200) # ISC DISABLE
-  sir_idle(b"\xFF",2,1) # BYPASS
-  sir(b"\x79") # LSC_REFRESH reload the bitstream from flash
-  sdr_idle(b"\x00\x00\x00",2,100)
+  if discard:
+    sir_idle(b"\x26",2,200) # ISC DISABLE
+    sir_idle(b"\xFF",2,1) # BYPASS
+    sir(b"\x79") # LSC_REFRESH reload the bitstream from flash
+    sdr_idle(b"\x00\x00\x00",2,100)
   spi_jtag_off()
   reset_tap()
   led.off()

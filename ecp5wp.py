@@ -382,15 +382,15 @@ def is25lp128_protect(prot=6):
   # now set to protect the bottom (0x000000 - ...).
   # NOTE: once set to protect the bottom, can't be reset back to protect the top
   # see datasheet p.17 t.6.5, p.50 s.8.19
-  sdr(bytearray([rb[0x06]])) # SPI WRITE ENABLE
+  flash_send(b"\x06") # permanent write
   flash_wait_status(1011)
-  sdr(bytearray([rb[0x42],rb[0x02]])) # function reg = 0x02 TBS=1 OTP warning: once set, can't be reset!
+  flash_send(b"\x42\x02") # function reg = 0x02 TBS=1 OTP warning: once set, can't be reset!
   flash_wait_status(2012)
   # write status register value prot=6 to protect 2MB (0x000000 - 0x1FFFFF)
   # see datasheet p.14 t.6.3
-  sdr(bytearray([rb[0x06]])) # SPI WRITE ENABLE
+  flash_send(b"\x06") # permanent write
   flash_wait_status(1021)
-  sdr(bytearray([rb[0x01],rb[prot<<2]])) # status reg = prot<<2
+  flash_send(bytearray([1,prot<<2])) # status reg1=0x18 protect lower 2MB
   flash_wait_status(2022)
   flash_close()
 

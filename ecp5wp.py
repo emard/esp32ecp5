@@ -19,19 +19,19 @@ from uctypes import addressof
 #gpio_tcknc = const(21)
 #gpio_led = const(19)
 # ULX3S v3.0.x
-#gpio_tms = const(21)
-#gpio_tck = const(18)
-#gpio_tdi = const(23)
-#gpio_tdo = const(19)
-#gpio_tcknc = const(17) # free pin for SPI workaround
-#gpio_led = const(5)
-# ULX3S v3.1.x
-gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+gpio_tms = const(21)
 gpio_tck = const(18)
 gpio_tdi = const(23)
-gpio_tdo = const(34)
-gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
-gpio_led = const(19)
+gpio_tdo = const(19)
+gpio_tcknc = const(17) # free pin for SPI workaround
+gpio_led = const(5)
+# ULX3S v3.1.x
+#gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
+#gpio_tck = const(18)
+#gpio_tdi = const(23)
+#gpio_tdo = const(34)
+#gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
+#gpio_led = const(19)
 
 #@micropython.viper
 def init_reverse_bits():
@@ -296,10 +296,10 @@ def common_open():
     check_response(unpack("<I",status)[0], mask=0x24040, expected=0, message="FAIL status")
     sir(b"\x0E") # ISC_ERASE: Erase the SRAM
     sdr_idle(b"\x01",2,10)
-    sir_idle(b"\x3C",2,1) # LSC_READ_STATUS
-    status = bytearray(4)
-    sdr_response(status)
-    check_response(unpack("<I",status)[0], mask=0xB000, expected=0, message="FAIL status")
+  sir_idle(b"\x3C",2,1) # LSC_READ_STATUS
+  status = bytearray(4)
+  sdr_response(status)
+  check_response(unpack("<I",status)[0], mask=0xB000, expected=0, message="FAIL status")
 
 # call this before sending the flash image
 # FPGA will enter flashing mode
@@ -309,8 +309,7 @@ def flash_open():
   common_open()
   reset_tap()
   runtest_idle(1,0)
-  if discard:
-    sir_idle(b"\xFF",32,0) # BYPASS
+  sir_idle(b"\xFF",32,0) # BYPASS
   sir(b"\x3A") # LSC_PROG_SPI
   sdr_idle(b"\xFE\x68",32,0)
   # ---------- flashing begin -----------
@@ -375,6 +374,13 @@ def flash_sendrecv(send,recv):
   send_int_msb1st(0,1,8) # complete dummy byte and exit
   send_tms0111() # -> select DR scan
 
+def int2bin(a):
+  bin=bytearray(8)
+  for i in range(8):
+    bin[7-i]=48+(a&1)
+    a>>=1
+  return bin
+
 # write protection tool for IS25LP128
 # https://www.issi.com/WW/pdf/IS25LP128.pdf
 # prot=0: unprotect
@@ -397,6 +403,37 @@ def is25lp128_protect(prot=6):
   flash_send(bytearray([1,prot<<2])) # status reg1=0x18 protect lower 2MB
   flash_wait_status(2022)
   flash_close()
+
+def is25lp128_status():
+  flash_open()
+  status_reg1=bytearray(1)
+  status_reg2=bytearray(1)
+  flash_sendrecv(b"\x05",status_reg1)
+  flash_sendrecv(b"\x48",status_reg2)
+  flash_close()
+  sleep_ms(100)
+  noyes_txt=("No","Yes")
+  TBS=(status_reg2[0]>>1) & 1
+  TBS_txt=("Top","Bottom")
+  IRL=(status_reg2[0]>>4) & 15
+  BP=(status_reg1[0]>>2) & 15
+  QE=(status_reg1[0]>>6) & 1
+  range_bytes = 32768<<BP
+  if BP:
+    if TBS:
+      range="0x000000 - 0x%06X" % (range_bytes-1)
+    else: # TBS=0
+      range="0x%06X - 0xFFFFFF" % (0x1000000-range_bytes)
+  else: # BP=0
+    range="None"
+  print("Read 0x05: Status Register = 0x%02X" % status_reg1[0])
+  print(int2bin(status_reg1[0]).decode())
+  print(".x...... QE  Quad Enable        : %s" % noyes_txt[QE])
+  print("..xxxx.. BP  Protected Range    : %s" % range)
+  print("Read 0x48: Function Register = 0x%02X" % status_reg2[0])
+  print("%s OTP warning value 1 can't reset to 0" % int2bin(status_reg2[0]).decode())
+  print("xxxx.... IRL Information Lock   : %d" % IRL)
+  print("......x. TBS Top/Bottom Select  : %s" % TBS_txt[TBS])
 
 # write protection tool for W25Q128JV, see datasheet p.18, p.26
 # https://www.winbond.com/resource-files/w25q128jv%20revf%2003272018%20plus.pdf
@@ -421,13 +458,6 @@ def w25q128jv_protect(prot=12):
   #flash_sendrecv(b"\x05",status_reg1)
   flash_close()
   #return status_reg1[0]
-
-def int2bin(a):
-  bin=bytearray(8)
-  for i in range(8):
-    bin[7-i]=48+(a&1)
-    a>>=1
-  return bin
 
 def w25q128jv_status():
   flash_open()
@@ -508,9 +538,16 @@ def detect():
     sleep_ms(100) # SRL=0 before
     w25q128jv_status()
     print("ecp5wp.w25q128jv_protect()")
-  if jedec_id==b"\xD5\x60\x18":
+    print("ecp5wp.w25q128jv_status()")
+  if jedec_id==b"\x9D\x60\x18":
     print("ISSI IS25LP128")
-  if jedec_id==b"\xD5\x60\x16":
+    sleep_ms(100) # SRL=0 before
+    is25lp128_status()
+    print("ecp5wp.is25lp128_protect()")
+    print("ecp5wp.is25lp128_status()")
+  if jedec_id==b"\x9D\x60\x16":
     print("ISSI IS25LP032")
+    sleep_ms(100) # SRL=0 before
+    is25lp128_status()
 
 detect()

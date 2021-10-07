@@ -518,6 +518,11 @@ def w25q128jv_status():
   print(".....x.. WPS Write Protection Scheme     : %s" % WPS_txt[WPS])
 
 def detect():
+  id=idcode()
+  print("FPGA JTAG IDCODE 0x%08X" % id)
+  if id==0:
+    print("check pinout for v3.0.x/v3.1.x")
+    return
   flash_open()
   manuf_dev_id=bytearray(2)
   flash_sendrecv(b"\x90\x00\x00\x00",manuf_dev_id)
@@ -552,5 +557,6 @@ def detect():
     print("ISSI IS25LP032")
     sleep_ms(100) # SRL=0 before
     is25lp128_status()
+    print("write protection not supported")
 
 detect()

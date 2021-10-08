@@ -61,7 +61,7 @@ read_status=bytearray([5])
 status=bytearray(1)
 #rb=bytearray(256) # reverse bits
 #init_reverse_bits()
-discard=const(1) # discard running bitstream
+discard=const(0) # discard running bitstream
 
 def bitbang_jtag_on():
   global tck,tms,tdi,tdo,led
@@ -541,13 +541,11 @@ def detect():
     (jedec_id[0],jedec_id[1],jedec_id[2]))
   print("Read 0x4B: Unique             ID: %02X %02X %02X %02X %02X %02X %02X %02X" %
     (unique_id[0],unique_id[1],unique_id[2],unique_id[3],unique_id[4],unique_id[5],unique_id[6],unique_id[7]))
-  if jedec_id==b"\x00\x00\x00" or jedec_id==b"\xFF\xFF\xFF":
-    print("JTAG can't access SPI FLASH.")
-    print("Use ESP32 passthru that doesn't access FLASH,")
+  if manuf_dev_id==b"\x00\x00" or manuf_dev_id==b"\xFF\xFF":
+    print("JTAG can't access SPI FLASH. Try")
+    print("ESP32 passthru that does not access FLASH,")
     print("with SYSCONFIG MASTER_SPI_PORT=ENABLE in .lpf, without USRMCLK in .v")
-    print("fujprog passthru.bit")
-    print("Or edit this source and try")
-    print("discard=1")
+    print("fujprog passthru.bit or edit this source: discard=1")
   if jedec_id==b"\xEF\x40\x18":
     print("Winbond W25Q128JV")
     if discard:

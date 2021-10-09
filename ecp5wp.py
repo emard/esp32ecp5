@@ -543,7 +543,7 @@ def detect():
     (unique_id[0],unique_id[1],unique_id[2],unique_id[3],unique_id[4],unique_id[5],unique_id[6],unique_id[7]))
   if manuf_dev_id==b"\x00\x00" or manuf_dev_id==b"\xFF\xFF":
     print("JTAG can't access SPI FLASH. Try")
-    print("ESP32 passthru that does not access FLASH,")
+    print("ESP32 passthru that drives WPn=1 HOLDn=1,")
     print("with SYSCONFIG MASTER_SPI_PORT=ENABLE in .lpf, without USRMCLK in .v")
     print("fujprog passthru.bit or edit this source: discard=1")
   if jedec_id==b"\xEF\x40\x18":

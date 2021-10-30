@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# will parse first SDR which should
+# parse first SDR which should
 # be very long, write it in reverse byte
 # and byte-reverse-bits order
 

@@ -37,6 +37,7 @@ spi_freq = const(20000000) # Hz JTAG clk frequency
 # -1 for JTAG over SOFT SPI slow, compatibility
 #  1 or 2 for JTAG over HARD SPI fast
 #  2 is preferred as it has default pinout wired
+spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
 flash_read_size = const(2048)
 flash_write_size = const(256)
 flash_erase_size = const(65536) # 4096 default, 65536 for FFM 32MB spansion flash

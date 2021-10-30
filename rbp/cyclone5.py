@@ -372,6 +372,12 @@ def prog_close():
 # TAP should be in "select DR scan" state
 @micropython.viper
 def flash_open():
+  # this is workaround bitstream,
+  # without it jtagspi won't load
+  file="led%08x.bit.gz" % idcode()
+  prog_stream(open_file(file,True))
+  if not prog_close():
+    print("%s failed" % file)
   file="jtagspi%08x.bit.gz" % idcode()
   prog_stream(open_file(file,True))
   if not prog_close():

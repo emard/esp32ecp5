@@ -132,6 +132,11 @@ def send_tms0110():
   send_tms(1) # -> update DR
   send_tms(0) # -> idle
 
+def send_tms100():
+  send_tms(1) # -> select DR scan
+  send_tms(0) # -> capture DR
+  send_tms(0) # -> shift DR
+
 @micropython.viper
 def send_read_buf_lsb1st(buf, last:int, w:int):
   p = ptr8(addressof(buf))
@@ -238,15 +243,13 @@ def runtest_idle(count:int, duration_ms:int):
     send_tms(0) # -> idle
 
 # send SIR command (bytes)
-# TAP should be in "select DR scan" state
-# TAP returns to "select DR scan" state
+# TAP should be in "idle" state
+# TAP returns to "idle" state
 # LSB first
 @micropython.viper
 def sir(sir:int)->int:
   send_tms(1) # -> select DR scan
-  send_tms(1) # -> select IR scan
-  send_tms(0) # -> capture IR
-  send_tms(0) # -> shift IR
+  send_tms100() # -> shift IR
   r=int(send_read_int_lsb1st(sir,1,10)) # -> exit 1 IR
   send_tms0110() # -> idle
   return r
@@ -254,9 +257,7 @@ def sir(sir:int)->int:
 # LSB first
 @micropython.viper
 def sdr(buf):
-  send_tms(1) # -> select DR scan
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms100() # -> shift DR
   send_read_buf_lsb1st(buf,1,0)
   send_tms0110() # -> idle
 
@@ -264,9 +265,7 @@ def sdr(buf):
 # LSB first
 @micropython.viper
 def sdr_response(buf):
-  send_tms(1) # -> select DR scan
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms100() # -> shift DR
   send_read_buf_lsb1st(buf,1,1)
   send_tms0110() # -> idle
 
@@ -274,9 +273,7 @@ def sdr_response(buf):
 # a can be 0-size
 def user1_send(a,b):
   sir(2) # USER1
-  send_tms(1) # -> select DR scan
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms100() # -> shift DR
   swspi.write(a)
   swspi.write(b[:-1])
   send_data_int_msb1st(b[-1],1,8) # last byte -> exit 1 DR
@@ -288,9 +285,7 @@ def user1_send(a,b):
 @micropython.viper
 def user1_send_recv(a,b):
   sir(2) # USER1
-  send_tms(1) # -> select DR scan
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms100() # -> shift DR
   swspi.write(a)
   swspi.readinto(b)
   send_tms(1) # -> exit 1 DR, dummy bit
@@ -331,9 +326,7 @@ def prog_open():
   # ---------- bitstream begin -----------
   # manually walk the TAP
   # we will be sending one long DR command
-  send_tms(1) # -> select DR scan
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR # NOTE sent with 1 TCK glitch
+  send_tms100() # -> shift DR
   # switch from bitbanging to SPI mode
   hwspi.init(sck=Pin(gpio_tck)) # 1 TCK-glitch TDI=0
   # we are lucky that format of the bitstream tolerates
@@ -373,6 +366,16 @@ def prog_close():
   led.off()
   bitbang_jtag_off()
   return ok
+
+# call this before sending the flash image
+# FPGA will enter flashing mode
+# TAP should be in "select DR scan" state
+@micropython.viper
+def flash_open():
+  file="jtagspi%08x.bit.gz" % idcode()
+  prog_stream(open_file(file,True))
+  if not prog_close():
+    print("%s failed" % file)
 
 def stopwatch_start():
   global stopwatch_ms

@@ -41,8 +41,20 @@ spi_freq = const(20000000) # Hz JTAG clk frequency
 #  1 or 2 for JTAG over HARD SPI fast
 #  2 is preferred as it has default pinout wired
 spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
-#rb=bytearray(256) # reverse bits
-#init_reverse_bits()
+rb=bytearray(256) # reverse bits
+#@micropython.viper
+def init_reverse_bits():
+  #p8rb=ptr8(addressof(rb))
+  p8rb=memoryview(rb)
+  for i in range(256):
+    v=i
+    r=0
+    for j in range(8):
+      r<<=1
+      r|=v&1
+      v>>=1
+    p8rb[i]=r
+init_reverse_bits()
 #flash_read_size = const(2048)
 #flash_write_size = const(256)
 #flash_erase_size = const(4096)
@@ -104,38 +116,35 @@ def spi_jtag_off():
 #    print("%02X" % block[len(block)-n-1], end="")
 #  print(tail, end="")
 
-#@micropython.viper
-#def init_reverse_bits():
-#  #p8rb=ptr8(addressof(rb))
-#  p8rb=memoryview(rb)
-#  for i in range(256):
-#    v=i
-#    r=0
-#    for j in range(8):
-#      r<<=1
-#      r|=v&1
-#      v>>=1
-#    p8rb[i]=r
-
 @micropython.viper
-def send_tms(val:int):
+def send_tms(val:int,n:int):
   if val:
     tms.on()
   else:
     tms.off()
-  tck.off()
-  tck.on()
+  for i in range(n):
+    tck.off()
+    tck.on()
+
+# TAP should be in IDLE, DRSHIFT, IRSHIFT, DRPAUSE, IRPAUSE state
+# TAP stays in the same state
+@micropython.viper
+def runtest_idle(count:int, duration_ms:int):
+  leave=int(ticks_ms()) + duration_ms
+  send_tms(0,count) # -> idle
+  while int(ticks_ms())-leave < 0:
+    send_tms(0,1) # -> idle
 
 def send_tms0110():
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(0) # -> idle
+  send_tms(0,1) # -> pause DR
+  send_tms(1,1) # -> exit 2 DR
+  send_tms(1,1) # -> update DR
+  send_tms(0,1) # -> idle
 
 def send_tms100():
-  send_tms(1) # -> select DR scan
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(1,1) # -> select DR scan
+  send_tms(0,1) # -> capture DR
+  send_tms(0,1) # -> shift DR
 
 @micropython.viper
 def send_read_buf_lsb1st(buf, last:int, w:int):
@@ -229,28 +238,26 @@ def send_data_int_msb1st(val:int, last:int, bits:int):
 # TAP to "reset" state
 @micropython.viper
 def reset_tap():
-  for n in range(6):
-    send_tms(1) # -> Test Logic Reset
+  send_tms(1,6) # -> Test Logic Reset
 
+# send SIR command (bytes)
 # TAP should be in "idle" state
-# TAP returns to "idle" state
+# TAP returns to "exit-IR" state
+# LSB first
 @micropython.viper
-def runtest_idle(count:int, duration_ms:int):
-  leave=int(ticks_ms()) + duration_ms
-  for n in range(count):
-    send_tms(0) # -> idle
-  while int(ticks_ms())-leave < 0:
-    send_tms(0) # -> idle
+def sir_exit(sir:int)->int:
+  send_tms(1,1) # -> select DR scan
+  send_tms100() # -> shift IR
+  r=int(send_read_int_lsb1st(sir,1,10)) # -> exit 1 IR
+  return r
 
 # send SIR command (bytes)
 # TAP should be in "idle" state
 # TAP returns to "idle" state
 # LSB first
 @micropython.viper
-def sir(sir:int)->int:
-  send_tms(1) # -> select DR scan
-  send_tms100() # -> shift IR
-  r=int(send_read_int_lsb1st(sir,1,10)) # -> exit 1 IR
+def sir(ir:int)->int:
+  r=int(sir_exit(ir))
   send_tms0110() # -> idle
   return r
 
@@ -269,27 +276,18 @@ def sdr_response(buf):
   send_read_buf_lsb1st(buf,1,1)
   send_tms0110() # -> idle
 
-# USER1 send a+b MSB first
-# a can be 0-size
-def user1_send(a,b):
-  sir(2) # USER1
-  send_tms100() # -> shift DR
-  swspi.write(a)
-  swspi.write(b[:-1])
-  send_data_int_msb1st(b[-1],1,8) # last byte -> exit 1 DR
-  send_tms0110() # -> idle
-
-# USER1 send a, recv b
-# a can be 0-size
-# after b, it reads one dummy bit
+# tap in idle and returns to idle
+# ir=12 USER0 VDR
+# ir=14 USER1 VIR
 @micropython.viper
-def user1_send_recv(a,b):
-  sir(2) # USER1
+def sir_sdr_int(ir:int,dr:int,bits:int)->int:
+  sir_exit(ir) # -> exit-IR
+  send_tms(0,12) # -> IRPAUSE
+  send_tms(1,2) # -> update-IR
   send_tms100() # -> shift DR
-  swspi.write(a)
-  swspi.readinto(b)
-  send_tms(1) # -> exit 1 DR, dummy bit
+  r=int(send_read_int_lsb1st(dr,1,bits))
   send_tms0110() # -> idle
+  return r
 
 def check_response(response, expected, mask=0xFFFFFFFF, message=""):
   if (response & mask) != expected:
@@ -349,7 +347,7 @@ def prog_stream_done():
 # returns status True-OK False-Fail
 def prog_close():
   bitbang_jtag_on()
-  send_tms(1) # -> exit 1 DR
+  send_tms(1,1) # -> exit 1 DR
   send_tms0110() # -> idle
   runtest_idle(8,2)
   # ---------- bitstream end -----------
@@ -382,6 +380,31 @@ def flash_open():
   prog_stream(open_file(file,True))
   if not prog_close():
     print("%s failed" % file)
+
+# this doesn't work yet
+# flash access could be something like this
+def flash_id():
+  #flash_open()
+  common_open()
+  bitbang_jtag_on()
+  send_tms(1,1) # -> exit 1 DR
+  send_tms0110() # -> idle
+  runtest_idle(8,2)
+
+  sir_sdr_int(14, 0x1111, 13)
+  sir_sdr_int(12,      0,  1)
+  sir_sdr_int(14, 0x1FFF, 13)
+  sir_sdr_int(14, 0x1A00, 13)
+  sir_sdr_int(12,      1,  8)
+  sir_sdr_int(14, 0x1002, 13)
+  sir_sdr_int(12, rb[0xAB], 40)
+  sir_sdr_int(14, 0x1020, 13)
+  resp=sir_sdr_int(12, rb[0xAB], 41)
+
+  print("%08X" % (resp & 0xFFFFFFFF))
+  reset_tap()
+  led.off()
+  bitbang_jtag_off()
 
 def stopwatch_start():
   global stopwatch_ms

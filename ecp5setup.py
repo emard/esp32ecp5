@@ -1,20 +1,23 @@
 import os
 
-def printfile(x):
-  f=open(x,"r")
-  user_pass=f.read()
-  print(user_pass)
-  f.close()
+def printfile(name):
+  try:
+    f=open(name,"r")
+    user_pass=f.read()
+    print(user_pass)
+    f.close()
+  except:
+    print("file '%s' not found." % name)
 
 printfile("wifiman.conf")
-yn=input("delete all existing WiFi users:passwords (y/n)? ")
+yn=input("create new and delete all WiFi users:passwords (n/y)? ")
 if yn.startswith("y"):
   f=open("wifiman.conf","w")
   f.close()
   print("all WiFi users:passwords deleted")
 yn="y"
 while yn.startswith("y"):
-  yn=input("add WiFi user:password (y/n)? ")
+  yn=input("add WiFi user:password (n/y)? ")
   if yn.startswith("y"):
     user_pass=input("enter WiFi user:password> ")
     f=open("wifiman.conf","a")
@@ -41,9 +44,10 @@ def main():
   )
   f.close()
 
-yn=input("overwrite 'main.py' to run FTP server at boot (y/n)? ")
+yn=input("overwrite 'main.py' to run FTP server at boot (n/y)? ")
 if yn.startswith("y"):
   main()
+  print("main.py overwritten")
 
 def pins_v20():
   f=open("jtagpin.py","w")
@@ -84,8 +88,8 @@ def pins_fjc():
   )
   f.close()
 
-
-yn=input("change JTAG pinout (y/n)? ")
+printfile("jtagpin.py")
+yn=input("change JTAG pinout (n/y)? ")
 if yn.startswith("y"):
   print("0: ULX3S v2.x.x or v3.0.x")
   print("1: ULX3S v3.1.x")

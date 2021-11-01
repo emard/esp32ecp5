@@ -1,6 +1,6 @@
 # MicroPython ESP32 JTAG programmer for FPGA
 
-A MicroPython library for ESP32 as full featured JTAG programmer with FTP server.
+A MicroPython library that makes ESP32 a full featured JTAG programmer with FTP server.
 Intended use is ULX3S board with ECP5 FPGA. Minimalistic code works on some hardware.
 Not universal tool for special cases.
 

@@ -4,36 +4,35 @@
 # AUTHOR=EMARD
 # LICENSE=BSD
 
-# FIXME spansion flash 4K erase block write unreliable
-
 from time import ticks_ms, sleep_ms
 from machine import SPI, Pin
 from micropython import const
 from struct import unpack
 from uctypes import addressof
+import jtagpin
 #from gc import collect
 
 # FJC-ESP32-V0r2 pluggable
-#gpio_tms = const(4)
-#gpio_tck = const(16)
-#gpio_tdi = const(15)
-#gpio_tdo = const(2)
-#gpio_tcknc = const(21)
-#gpio_led = const(19)
+#jtagpin.tms = const(4)
+#jtagpin.tck = const(16)
+#jtagpin.tdi = const(15)
+#jtagpin.tdo = const(2)
+#jtagpin.tcknc = const(21)
+#jtagpin.led = const(19)
 # ULX3S v3.0.x
-gpio_tms = const(21)
-gpio_tck = const(18)
-gpio_tdi = const(23)
-gpio_tdo = const(19)
-gpio_tcknc = const(17) # free pin for SPI workaround
-gpio_led = const(5)
+#jtagpin.tms = const(21)
+#jtagpin.tck = const(18)
+#jtagpin.tdi = const(23)
+#jtagpin.tdo = const(19)
+#jtagpin.tcknc = const(17) # free pin for SPI workaround
+#jtagpin.led = const(5)
 # ULX3S v3.1.x
-#gpio_tms = const(5)   # BLUE LED - 549ohm - 3.3V
-#gpio_tck = const(18)
-#gpio_tdi = const(23)
-#gpio_tdo = const(34)
-#gpio_tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
-#gpio_led = const(19)
+#jtagpin.tms = const(5)   # BLUE LED - 549ohm - 3.3V
+#jtagpin.tck = const(18)
+#jtagpin.tdi = const(23)
+#jtagpin.tdo = const(34)
+#jtagpin.tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
+#jtagpin.led = const(19)
 
 spi_freq = const(20000000) # Hz JTAG clk frequency
 # -1 for JTAG over SOFT SPI slow, compatibility
@@ -53,19 +52,19 @@ status=bytearray(1)
 
 def bitbang_jtag_on():
   global tck,tms,tdi,tdo,led
-  led=Pin(gpio_led,Pin.OUT)
-  tms=Pin(gpio_tms,Pin.OUT)
-  tck=Pin(gpio_tck,Pin.OUT)
-  tdi=Pin(gpio_tdi,Pin.OUT)
-  tdo=Pin(gpio_tdo,Pin.IN)
+  led=Pin(jtagpin.led,Pin.OUT)
+  tms=Pin(jtagpin.tms,Pin.OUT)
+  tck=Pin(jtagpin.tck,Pin.OUT)
+  tdi=Pin(jtagpin.tdi,Pin.OUT)
+  tdo=Pin(jtagpin.tdo,Pin.IN)
 
 def bitbang_jtag_off():
   global tck,tms,tdi,tdo,led
-  led=Pin(gpio_led,Pin.IN)
-  tms=Pin(gpio_tms,Pin.IN)
-  tck=Pin(gpio_tck,Pin.IN)
-  tdi=Pin(gpio_tdi,Pin.IN)
-  tdo=Pin(gpio_tdo,Pin.IN)
+  led=Pin(jtagpin.led,Pin.IN)
+  tms=Pin(jtagpin.tms,Pin.IN)
+  tck=Pin(jtagpin.tck,Pin.IN)
+  tdi=Pin(jtagpin.tdi,Pin.IN)
+  tdo=Pin(jtagpin.tdo,Pin.IN)
   a = led.value()
   a = tms.value()
   a = tck.value()
@@ -81,8 +80,8 @@ def bitbang_jtag_off():
 # software SPI on the same pins
 def spi_jtag_on():
   global hwspi,swspi
-  hwspi=SPI(spi_channel, baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(gpio_tck), mosi=Pin(gpio_tdi), miso=Pin(gpio_tdo))
-  swspi=SPI(-1, baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(gpio_tck), mosi=Pin(gpio_tdi), miso=Pin(gpio_tdo))
+  hwspi=SPI(spi_channel, baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(jtagpin.tck), mosi=Pin(jtagpin.tdi), miso=Pin(jtagpin.tdo))
+  swspi=SPI(-1, baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(jtagpin.tck), mosi=Pin(jtagpin.tdi), miso=Pin(jtagpin.tdo))
 
 def spi_jtag_off():
   global hwspi,swspi
@@ -278,7 +277,7 @@ def idcode():
 # common JTAG open for both program and flash
 def common_open():
   spi_jtag_on()
-  hwspi.init(sck=Pin(gpio_tcknc)) # avoid TCK-glitch
+  hwspi.init(sck=Pin(jtagpin.tcknc)) # avoid TCK-glitch
   bitbang_jtag_on()
   led.on()
   reset_tap()
@@ -314,7 +313,7 @@ def prog_open():
   send_tms(0) # -> capture DR
   send_tms(0) # -> shift DR
   # switch from bitbanging to SPI mode
-  hwspi.init(sck=Pin(gpio_tck)) # 1 TCK-glitch? TDI=0
+  hwspi.init(sck=Pin(jtagpin.tck)) # 1 TCK-glitch? TDI=0
   # we are lucky that format of the bitstream tolerates
   # any leading and trailing junk bits. If it weren't so,
   # HW SPI JTAG acceleration wouldn't work.
@@ -327,7 +326,7 @@ def prog_open():
 
 def prog_stream_done():
   # switch from hardware SPI to bitbanging done after prog_stream()
-  hwspi.init(sck=Pin(gpio_tcknc)) # avoid TCK-glitch
+  hwspi.init(sck=Pin(jtagpin.tcknc)) # avoid TCK-glitch
   spi_jtag_off()
 
 # call this after uploading all of the bitstream blocks,

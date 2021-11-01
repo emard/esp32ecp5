@@ -4,6 +4,26 @@ This is micropython running on ESP32 to allow
 JTAG programming and flashing of Lattice ECP5 FPGA JTAG.
 A simple way in about 700 lines of code.
 
+# Quick Start
+
+New ULX3S boards v3.1.x may have already installed micropython and esp32ecp5
+with setup that helps setting WiFi password and board pinout.
+Connect USB to US1 port. With terminal emulator open port
+"/dev/ttyUSB0" (linux) or "COM1:" (windows) at standard speed 115200,8n1
+Reboot ESP32, type this and follow interactive setup procedure:
+
+    import ecp5setup
+
+Reboot ESP32. If connected to internet,
+esp32ecp5 can be installed or upgraded online with
+[upip.install("esp32ecp5")](https://pypi.org/project/esp32ecp5):
+
+    import upip
+    upip.install("esp32ecp5")
+    Installing to: /lib/
+    Warning: micropython.org SSL certificate is not validated
+    Installing esp32ecp5 1.0.6 from https://files.pythonhosted.org/packages/a1/a5/b3689848cabb12c785bb402093180b2a20e180e158692fc19c383b30fac8/esp32ecp5-1.0.6.tar.gz
+
 # Install ESP32 micropython
 
 Skip this step if you have ESP32 on some development board with USB-serial module.
@@ -125,18 +145,6 @@ From webrepl GUI upload "ecp5.py", (optionally also "uftpd.py", "sdraw.py",
 profiles read below) and some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with gzip -9) to
 the root of ESP32 python FLASH filesystem.
-
-# Pull files from network
-
-We have support for 
-[upip.install("esp32ecp5")](https://pypi.org/project/esp32ecp5)
-Connect ESP32 to WiFi internet as described above. Install or upgrade from ESP32 prompt:
-
-    import upip
-    upip.install("esp32ecp5")
-    Installing to: /lib/
-    Warning: micropython.org SSL certificate is not validated
-    Installing esp32ecp5 1.0.1 from https://files.pythonhosted.org/packages/3b/51/04cc8cce4fb2d5c9b29ca714433b909a58db8ab4ab0188dd25d2df1a4f7d/esp32ecp5-1.0.1.tar.gz
 
 # Upload files from linux command line
 

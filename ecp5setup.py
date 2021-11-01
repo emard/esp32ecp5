@@ -10,7 +10,7 @@ def printfile(name):
     print("file '%s' not found." % name)
 
 printfile("wifiman.conf")
-yn=input("create new and delete all WiFi users:passwords (n/y)? ")
+yn=input("delete old and create new WiFi users:passwords (n/y)? ")
 if yn.startswith("y"):
   f=open("wifiman.conf","w")
   f.close()
@@ -20,10 +20,11 @@ while yn.startswith("y"):
   yn=input("add WiFi user:password (n/y)? ")
   if yn.startswith("y"):
     user_pass=input("enter WiFi user:password> ")
-    f=open("wifiman.conf","a")
-    f.write(user_pass)
-    f.write("\n")
-    f.close()
+    if user_pass.find(":")>0:
+      f=open("wifiman.conf","a")
+      f.write(user_pass)
+      f.write("\n")
+      f.close()
   printfile("wifiman.conf")
 
 def main():
@@ -52,7 +53,7 @@ if yn.startswith("y"):
 def pins_v20():
   f=open("jtagpin.py","w")
   f.write(
-"# ULX3S v2.x.x or v3.0.x\n"
+"# ULX3S v3.0.x or v2.x.x\n"
 "tms=const(21)\n"
 "tck=const(18)\n"
 "tdi=const(23)\n"
@@ -91,7 +92,7 @@ def pins_fjc():
 printfile("jtagpin.py")
 yn=input("change JTAG pinout (n/y)? ")
 if yn.startswith("y"):
-  print("0: ULX3S v2.x.x or v3.0.x")
+  print("0: ULX3S v3.0.x or v2.x.x")
   print("1: ULX3S v3.1.x")
   print("2: FJC-ESP32-V0r2")
   pinout=input("select pinout (0-2)> ")

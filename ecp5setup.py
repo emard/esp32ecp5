@@ -66,12 +66,12 @@ def pins_v31():
   f=open("jtagpin.py","w")
   f.write(
 "# ULX3S v3.1.x\n"
-"tms=const(21)\n"
+"tms=const(5)\n"
 "tck=const(18)\n"
 "tdi=const(23)\n"
-"tdo=const(19)\n"
-"tcknc=const(17)\n"
-"led=const(5)\n"
+"tdo=const(34)\n"
+"tcknc=const(21)\n"
+"led=const(19)\n"
   )
   f.close()
 
@@ -97,11 +97,8 @@ if yn.startswith("y"):
   pinout=input("select pinout (0-2)> ")
   if pinout.startswith("0"):
     pins_v20()
-    print("selected pinout: ULX3S v2.x.x or v3.0.x")
   if pinout.startswith("1"):
     pins_v31()
-    print("selected pinout: ULX3S v3.1.x")
   if pinout.startswith("2"):
     pins_fjc()
-    print("selected pinout: FJC-ESP32-V0r2")
   printfile("jtagpin.py")

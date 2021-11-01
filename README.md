@@ -140,8 +140,9 @@ enter IP address of ESP32, enter password. Python prompt ">>>" should appear.
 
 # Upload files from web browser
 
-From webrepl GUI upload "ecp5.py", (optionally also "uftpd.py", "sdraw.py",
-"wifiman.py" and edited "wifiman.conf" if you want FTP server and roaming
+From webrepl GUI upload "ecp5.py" and "jtagpin.py" (optionally also "uftpd.py", "sdraw.py",
+"wifiman.py", "ecp5wp.py", "ecp5setup.py" and edited "wifiman.conf" or
+generate it with "import ecp5setup" if you want FTP server and roaming
 profiles read below) and some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with gzip -9) to
 the root of ESP32 python FLASH filesystem.

@@ -12,28 +12,6 @@ from uctypes import addressof
 import jtagpin
 #from gc import collect
 
-# FJC-ESP32-V0r2 pluggable
-#jtagpin.tms = const(4)
-#jtagpin.tck = const(16)
-#jtagpin.tdi = const(15)
-#jtagpin.tdo = const(2)
-#jtagpin.tcknc = const(21)
-#jtagpin.led = const(19)
-# ULX3S v3.0.x
-#jtagpin.tms = const(21)
-#jtagpin.tck = const(18)
-#jtagpin.tdi = const(23)
-#jtagpin.tdo = const(19)
-#jtagpin.tcknc = const(17) # free pin for SPI workaround
-#jtagpin.led = const(5)
-# ULX3S v3.1.x
-#jtagpin.tms = const(5)   # BLUE LED - 549ohm - 3.3V
-#jtagpin.tck = const(18)
-#jtagpin.tdi = const(23)
-#jtagpin.tdo = const(34)
-#jtagpin.tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
-#jtagpin.led = const(19)
-
 spi_freq = const(20000000) # Hz JTAG clk frequency
 # -1 for JTAG over SOFT SPI slow, compatibility
 #  1 or 2 for JTAG over HARD SPI fast

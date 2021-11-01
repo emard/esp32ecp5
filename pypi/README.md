@@ -46,7 +46,7 @@ Distribution of release:
 ```
 python setup.py sdist
 pip install twine
-twine upload pypi/*
+twine upload dist/*
 ```
 
 ## Links

@@ -12,7 +12,7 @@ import sdist_upip
 
 setup(
     name='esp32ecp5',
-    py_modules=['ecp5','ecp5wp','sdraw','uftpd','wifiman'],
+    py_modules=['ecp5setup','ecp5','ecp5wp','sdraw','uftpd','wifiman'],
     version='1.0.2',
     description='MicroPython ESP32 JTAG programmer for ECP5 FPGA',
     long_description='Full featured ECP5 FPGA programmer with native support for ULX3S boards',

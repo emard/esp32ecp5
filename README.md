@@ -126,6 +126,17 @@ profiles read below) and some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with gzip -9) to
 the root of ESP32 python FLASH filesystem.
 
+# Pull files from network
+
+We have support for (upip.install("esp32ecp5"))[https://pypi.org/project/esp32ecp5]
+Connect ESP32 to WiFi internet router, as described above. Install from ESP32 prompt:
+
+    import upip
+    upip.install("esp32ecp5")
+    Installing to: /lib/
+    Warning: micropython.org SSL certificate is not validated
+    Installing esp32ecp5 1.0.1 from https://files.pythonhosted.org/packages/3b/51/04cc8cce4fb2d5c9b29ca714433b909a58db8ab4ab0188dd25d2df1a4f7d/esp32ecp5-1.0.1.tar.gz
+
 # Upload files from linux command line
 
 Get Adafruit "ampy"

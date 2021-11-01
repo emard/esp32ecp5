@@ -128,8 +128,9 @@ the root of ESP32 python FLASH filesystem.
 
 # Pull files from network
 
-We have support for (upip.install("esp32ecp5"))[https://pypi.org/project/esp32ecp5]
-Connect ESP32 to WiFi internet router, as described above. Install from ESP32 prompt:
+We have support for 
+[upip.install("esp32ecp5")](https://pypi.org/project/esp32ecp5)
+Connect ESP32 to WiFi internet as described above. Install or upgrade from ESP32 prompt:
 
     import upip
     upip.install("esp32ecp5")

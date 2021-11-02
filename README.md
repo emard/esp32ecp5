@@ -320,27 +320,28 @@ it also accepts "site" command to read file from ESP32 local filesystem
     ftp> site /sd/blink.bit
     ... If the path starts with "/sd/" then SD card will be unmounted
     ... before starting bitstream
-    ftp> site passthru
-    ... will program file "passthru%08X.bit.gz" % idcode
+    ftp> site passthru()
+    ... program file "passthru%08X.bit.gz" % idcode
     ... ecp5.passthru()
 
 SD card with FAT filesystem can be mounted or unmounted to "/sd" directory:
 
-    ftp> site mount
+    ftp> site mount()
     ftp> ls sd
-    ftp> site umount
+    ftp> site umount()
     ftp> ls sd
 
-exec() any micropython command. For this to work, ftp should be in root
-"/" directory because path is usually prepended to "site" argument.
+exec() any micropython command.
 Quotes ("") may be required sometimes and actual syntax may vary
 between ftp clients.
 
-    ftp> cd /
-    ftp> site "import struct"
-    ... will exec("import struct")
-    250 OK import struct
-    lftp> site import struct
+    ftp> site import ecp5; ecp5.passthru()
+    lftp> site "import ecp5; ecp5.passthru()"
+    250-                                                                
+    ecp5.prog("passthru41113043.bit.gz")
+    Warning: SPI(-1, ...) is deprecated, use SoftSPI(...) instead
+    282624 bytes uploaded in 613 ms (461 kB/s)
+    250 OK
 
 It is possible to directly put a binary file
 (not gzipped) from "ftp>" prompt into FPGA, FLASH or

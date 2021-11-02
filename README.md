@@ -332,7 +332,7 @@ SD card with FAT filesystem can be mounted or unmounted to "/sd" directory:
     ftp> ls sd
 
 exec() any micropython command.
-Quotes ("") may be required sometimes and actual syntax may vary
+Quotes ("") and backslash escaping may be required. Actual syntax may vary
 between ftp clients.
 
     ftp> site import ecp5; ecp5.passthru()
@@ -342,6 +342,13 @@ between ftp clients.
     Warning: SPI(-1, ...) is deprecated, use SoftSPI(...) instead
     282624 bytes uploaded in 613 ms (461 kB/s)
     250 OK
+    lftp> site ecp5.flash(\"passthru41113043.bit.gz\",0x200000)
+    250-                                                                                  
+    Warning: SPI(-1, ...) is deprecated, use SoftSPI(...) instead
+    0x200000 4K wwwwwwwwwwwwwwww
+    0x210000 4K wwwwwwwww
+    102400 bytes uploaded in 5890 ms (17 kB/s)
+    4K blocks: 25 total, 25 erased, 25 written.
 
 It is possible to directly put a binary file
 (not gzipped) from "ftp>" prompt into FPGA, FLASH or

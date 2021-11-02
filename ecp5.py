@@ -5,13 +5,13 @@
 # LICENSE=BSD
 
 from time import ticks_ms, sleep_ms
-from machine import SPI, SoftSPI, Pin
+from machine import SPI, SoftSPI, Pin, freq
 from micropython import const
 from struct import unpack
 from uctypes import addressof
 import jtagpin
-#from gc import collect
 
+freq(240000000) # Hz CPU clk frequency
 spi_freq = const(20000000) # Hz JTAG clk frequency
 flash_read_size = const(2048)
 flash_write_size = const(256)

@@ -85,20 +85,19 @@ def spi_jtag_off():
 #    p8rb[i]=r
 
 @micropython.viper
-def send_tms(val:int):
+def send_tms(val:int,n:int):
   if val:
     tms.on()
   else:
     tms.off()
-  tck.off()
-  tck.on()
+  for i in range(n):
+    tck.off()
+    tck.on()
 
 # exit 1 DR -> select DR scan
 def send_tms0111():
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms(0,1) # -> pause DR
+  send_tms(1,3) # -> exit 2 DR -> update DR -> select DR scan
 
 @micropython.viper
 def send_read_buf_lsb1st(buf, last:int, w:ptr8):
@@ -164,31 +163,23 @@ def send_int_msb1st(val:int, last:int, bits:int):
   tck.off()
   tck.on()
 
-# TAP to "reset" state
-@micropython.viper
-def reset_tap():
-  for n in range(6):
-    send_tms(1) # -> Test Logic Reset
-
 # TAP should be in "idle" state
 # TAP returns to "select DR scan" state
 @micropython.viper
 def runtest_idle(count:int, duration_ms:int):
   leave=int(ticks_ms()) + duration_ms
-  for n in range(count):
-    send_tms(0) # -> idle
+  send_tms(0,count) # -> idle
   while int(ticks_ms())-leave < 0:
-    send_tms(0) # -> idle
-  send_tms(1) # -> select DR scan
+    send_tms(0,1) # -> idle
+  send_tms(1,1) # -> select DR scan
 
 # send SIR command (bytes)
 # TAP should be in "select DR scan" state
 # TAP returns to "select DR scan" state
 @micropython.viper
 def sir(buf):
-  send_tms(1) # -> select IR scan
-  send_tms(0) # -> capture IR
-  send_tms(0) # -> shift IR
+  send_tms(1,1) # -> select IR scan
+  send_tms(0,2) # -> capture IR -> shift IR
   send_read_buf_lsb1st(buf,1,0) # -> exit 1 IR
   send_tms0111() # -> select DR scan
 
@@ -198,37 +189,31 @@ def sir(buf):
 # finish with n idle cycles during minimum of ms time
 @micropython.viper
 def sir_idle(buf, n:int, ms:int):
-  send_tms(1) # -> select IR scan
-  send_tms(0) # -> capture IR
-  send_tms(0) # -> shift IR
+  send_tms(1,1) # -> select IR scan
+  send_tms(0,2) # -> capture IR -> shift IR
   send_read_buf_lsb1st(buf,1,0) # -> exit 1 IR
-  send_tms(0) # -> pause IR
-  send_tms(1) # -> exit 2 IR
-  send_tms(1) # -> update IR
+  send_tms(0,1) # -> pause IR
+  send_tms(1,2) # -> exit 2 IR -> update IR
   runtest_idle(n+1,ms) # -> select DR scan
 
 @micropython.viper
 def sdr(buf):
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   send_read_buf_lsb1st(buf,1,0)
   send_tms0111() # -> select DR scan
 
 @micropython.viper
 def sdr_idle(buf, n:int, ms:int):
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   send_read_buf_lsb1st(buf,1,0)
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
+  send_tms(0,1) # -> pause IR
+  send_tms(1,2) # -> exit 2 IR -> update IR
   runtest_idle(n+1, ms) # -> select DR scan
 
 # sdr buffer will be overwritten with response
 @micropython.viper
 def sdr_response(buf):
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   send_read_buf_lsb1st(buf,1,addressof(buf))
   send_tms0111() # -> select DR scan
 
@@ -239,7 +224,7 @@ def check_response(response, expected, mask=0xFFFFFFFF, message=""):
 def idcode():
   bitbang_jtag_on()
   led.on()
-  reset_tap()
+  send_tms(1,6) # -> Test Logic Reset
   runtest_idle(1,0)
   #sir(b"\xE0")
   id_bytes = bytearray(4)
@@ -254,7 +239,7 @@ def common_open():
   hwspi.init(sck=Pin(jtagpin.tcknc)) # avoid TCK-glitch
   bitbang_jtag_on()
   led.on()
-  reset_tap()
+  send_tms(1,6) # -> Test Logic Reset
   runtest_idle(1,0)
   #sir(b"\xE0") # read IDCODE
   #sdr(pack("<I",0), expected=pack("<I",0), message="IDCODE")
@@ -284,8 +269,7 @@ def prog_open():
   # ---------- bitstream begin -----------
   # manually walk the TAP
   # we will be sending one long DR command
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   # switch from bitbanging to SPI mode
   hwspi.init(sck=Pin(jtagpin.tck)) # 1 TCK-glitch? TDI=0
   # we are lucky that format of the bitstream tolerates
@@ -308,11 +292,10 @@ def prog_stream_done():
 # returns status True-OK False-Fail
 def prog_close():
   bitbang_jtag_on()
-  send_tms(1) # -> exit 1 DR
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  #send_tms(0) # -> idle, disabled here as runtest_idle does the same
+  send_tms(1,1) # -> exit 1 DR
+  send_tms(0,1) # -> pause DR
+  send_tms(1,2) # -> exit 2 DR -> update DR
+  #send_tms(0,1) # -> idle, disabled here as runtest_idle does the same
   runtest_idle(100,10)
   # ---------- bitstream end -----------
   sir_idle(b"\xC0",2,1) # read usercode
@@ -329,7 +312,7 @@ def prog_close():
   done = True
   if (status & 0x2100) != 0x100:
     done = False
-  reset_tap()
+  send_tms(1,6) # -> Test Logic Reset
   led.off()
   bitbang_jtag_off()
   return done
@@ -340,7 +323,7 @@ def prog_close():
 @micropython.viper
 def flash_open():
   common_open()
-  reset_tap()
+  send_tms(1,6) # -> Test Logic Reset
   runtest_idle(1,0)
   sir_idle(b"\xFF",32,0) # BYPASS
   sir(b"\x3A") # LSC_PROG_SPI
@@ -356,8 +339,7 @@ def flash_open():
 def flash_wait_status(n:int):
   retry=n
   mask=1 # WIP bit (work-in-progress)
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   swspi.write(read_status) # READ STATUS REGISTER
   swspi.readinto(status)
   while retry > 0:
@@ -366,7 +348,7 @@ def flash_wait_status(n:int):
       break
     sleep_ms(1)
     retry -= 1
-  send_tms(1) # -> exit 1 DR # exit at byte incomplete
+  send_tms(1,1) # -> exit 1 DR # exit at byte incomplete
   #send_int_msb1st(0,1,8) # exit at byte complete
   send_tms0111() # -> select DR scan
   if retry <= 0:
@@ -379,8 +361,7 @@ def flash_erase_block(addr:int):
   p8=ptr8(addressof(flash_era))
   p8[1]=addr>>16
   p8[2]=addr>>8
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   swspi.write(flash_era) # except LSB
   send_int_msb1st(addr,1,8) # last LSB byte -> exit 1 DR
   send_tms0111() # -> select DR scan
@@ -395,8 +376,7 @@ def flash_write_block(block, last:int, addr:int):
   p8[1]=addr>>16
   p8[2]=addr>>8
   p8[3]=addr
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   swspi.write(flash_req)
   swspi.write(block) # whole block
   send_int_msb1st(last,1,8) # last byte -> exit 1 DR
@@ -411,8 +391,7 @@ def flash_read_block(data, addr:int):
   p8[1]=addr>>16
   p8[2]=addr>>8
   p8[3]=addr
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   swspi.write(flash_req) # send SPI FLASH read command and address and dummy byte
   swspi.readinto(data) # retrieve whole block
   send_int_msb1st(0,1,8) # dummy read byte -> exit 1 DR
@@ -431,7 +410,7 @@ def flash_close():
   sir(b"\x79") # LSC_REFRESH reload the bitstream from flash
   sdr_idle(b"\x00\x00\x00",2,100)
   spi_jtag_off()
-  reset_tap()
+  send_tms(1,6) # -> Test Logic Reset
   led.off()
   bitbang_jtag_off()
 

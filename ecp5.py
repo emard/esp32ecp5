@@ -5,7 +5,7 @@
 # LICENSE=BSD
 
 from time import ticks_ms, sleep_ms
-from machine import SPI, Pin
+from machine import SPI, SoftSPI, Pin
 from micropython import const
 from struct import unpack
 from uctypes import addressof
@@ -13,10 +13,6 @@ import jtagpin
 #from gc import collect
 
 spi_freq = const(20000000) # Hz JTAG clk frequency
-# -1 for JTAG over SOFT SPI slow, compatibility
-#  1 or 2 for JTAG over HARD SPI fast
-#  2 is preferred as it has default pinout wired
-spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
 flash_read_size = const(2048)
 flash_write_size = const(256)
 flash_erase_size = const(4096)
@@ -58,8 +54,8 @@ def bitbang_jtag_off():
 # software SPI on the same pins
 def spi_jtag_on():
   global hwspi,swspi
-  hwspi=SPI(spi_channel, baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(jtagpin.tck), mosi=Pin(jtagpin.tdi), miso=Pin(jtagpin.tdo))
-  swspi=SPI(-1, baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(jtagpin.tck), mosi=Pin(jtagpin.tdi), miso=Pin(jtagpin.tdo))
+  hwspi=SPI(2, baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(jtagpin.tck), mosi=Pin(jtagpin.tdi), miso=Pin(jtagpin.tdo))
+  swspi=SoftSPI(baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(jtagpin.tck), mosi=Pin(jtagpin.tdi), miso=Pin(jtagpin.tdo))
 
 def spi_jtag_off():
   global hwspi,swspi

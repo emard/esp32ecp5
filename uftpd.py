@@ -17,9 +17,7 @@
 # few extensions)
 # Distributed under MIT License
 #
-import socket
-import network
-import uos
+import socket, network, os, io
 from gc import collect
 from time import sleep_ms, localtime
 from micropython import alloc_emergency_exception_buf
@@ -45,8 +43,50 @@ STA_addr = ("0.0.0.0", 0, 0xffffff00)
 _month_name = ("", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
-class FTP_client:
+def mount():
+  global SD
+  try:
+    SD = SDCard(slot=3)
+    os.mount(SD,"/sd")
+    return True
+  except:
+    return False
 
+def umount():
+  global SD
+  try:
+    os.umount("/sd")
+    try:
+      SD.deinit()
+      del SD
+    except:
+      pass
+    # let all SD pins be inputs
+    for i in bytearray([2,4,12,13,14,15]):
+      p = Pin(i,Pin.IN)
+      a = p.value()
+      del p, a
+    return True
+  except:
+    return False
+
+def passthru():
+  import ecp5
+  ecp5.passthru()
+
+# to capture output of exec()
+class DUP(io.IOBase):
+    def __init__(self, s):
+        self.s = s
+
+    def write(self, data):
+        self.s += data
+        return len(data)
+
+    def readinto(self, data):
+        return 0
+
+class FTP_client:
   def __init__(self, ftpsocket):
     global AP_addr, STA_addr
     self.command_client, self.remote_addr = ftpsocket.accept()
@@ -81,12 +121,12 @@ class FTP_client:
 
   def send_list_data(self, path, data_client, full):
     try:
-      for fname in uos.listdir(path):
+      for fname in os.listdir(path):
         data_client.sendall(self.make_description(path, fname, full))
     except:  # path may be a file name or pattern
       path, pattern = self.split_path(path)
       try:
-        for fname in uos.listdir(path):
+        for fname in os.listdir(path):
           if self.fncmp(fname, pattern):
             data_client.sendall(
               self.make_description(path, fname, full))
@@ -96,7 +136,7 @@ class FTP_client:
   def make_description(self, path, fname, full):
     global _month_name
     if full:
-      stat = uos.stat(self.get_absolute_path(path, fname))
+      stat = os.stat(self.get_absolute_path(path, fname))
       file_permissions = ("drwxr-xr-x"
                           if (stat[0] & 0o170000 == 0o040000)
                           else "-rw-r--r--")
@@ -188,31 +228,6 @@ class FTP_client:
       log_msg(1, "FTP Data connection with:", data_addr[0])
     return data_client
 
-  def mount(self):
-    try:
-      self.sd = SDCard(slot=3)
-      uos.mount(self.sd,"/sd")
-      return True
-    except:
-      return False
-
-  def umount(self):
-    try:
-      uos.umount("/sd")
-      try:
-        self.sd.deinit()
-        del self.sd
-      except:
-        pass
-      # let all SD pins be inputs
-      for i in bytearray([2,4,12,13,14,15]):
-        p = Pin(i,Pin.IN)
-        a = p.value()
-        del p, a
-      return True
-    except:
-      return False
-
   def exec_ftp_command(self, cl):
     global datasocket
     global client_busy
@@ -271,7 +286,7 @@ class FTP_client:
         cl.sendall('257 "{}"\r\n'.format(self.cwd))
       elif command == "CWD" or command == "XCWD":
         try:
-          if (uos.stat(path)[0] & 0o170000) == 0o040000:
+          if (os.stat(path)[0] & 0o170000) == 0o040000:
             self.cwd = path
             cl.sendall('250 OK\r\n')
           else:
@@ -306,7 +321,7 @@ class FTP_client:
           data_client = self.open_dataclient()
           cl.sendall("150 Directory listing:\r\n")
           self.send_list_data(path, data_client,
-                              command == "LIST" or 'l' in option)
+            command == "LIST" or 'l' in option)
           cl.sendall("226 Done.\r\n")
           data_client.close()
         except:
@@ -369,7 +384,7 @@ class FTP_client:
         del result
       elif command == "SIZE":
         try:
-          cl.sendall('213 {}\r\n'.format(uos.stat(path)[6]))
+          cl.sendall('213 {}\r\n'.format(os.stat(path)[6]))
         except:
           cl.sendall('550 Fail\r\n')
       elif command == "STAT":
@@ -387,21 +402,21 @@ class FTP_client:
           cl.sendall("213 Done.\r\n")
       elif command == "DELE":
         try:
-          uos.remove(path)
+          os.remove(path)
           cl.sendall('250 OK\r\n')
         except:
           cl.sendall('550 Fail\r\n')
       elif command == "RNFR":
         try:
           # just test if the name exists, exception if not
-          uos.stat(path)
+          os.stat(path)
           self.fromname = path
           cl.sendall("350 Rename from\r\n")
         except:
           cl.sendall('550 Fail\r\n')
       elif command == "RNTO":
         try:
-          uos.rename(self.fromname, path)
+          os.rename(self.fromname, path)
           cl.sendall('250 OK\r\n')
         except:
           cl.sendall('550 Fail\r\n')
@@ -411,41 +426,27 @@ class FTP_client:
         cl.sendall('250 OK\r\n')
       elif command == "RMD" or command == "XRMD":
         try:
-          uos.rmdir(path)
+          os.rmdir(path)
           cl.sendall('250 OK\r\n')
         except:
           cl.sendall('550 Fail\r\n')
       elif command == "MKD" or command == "XMKD":
         try:
-          uos.mkdir(path)
+          os.mkdir(path)
           cl.sendall('250 OK\r\n')
         except:
           cl.sendall('550 Fail\r\n')
       elif command == "SITE":
-        if path == "/mount":
-          if self.mount():
-            cl.sendall('250 OK\r\n')
-          else:
-            cl.sendall('550 Fail\r\n')
-        elif path == "/umount":
-          if self.umount():
-            cl.sendall('250 OK\r\n')
-          else:
-            cl.sendall('550 Fail\r\n')
-        elif path == "/passthru":
-          import ecp5
-          ecp5.passthru()
-          cl.sendall('250 OK passthru\r\n')
-        elif path.endswith(".bit") or path.endswith(".bit.gz"):
+        if path.endswith(".bit") or path.endswith(".bit.gz"):
           try:
             import ecp5
             if ecp5.prog(path, close=False):
               if path.startswith("/sd/"):
                 try:
-                  self.umount()
-                  cl.sendall('111 umount /sd OK\r\n')
+                  umount()
+                  cl.sendall('250-umount /sd OK\r\n')
                 except:
-                  cl.sendall('411 umount /sd Fail\r\n')
+                  cl.sendall('550-umount /sd Fail\r\n')
               if ecp5.prog_close():
                 cl.sendall('250 OK\r\n')
               else:
@@ -455,16 +456,18 @@ class FTP_client:
           except:
             cl.sendall('550 Fail\r\n')
         else:
-          if path.startswith("/"):
-            exe=path[1:]
-          else:
-            exe=path
           try:
-            exec(exe)
-            cl.sendall('250 OK '+exe+'\r\n')
+            stdout=bytearray()
+            os.dupterm(DUP(stdout))
+            exec(payload)
+            os.dupterm(None)
+            cl.sendall('250-\r\n')
+            for line in stdout.decode("utf-8").splitlines():
+              cl.sendall(line+'\r\n')
+            cl.sendall('250 OK\r\n')
+            del stdout
           except:
-            cl.sendall('550 Fail '+exe+'\r\n')
-          del exe
+            cl.sendall('550 Fail '+payload+'\r\n')
       else:
         cl.sendall("502 Unsupported command.\r\n")
         # log_msg(2,

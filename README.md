@@ -331,7 +331,7 @@ SD card with FAT filesystem can be mounted or unmounted to "/sd" directory:
     ftp> site umount()
     ftp> ls sd
 
-exec() any micropython command.
+"site" can exec() any micropython command.
 Quotes ("") and backslash escaping may be required. Actual syntax may vary
 between ftp clients.
 
@@ -349,6 +349,11 @@ between ftp clients.
     0x210000 4K wwwwwwwww
     102400 bytes uploaded in 5890 ms (17 kB/s)
     4K blocks: 25 total, 25 erased, 25 written.
+
+Theoretically "site" should work well if there is enough RAM
+but even on ESP32-WROVER with 2MB there is instability.
+After few ecp5.prog() or ecp5.flash(), FTP traffic stops
+and ESP32 freezes.
 
 It is possible to directly put a binary file
 (not gzipped) from "ftp>" prompt into FPGA, FLASH or

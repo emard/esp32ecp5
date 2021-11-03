@@ -425,6 +425,7 @@ memory situation will be better for ecp5.flash() from "webrepl"
 
 This is developer's procedure how to upload.
 Developer should register at [Python Package Index](pypi.org),
+increase version number in pypi/setup.py,
 build package and upload, type pypi username/password when asked:
 
     cd pypi

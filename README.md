@@ -421,6 +421,17 @@ memory situation will be better for ecp5.flash() from "webrepl"
     import ecp5
     ecp5.flash("blink.bit.gz")
 
+# Releasing
+
+This is developer's procedure how to upload.
+Developer should register at [Python Package Index](pypi.org),
+build package and upload, type pypi username/password when asked:
+
+    cd pypi
+    make clean
+    make check
+    make upload
+
 # Onboard Editor
 
 ESP32 can run small [VT100 terminal editor](https://github.com/robert-hh/Micropython-Editor)

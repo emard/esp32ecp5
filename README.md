@@ -28,6 +28,10 @@ It can be also upgraded from FTP or LFTP prompt:
 
     ftp> site import upip; upip.install(\"esp32ecp5\")
     lftp> site "import upip; upip.install(\"esp32ecp5\")"
+    250-
+    Installing to: /lib/
+    Installing esp32ecp5 1.0.12 from https://files.pythonhosted.org/packages/46/d6/15b3f9f2312b4bc16f9c2d0c042ad4e4ae8aee969c50b352d816b090a8b0/esp32ecp5-1.0.12.tar.gz
+    250 OK
 
 # Install ESP32 micropython
 

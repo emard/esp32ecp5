@@ -153,7 +153,7 @@ From webrepl GUI upload "ecp5.py" and "jtagpin.py" (optionally also "uftpd.py", 
 "wifiman.py", "ecp5wp.py", "ecp5setup.py" and edited "wifiman.conf" or
 generate it with "import ecp5setup" if you want FTP server and roaming
 profiles read below) and some bitstream file like "blink.bit" or
-"blink.bit.gz" (compressed with gzip -9) to
+"blink.bit.gz" (compressed with "gzip4k.py" tool) to
 the root of ESP32 python FLASH filesystem.
 
 # Upload files from linux command line
@@ -246,7 +246,7 @@ which should be 4K even - lower 12 bits must be 0x000
 
 If file ends with "*.gz", it will be decompressed on-the-fly.
 
-    linux$ gzip -9 blink.bit
+    linux$ ./gzip4k.py blink.bit
     >>> ecp5.prog("http://192.168.4.2/blink.bit.gz")
     >>> ecp5.flash("blink.bit.gz")
 

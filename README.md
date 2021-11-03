@@ -24,6 +24,11 @@ esp32ecp5 can be installed or upgraded online with
     Warning: micropython.org SSL certificate is not validated
     Installing esp32ecp5 1.0.6 from https://files.pythonhosted.org/packages/a1/a5/b3689848cabb12c785bb402093180b2a20e180e158692fc19c383b30fac8/esp32ecp5-1.0.6.tar.gz
 
+It can be also upgraded from FTP or LFTP prompt:
+
+    ftp> site import upip; upip.install(\"esp32ecp5\")
+    lftp> site "import upip; upip.install(\"esp32ecp5\")"
+
 # Install ESP32 micropython
 
 Skip this step if you have ESP32 on some development board with USB-serial module.

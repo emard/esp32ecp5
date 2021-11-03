@@ -5,7 +5,7 @@
 # LICENSE=BSD
 
 from time import ticks_ms, sleep_ms
-from machine import SPI, Pin
+from machine import SPI, SoftSPI, Pin
 from micropython import const
 from struct import unpack
 from uctypes import addressof
@@ -26,10 +26,6 @@ import jtagpin
 #    p8rb[i]=r
 
 spi_freq = const(20000000) # Hz JTAG clk frequency
-# -1 for JTAG over SOFT SPI slow, compatibility
-#  1 or 2 for JTAG over HARD SPI fast
-#  2 is preferred as it has default pinout wired
-spi_channel = const(2) # -1 soft, 1:sd, 2:jtag
 #flash_read_size = const(2048)
 #flash_write_size = const(256)
 #flash_erase_size = const(4096)
@@ -72,8 +68,8 @@ def bitbang_jtag_off():
 # software SPI on the same pins
 def spi_jtag_on():
   global hwspi,swspi
-  hwspi=SPI(spi_channel, baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(jtagpin.tck), mosi=Pin(jtagpin.tdi), miso=Pin(jtagpin.tdo))
-  swspi=SPI(-1, baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(jtagpin.tck), mosi=Pin(jtagpin.tdi), miso=Pin(jtagpin.tdo))
+  hwspi=SPI(2, baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(jtagpin.tck), mosi=Pin(jtagpin.tdi), miso=Pin(jtagpin.tdo))
+  swspi=SoftSPI(baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(jtagpin.tck), mosi=Pin(jtagpin.tdi), miso=Pin(jtagpin.tdo))
 
 def spi_jtag_off():
   global hwspi,swspi
@@ -90,20 +86,19 @@ def spi_jtag_off():
 #  print(tail, end="")
 
 @micropython.viper
-def send_tms(val:int):
+def send_tms(val:int,n:int):
   if val:
     tms.on()
   else:
     tms.off()
-  tck.off()
-  tck.on()
+  for i in range(n):
+    tck.off()
+    tck.on()
 
 # exit 1 DR -> select DR scan
 def send_tms0111():
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
-  send_tms(1) # -> select DR scan
+  send_tms(0,1) # -> pause DR
+  send_tms(1,3) # -> exit 2 DR -> update DR -> select DR scan
 
 @micropython.viper
 def send_read_buf_lsb1st(buf, last:int, w:ptr8):
@@ -169,31 +164,23 @@ def send_int_msb1st(val:int, last:int, bits:int):
   tck.off()
   tck.on()
 
-# TAP to "reset" state
-@micropython.viper
-def reset_tap():
-  for n in range(6):
-    send_tms(1) # -> Test Logic Reset
-
 # TAP should be in "idle" state
 # TAP returns to "select DR scan" state
 @micropython.viper
 def runtest_idle(count:int, duration_ms:int):
   leave=int(ticks_ms()) + duration_ms
-  for n in range(count):
-    send_tms(0) # -> idle
+  send_tms(0,count) # -> idle
   while int(ticks_ms())-leave < 0:
-    send_tms(0) # -> idle
-  send_tms(1) # -> select DR scan
+    send_tms(0,1) # -> idle
+  send_tms(1,1) # -> select DR scan
 
 # send SIR command (bytes)
 # TAP should be in "select DR scan" state
 # TAP returns to "select DR scan" state
 @micropython.viper
 def sir(buf):
-  send_tms(1) # -> select IR scan
-  send_tms(0) # -> capture IR
-  send_tms(0) # -> shift IR
+  send_tms(1,1) # -> select IR scan
+  send_tms(0,2) # -> capture IR -> shift IR
   send_read_buf_lsb1st(buf,1,0) # -> exit 1 IR
   send_tms0111() # -> select DR scan
 
@@ -203,37 +190,31 @@ def sir(buf):
 # finish with n idle cycles during minimum of ms time
 @micropython.viper
 def sir_idle(buf, n:int, ms:int):
-  send_tms(1) # -> select IR scan
-  send_tms(0) # -> capture IR
-  send_tms(0) # -> shift IR
+  send_tms(1,1) # -> select IR scan
+  send_tms(0,2) # -> capture IR -> shift IR
   send_read_buf_lsb1st(buf,1,0) # -> exit 1 IR
-  send_tms(0) # -> pause IR
-  send_tms(1) # -> exit 2 IR
-  send_tms(1) # -> update IR
+  send_tms(0,1) # -> pause IR
+  send_tms(1,2) # -> exit 2 IR -> update IR
   runtest_idle(n+1,ms) # -> select DR scan
 
 @micropython.viper
 def sdr(buf):
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   send_read_buf_lsb1st(buf,1,0)
   send_tms0111() # -> select DR scan
 
 @micropython.viper
 def sdr_idle(buf, n:int, ms:int):
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   send_read_buf_lsb1st(buf,1,0)
-  send_tms(0) # -> pause DR
-  send_tms(1) # -> exit 2 DR
-  send_tms(1) # -> update DR
+  send_tms(0,1) # -> pause DR
+  send_tms(1,2) # -> exit 2 DR -> update DR
   runtest_idle(n+1, ms) # -> select DR scan
 
 # sdr buffer will be overwritten with response
 @micropython.viper
 def sdr_response(buf):
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   send_read_buf_lsb1st(buf,1,addressof(buf))
   send_tms0111() # -> select DR scan
 
@@ -244,7 +225,7 @@ def check_response(response, expected, mask=0xFFFFFFFF, message=""):
 def idcode():
   bitbang_jtag_on()
   led.on()
-  reset_tap()
+  send_tms(1,6) # -> Test Logic Reset
   runtest_idle(1,0)
   #sir(b"\xE0")
   id_bytes = bytearray(4)
@@ -260,7 +241,7 @@ def common_open():
   hwspi.init(sck=Pin(jtagpin.tcknc)) # avoid TCK-glitch
   bitbang_jtag_on()
   led.on()
-  reset_tap()
+  send_tms(1,6) # -> Test Logic Reset
   runtest_idle(1,0)
   #sir(b"\xE0") # read IDCODE
   #sdr(pack("<I",0), expected=pack("<I",0), message="IDCODE")
@@ -286,7 +267,7 @@ def common_open():
 @micropython.viper
 def flash_open():
   common_open()
-  reset_tap()
+  send_tms(1,6) # -> Test Logic Reset
   runtest_idle(1,0)
   sir_idle(b"\xFF",32,0) # BYPASS
   sir(b"\x3A") # LSC_PROG_SPI
@@ -302,8 +283,7 @@ def flash_open():
 def flash_wait_status(n:int):
   retry=n
   mask=1 # WIP bit (work-in-progress)
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   swspi.write(read_status) # READ STATUS REGISTER
   swspi.readinto(status)
   while retry > 0:
@@ -312,7 +292,7 @@ def flash_wait_status(n:int):
       break
     sleep_ms(1)
     retry -= 1
-  send_tms(1) # -> exit 1 DR # exit at byte incomplete
+  send_tms(1,1) # -> exit 1 DR # exit at byte incomplete
   #send_int_msb1st(0,1,8) # exit at byte complete
   send_tms0111() # -> select DR scan
   if retry <= 0:
@@ -332,21 +312,19 @@ def flash_close():
     sir(b"\x79") # LSC_REFRESH reload the bitstream from flash
     sdr_idle(b"\x00\x00\x00",2,100)
   spi_jtag_off()
-  reset_tap()
+  send_tms(1,6) # -> Test Logic Reset
   led.off()
   bitbang_jtag_off()
 
 def flash_send(seq):
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   if len(seq)>1:
     swspi.write(seq[:-1]) # all except last byte
   send_int_msb1st(seq[-1],1,8) # last byte -> exit 1 DR
   send_tms0111() # -> select DR scan
 
 def flash_sendrecv(send,recv):
-  send_tms(0) # -> capture DR
-  send_tms(0) # -> shift DR
+  send_tms(0,2) # -> capture DR -> shift DR
   swspi.write(send)
   swspi.readinto(recv)
   #send_tms(1) # -> exit 1 DR # exit at byte incomplete
@@ -531,14 +509,15 @@ def detect():
       sleep_ms(1000)
     w25q128jv_status()
     print("ecp5wp.w25q128jv_protect()")
-    print("ecp5wp.w25q128jv_status()")
+    print("ecp5wp.w25q128jv_protect(0)")
   if jedec_id==b"\x9D\x60\x18":
     print("ISSI IS25LP128")
     if discard:
       sleep_ms(1000)
     is25lp128_status()
     print("ecp5wp.is25lp128_protect()")
-    print("ecp5wp.is25lp128_status()")
+    print("ecp5wp.is25lp128_protect(0)")
+  print("ecp5wp.detect()")
   if jedec_id==b"\x9D\x60\x16":
     print("ISSI IS25LP032")
     if discard:

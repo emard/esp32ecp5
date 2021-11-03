@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# gzip-compress file using small block size 4K,
+# gzip-compress file on PC using small block size 4K,
 # suitable for unzipping at devices with small RAM,
 # micropython friendly
 

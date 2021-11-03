@@ -437,6 +437,7 @@ class FTP_client:
         except:
           cl.sendall('550 Fail\r\n')
       elif command == "SITE":
+        collect()
         if path.endswith(".bit") or path.endswith(".bit.gz"):
           try:
             import ecp5

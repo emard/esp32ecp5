@@ -1,7 +1,7 @@
 try:
   import wifiman
 except:
-  print("no wifiman.py")
+  print("wifiman.py error")
 import gc
 gc.collect()
 import uftpd

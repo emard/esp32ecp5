@@ -33,7 +33,7 @@ def main():
 "try:\n"
 "  import wifiman\n"
 "except:\n"
-"  print('no WiFi')\n"
+"  print('wifiman.py error')\n"
 "import gc\n"
 "gc.collect()\n"
 "import uftpd\n"

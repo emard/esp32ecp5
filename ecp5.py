@@ -320,7 +320,6 @@ def prog_close():
 # call this before sending the flash image
 # FPGA will enter flashing mode
 # TAP should be in "select DR scan" state
-@micropython.viper
 def flash_open():
   common_open()
   send_tms(1,6) # -> Test Logic Reset
@@ -399,7 +398,6 @@ def flash_read_block(data, addr:int):
 
 # call this after uploading all of the flash blocks,
 # this will exit FPGA flashing mode and start the bitstream
-@micropython.viper
 def flash_close():
   # switch from SPI to bitbanging
   # ---------- flashing end -----------

@@ -157,6 +157,10 @@ profiles read below) and some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with "gzip4k.py" tool) to
 the root of ESP32 python FLASH filesystem.
 
+If webrepl GUI disconnects immediatly, without asking the password, try to delete
+web browser's history, cookies, passwords and similar data, close web browser and
+try again.
+
 # Upload files over USB from linux command line
 
 Get Adafruit "ampy"
@@ -235,9 +239,6 @@ Then "main.py" should be only this
     except:
       print("NTP not available")
 
-If webrepl GUI disconnects immediatly, without asking the password, try to delete
-web browser's history, cookies, passwords and similar data, close web browser and
-try again.
 
 # ECP5 programming from python command line
 

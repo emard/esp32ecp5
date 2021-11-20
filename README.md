@@ -288,8 +288,8 @@ with this ecp5.py programmer.
 
 # FLASH protection
 
-FLASH can set hardware write protection to a part of address space.
-"ecp5wp.py" is ESP32 command line tool for FLASH protection and
+FLASH chip can set hardware write protection to a part of address space
+and "ecp5wp.py" is ESP32 command line tool for protection and
 unprotection. Supported FLASH chips are ISSI IS25LP128 and Winbond
 W25Q128.
 

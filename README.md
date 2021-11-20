@@ -85,7 +85,7 @@ Try some simple commands
 # Connect ESP32 to WiFi
 
 This is how to manually setup WiFi by creating auto-executable file
-named "main.py" from ">>>" micropython command prompot. 
+named "main.py" by copy-pasting text to ">>>" micropython command prompt. 
 Later will be explained how to setup simple roaming
 profile with multiple APs and passwords.
 

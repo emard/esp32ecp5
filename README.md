@@ -262,7 +262,7 @@ which should be 4K even - lower 12 bits must be 0x000
 
 If file ends with "*.gz", it will be decompressed on-the-fly.
 
-    linux$ ./gzip4k.py blink.bit
+    linux$ ./gzip4k.py blink.bit blink.bit.gz
     >>> ecp5.prog("http://192.168.4.2/blink.bit.gz")
     >>> ecp5.flash("blink.bit.gz")
 

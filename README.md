@@ -293,6 +293,12 @@ and "ecp5wp.py" is ESP32 command line tool for protection and
 unprotection. Supported FLASH chips are ISSI IS25LP128 and Winbond
 W25Q128.
 
+FPGA ECP5 should be loaded with bitstream that allows
+FLASH access from JTAG
+(SYSCONFIG MASTER_SPI_PORT=ENABLE in .lpf, without
+using USRMCLK module in user design)
+and drives WPn=1 and HOLDn=1 to prevent crosstalk.
+
     import ecp5wp
 
 Tool will autodetect FLASH chip, report current protection status

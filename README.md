@@ -162,6 +162,10 @@ Get Adafruit "ampy"
 
     pip3 install adafruit-ampy
 
+It will be installed here:
+
+    ~/.local/bin/ampy
+
 Upload local files to remote ESP32 like this:
 
     ampy -p /dev/ttyUSB0 put ecp5.py

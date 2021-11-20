@@ -171,16 +171,15 @@ It will be installed here:
 
     ~/.local/bin/ampy
 
-Upload local file to ESP32 like this:
+Upload local file "main.py" to ESP32 like this:
 
-    ampy -p /dev/ttyUSB0 put ecp5.py
+    ampy -p /dev/ttyUSB0 put main.py
 
 List files on ESP32:
 
     ampy -p /dev/ttyUSB0 ls
     /boot.py
     /main.py
-    /ecp5.py
     ...
 
 # Upload files over WiFi from linux command line

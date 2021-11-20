@@ -156,13 +156,19 @@ profiles read below) and some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with "gzip4k.py" tool) to
 the root of ESP32 python FLASH filesystem.
 
-# Upload files from linux command line
+# Upload files over USB from linux command line
 
 Get Adafruit "ampy"
 
     pip3 install adafruit-ampy
 
-or get [webrepl for commandline](https://github.com/Hermann-SW/webrepl),
+Upload local files to remote ESP32 like this:
+
+    ampy -p /dev/ttyUSB0 put ecp5.py
+
+# Upload files over WiFi from linux command line
+
+Get [webrepl for commandline](https://github.com/Hermann-SW/webrepl),
 and [KOST's webrepl shell automation](https://github.com/kost/webrepl-python)
 install some python dependencies:
 
@@ -179,10 +185,6 @@ typeable names and make them executable:
     chmod +x /usr/local/bin/replsh /usr/local/bin/replcp /usr/local/bin/replcmd
 
 Upload local files to remote ESP32 like this:
-
-    ampy -p /dev/ttyUSB0 put ecp5.py
-
-or like this:
 
     replcp -p password ecp5.py 192.168.4.1:ecp5.py
 

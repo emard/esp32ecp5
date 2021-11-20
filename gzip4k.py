@@ -5,7 +5,7 @@
 # micropython friendly
 
 # usage:
-# ./gzip4k.py src.bit src.bit.gz
+# ./gzip4k.py blink.bit blink.bit.gz
 
 import sys, zlib
 

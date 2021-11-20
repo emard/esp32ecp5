@@ -84,14 +84,14 @@ Try some simple commands
 
 # Connect ESP32 to WiFi
 
-This is how to manually setup WiFi using auto-executable file
-named "main.py" which will connect to one Access Point
-with one password. Later will be explained how to setup simple roaming
+This is how to manually setup WiFi by creating auto-executable file
+named "main.py" from ">>>" micropython command prompot. 
+Later will be explained how to setup simple roaming
 profile with multiple APs and passwords.
 
-Choose either: (copy-paste to usb-serial python prompt ">>>")
+Choose either setup as "client" or "access point":
 
-setup as client that logs on to a WiFi access point (home internet router),
+Setup as client that logs on to a WiFi access point (home internet router),
 replace "accesspoint" and "password" with proper logins for your WiFi router:
 
     f=open("main.py","w")
@@ -109,8 +109,8 @@ at usb-serial prompt. To stop it, type blindly or copy-paste:
 
     sta_if.disconnect()
 
-or setup as access point but
-some WiFi clients may have problem connecting to ESP32:
+Setup as access point.
+Some WiFi clients may have problem connecting to ESP32.
 
     f=open("main.py","w")
     f.write("import network\n")

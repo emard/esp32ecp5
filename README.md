@@ -84,9 +84,8 @@ Try some simple commands
 
 # Connect ESP32 to WiFi
 
-To automate further use, it is good to setup ESP32 to automatically
-bring up networking and services after power up. This is done using
-auto-executable file named "main.py" which will connect to one Access Point
+This is how to manually setup WiFi using auto-executable file
+named "main.py" which will connect to one Access Point
 with one password. Later will be explained how to setup simple roaming
 profile with multiple APs and passwords.
 

@@ -145,10 +145,10 @@ address if you press Ctrl-D on empty python prompt:
 
     >>> Ctrl-D
 
-with web browser open [webrepl for web browser](http://micropython.org/webrepl),
-enter IP address of ESP32, enter password. Python prompt ">>>" should appear.
-
 # Upload files from web browser
+
+With web browser open [webrepl for web browser](http://micropython.org/webrepl),
+enter IP address of ESP32, enter password. Python prompt ">>>" should appear.
 
 From webrepl GUI upload "ecp5.py" and "jtagpin.py" (optionally also "uftpd.py", "sdraw.py",
 "wifiman.py", "ecp5wp.py", "ecp5setup.py" and edited "wifiman.conf" or

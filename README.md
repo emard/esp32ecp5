@@ -296,8 +296,8 @@ W25Q128.
     import ecp5wp
 
 Tool will autodetect FLASH chip, report current protection status
-and suggest commands to protect or unprotect range of address space
-usually used for bootloader.
+and suggest commands to protect or unprotect first 2MB usually used
+to hold bootloader bitstream.
 
 Be careful with setting OTP registers, it is possible to permanently
 lock the chip.

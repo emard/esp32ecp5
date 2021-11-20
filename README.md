@@ -286,6 +286,22 @@ SD card usage (SPI at gpio 12-15):
 MMC mode is about 2x faster but currently it doesn't work together
 with this ecp5.py programmer.
 
+# FLASH protection
+
+FLASH can set hardware write protection to a part of address space.
+"ecp5wp.py" is ESP32 command line tool for FLASH protection and
+unprotection. Supported FLASH chips are ISSI IS25LP128 and Winbond
+W25Q128.
+
+    import ecp5wp
+
+Tool will autodetect FLASH chip, report current protection status
+and suggest commands to protect or unprotect range of address space
+usually used for bootloader.
+
+Be careful with setting OTP registers, it is possible to permanently
+lock the chip.
+
 # ECP5 programming from FTP
 
 Here I have "uftpd.py" which came from original

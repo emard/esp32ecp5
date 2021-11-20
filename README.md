@@ -87,7 +87,7 @@ Try some simple commands
 This is how to manually setup WiFi by creating auto-executable file
 named "main.py" by copy-pasting text to ">>>" micropython command prompt
 without any upload tools.
-Later is explained how to install upload tools
+In following chapters is explained how to install upload tools
 and setup simple roaming profile with multiple
 APs and passwords.
 

@@ -150,12 +150,16 @@ address if you press Ctrl-D on empty python prompt:
 With web browser open [webrepl for web browser](http://micropython.org/webrepl),
 enter IP address of ESP32, enter password. Python prompt ">>>" should appear.
 
-From webrepl GUI upload "ecp5.py" and "jtagpin.py" (optionally also "uftpd.py", "sdraw.py",
-"wifiman.py", "ecp5wp.py", "ecp5setup.py" and edited "wifiman.conf" or
-generate it with "import ecp5setup" if you want FTP server and roaming
-profiles read below) and some bitstream file like "blink.bit" or
+From webrepl GUI minimal upload is "ecp5.py" and "jtagpin.py" to root "/" or
+"/lib" directory at the ESP32.
+Very useful are also "uftpd.py", "sdraw.py", "wifiman.py", "ecp5wp.py",
+"ecp5setup.py".
+Your passwords can be placed in "wifiman.conf" and uploaded to root "/" of
+ESP32 or generated automatically with "import ecp5setup".
+For details about FTP and roaming profiles read below.
+Optionally upload some bitstream file like "blink.bit" or
 "blink.bit.gz" (compressed with "gzip4k.py" tool) to
-the root of ESP32 python FLASH filesystem.
+the root of ESP32.
 
 If webrepl GUI disconnects immediatly, without asking the password, try to delete
 web browser's history, cookies, passwords and similar data, close web browser and

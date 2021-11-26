@@ -21,7 +21,7 @@ import socket, network, os, io
 from gc import collect
 from time import sleep_ms, localtime
 from micropython import alloc_emergency_exception_buf
-from machine import SDCard, Pin
+from machine import Pin
 
 # constant definitions
 _CHUNK_SIZE = const(1024)
@@ -46,6 +46,7 @@ _month_name = ("", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
 def mount():
   global SD
   try:
+    from machine import SDCard
     SD = SDCard(slot=3)
     os.mount(SD,"/sd")
     return True

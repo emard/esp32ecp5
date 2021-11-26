@@ -80,12 +80,12 @@ def pins_esp32s2():
   f=open("jtagpin.py","w")
   f.write(
 "# ESP32-S2 prototype\n"
-"tms=const(18)\n"
+"tms=const(8)\n"
 "tck=const(16)\n"
 "tdi=const(15)\n"
-"tdo=const(17)\n"
-"tcknc=const(12)\n"
-"led=const(13)\n"
+"tdo=const(7)\n"
+"tcknc=const(6)\n"
+"led=const(5)\n"
   )
   f.close()
 

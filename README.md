@@ -179,11 +179,12 @@ Upload local files to ESP32 like this:
 
     ampy -p /dev/ttyUSB0 mkdir /lib
     ampy -p /dev/ttyUSB0 put ecp5.py /lib/ecp5.py
-    ampy -p /dev/ttyUSB0 put jtagpin.py /lib/jtagpin.py
     ampy -p /dev/ttyUSB0 put uftpd.py /lib/uftpd.py
     ampy -p /dev/ttyUSB0 put sdraw.py /lib/sdraw.py
     ampy -p /dev/ttyUSB0 put ecp5wp.py /lib/ecp5wp.py
     ampy -p /dev/ttyUSB0 put ecp5setup.py /lib/ecp5setup.py
+    ampy -p /dev/ttyUSB0 put wifiman.conf /wifiman.conf
+    ampy -p /dev/ttyUSB0 put jtagpin.py /jtagpin.py
     ampy -p /dev/ttyUSB0 put main.py /main.py
 
 List files on ESP32:

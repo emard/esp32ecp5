@@ -21,3 +21,11 @@ led = const(5)
 #tdo = const(34)
 #tcknc = const(21) # 1,2,3,19,21 free pin for SPI workaround
 #led = const(19)
+
+# ESP32-S2 prototype
+#tms = const(18) # 38
+#tck = const(16) # 36
+#tdi = const(15) # 35
+#tdo = const(17) # 37
+#tcknc = const(12) # free pin for SPI workaround
+#led = const(13)

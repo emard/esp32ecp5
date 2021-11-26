@@ -1,6 +1,6 @@
 # ESP32 JTAG tap walker for ECP5
 
-This is micropython running on ESP32 to allow
+This is micropython running on ESP32 or ESP32-S2 to allow
 JTAG programming and flashing of Lattice ECP5 FPGA JTAG.
 A simple way in about 700 lines of code.
 
@@ -42,7 +42,7 @@ Choose appropriate for your board and ECP5 chip and upload passthru bitstream to
 
     fujprog -j flash passthru.bit
 
-Download [micropython for ESP32](https://micropython.org/download#esp32)
+For ESP32 classic download [micropython for ESP32](https://micropython.org/download#esp32)
 "Stable" version.
 For WROOM modules use non-SPIRAM versions like:
 [esp32-idf3-20210202-v1.14.bin](https://micropython.org/resources/firmware/esp32-idf3-20210202-v1.14.bin).
@@ -63,6 +63,37 @@ Upload micropython to ESP32
     esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460800 write_flash -z 0x1000 esp32-idf3-20210202-v1.14.bin
 
 Power off and on ESP32
+
+# Install ESP32-S2 micropython
+
+ESP32-S2 modules with PSRAM and native USB support can be used.
+ESP32-S2 modules without PSRAM don't have enough RAM for esp32ecp5.
+Download [micropython for ESP32-S2](https://www.wemos.cc/en/latest/tutorials/s2/get_started_with_micropython_s2.html).
+Use this pinout:
+
+    GND  GND
+    3V3  3.3V
+    EN   10k 3.3V
+    IO0  BTN GND
+    IO18 10k 3.3V (pullup for floating RXD)
+    IO19 D-
+    IO20 D+
+    # JTAG pinout
+    IO15 TDI
+    IO16 TCK
+    IO7  TDO
+    IO8  TMS - BLUE LED - 549ohm - 3.3V
+
+Enter USB download mode by connecting GPIO0 to GND and plugging USB.
+Upload micropython firmware:
+
+    esptool.py --port /dev/ttyACM0 --baud 1000000 erase_flash
+    esptool.py --port /dev/ttyACM0 --baud 1000000 write_flash -z 0x1000 s2_mini_micropython_v1.16-200-g1b87e1793.bin
+
+Unplug USB, disconnect GPIO0 from GND and re-plug USB.
+Serial port "/dev/ttyACM0" will appear, providing micropython prompt:
+
+    screen /dev/ttyACM0
 
 # ESP32 micropython prompt
 

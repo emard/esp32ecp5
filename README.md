@@ -1,7 +1,7 @@
 # ESP32 JTAG tap walker for ECP5
 
-This is micropython running on ESP32 or ESP32-S2 to allow
-JTAG programming and flashing of Lattice ECP5 FPGA JTAG.
+Micropython on ESP32 or ESP32-S2 for
+programming and flashing Lattice ECP5 FPGA via JTAG.
 A simple way in about 700 lines of code.
 
 # Quick Start

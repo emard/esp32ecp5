@@ -70,7 +70,7 @@ ESP32-S2 modules with PSRAM and native USB support can be used.
 ESP32-S2 modules without PSRAM don't have enough RAM for esp32ecp5.
 Download [micropython for ESP32-S2](https://www.wemos.cc/en/latest/tutorials/s2/get_started_with_micropython_s2.html).
 This firware doesn't currently support SD card.
-It should be recompiled and configured to support it
+It should be recompiled and configured to support SD
 and open 2nd USB-serial port which will be transparently routed
 to hardware TX/RX pins for communication with various FPGA projects
 that need serial port.

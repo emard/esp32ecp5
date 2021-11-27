@@ -347,12 +347,13 @@ class FTP_client:
         try:
           data_client = self.open_dataclient()
           cl.sendall("150 Opened data connection.\r\n")
-          if path == "/fpga":
+          dname = payload.split()[-1].upper()
+          if dname == "FPGA":
             import ecp5
             ecp5.prog_stream(data_client,_CHUNK_SIZE)
             result = ecp5.prog_close()
             data_client.close()
-          elif path.startswith("/flash@"):
+          elif dname.startswith("FLASH@"):
             import ecp5
             dummy, addr = path.split("@")
             addr = int(addr)
@@ -360,7 +361,7 @@ class FTP_client:
             ecp5.flash_close()
             del addr, dummy
             data_client.close()
-          elif path.startswith("/sd@"):
+          elif dname.startswith("SD@"):
             import sdraw
             dummy, addr = path.split("@")
             addr = int(addr)

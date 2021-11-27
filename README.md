@@ -33,6 +33,36 @@ It can be also upgraded from FTP or LFTP prompt:
     Installing esp32ecp5 1.0.12 from https://files.pythonhosted.org/packages/46/d6/15b3f9f2312b4bc16f9c2d0c042ad4e4ae8aee969c50b352d816b090a8b0/esp32ecp5-1.0.12.tar.gz
     250 OK
 
+# ESP32 pinout
+
+JTAG needs to switch between bitbanging and hardware SPI mode.
+Bitbanging is required to walk thru JTAG TAP states.
+SPI is required for fast upload of large bitstream.
+
+There is undocumented behaviour of possible glitch when switching
+between bitbanging and hardware SPI. Glitch appears at "clk" line and
+maybe some other too. Although bitstream is usually tolerant about
+garbage data before and after, but it is best to avoid it.
+Experimentally is determined this pinout which doesn't make
+glitch at switching modes:
+
+    tms   = 5   # BLUE LED - 549ohm - 3.3V
+    tck   = 18
+    tcknc = 21  # 1,2,3,19,21 free pin for SPI workaround
+    tdi   = 23
+    tdo   = 34
+    led   = 19
+
+"tcknc" is not connected, but it is important to
+temporary replace "tck" to avoid glitch when changing
+modes between bitbanging and SPI.
+
+Activity indicator can be hi-efficiency LED with near 3V
+drop (blue) and 0.5-1k series resistor connected between
+"tms" and 3.3V.
+
+There can be also separate LED connected at "led".
+
 # Install ESP32 micropython
 
 Skip this step if you have ESP32 on some development board with USB-serial module.
@@ -63,6 +93,32 @@ Upload micropython to ESP32
     esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460800 write_flash -z 0x1000 esp32-idf3-20210202-v1.14.bin
 
 Power off and on ESP32
+
+# ESP32-S2 pinout
+
+This pinout is not yet tested does it glitch at
+changing modes. It is possible that there are
+better combinations.
+
+This pinout provides 40KB/s flashing speed. Different
+pinout was tried and it provides only 20KB/s. It is not
+yet known is there a pinout able to write flash faster
+than 40KB/s.
+
+ESP32-S2 can use any pin as input and/or output,
+while at ESP32 classic, pins 32 and higer are input only.
+
+Some micropython for ESP32-S2 binary builds prevent
+use of some pins as input or output, not yet known why.
+This is experimentally found pinout that is accepted
+and works:
+
+    tms   = 8   # BLUE LED - 549ohm - 3.3V
+    tck   = 16
+    tdi   = 15
+    tdo   = 7
+    tcknc = 12  # free pin for SPI workaround
+    led   = 13
 
 # Install ESP32-S2 micropython
 

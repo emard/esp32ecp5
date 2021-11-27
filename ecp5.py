@@ -9,6 +9,7 @@ from machine import SPI, SoftSPI, Pin, freq
 from micropython import const
 from struct import unpack
 from uctypes import addressof
+from gc import collect
 import jtagpin
 
 freq(240000000) # Hz CPU clk frequency
@@ -427,13 +428,13 @@ def stopwatch_stop(bytes_uploaded):
     transfer_rate_kBps = bytes_uploaded // elapsed_ms
   print("%d bytes uploaded in %d ms (%d kB/s)" % (bytes_uploaded, elapsed_ms, transfer_rate_kBps))
 
-def prog_stream(filedata, blocksize=16384):
+def prog_stream(dstream, blocksize=4096):
   prog_open()
   bytes_uploaded = 0
   stopwatch_start()
   block = bytearray(blocksize)
   while True:
-    if filedata.readinto(block):
+    if dstream.readinto(block):
       hwspi.write(block)
       bytes_uploaded += len(block)
     else:
@@ -441,14 +442,14 @@ def prog_stream(filedata, blocksize=16384):
   stopwatch_stop(bytes_uploaded)
   prog_stream_done()
 
-def open_file(filename, gz=False):
-  filedata = open(filename, "rb")
-  if gz:
+def prog_stream_gz(dstream, blocksize=4096, name=""):
+  if name.lower().endswith(".gz"):
     import uzlib
-    return uzlib.DecompIO(filedata,31)
-  return filedata
+    prog_stream(uzlib.DecompIO(dstream,31), blocksize)
+  else:
+    prog_stream(dstream, blocksize)
 
-def open_web(url, gz=False):
+def open_web(url):
   import socket
   _, _, host, path = url.split('/', 3)
   port = 80
@@ -463,9 +464,6 @@ def open_web(url, gz=False):
   for i in range(100): # read first 100 lines searching for
     if len(s.readline()) < 3: # first empty line (contains "\r\n")
       break
-  if gz:
-    import uzlib
-    return uzlib.DecompIO(s,31)
   return s
 
 # data is bytearray of to-be-read length
@@ -499,7 +497,7 @@ def compare_flash_file_buf(flash_b, file_b, must:int)->int:
 # prevents flash wear when overwriting the same data
 # 4K erase block is max that fits on ESP32-WROOM
 # returns status True-OK False-Fail
-def flash_stream(filedata, addr=0):
+def flash_stream(dstream, addr=0):
   flash_open()
   addr_mask = flash_erase_size-1
   if addr & addr_mask:
@@ -521,7 +519,7 @@ def flash_stream(filedata, addr=0):
   flash_block = bytearray(flash_read_size)
   file_blockmv=memoryview(file_block)
   progress_char="."
-  while filedata.readinto(file_block):
+  while dstream.readinto(file_block):
     led.value((bytes_uploaded >> 12)&1)
     retry = 3
     while retry > 0:
@@ -569,21 +567,24 @@ def flash_stream(filedata, addr=0):
   print("%dK blocks: %d total, %d erased, %d written." % (flash_erase_size>>10, count_total, count_erase, count_write))
   return retry > 0 # True if successful
 
-def filedata_gz(filepath):
-  gz = filepath.endswith(".gz")
-  if filepath.startswith("http://") or filepath.startswith("/http:/"):
-    filedata = open_web(filepath, gz)
+def flash_stream_gz(dstream, addr=0, name=""):
+  if name.lower().endswith(".gz"):
+    import uzlib
+    flash_stream(uzlib.DecompIO(dstream,31), addr)
   else:
-    filedata = open_file(filepath, gz)
-  return filedata, gz
+    flash_stream(dstream, addr)
+
+def datastream(filepath):
+  if filepath.startswith("http://") or filepath.startswith("/http:/"):
+    return open_web(filepath)
+  else:
+    return open(filepath, "rb")
 
 def prog(filepath, close=True):
-  filedata, gz = filedata_gz(filepath)
-  if filedata:
-    if gz:
-      prog_stream(filedata,blocksize=4096)
-    else:
-      prog_stream(filedata,blocksize=16384)
+  collect()
+  dstream = datastream(filepath)
+  if dstream:
+    prog_stream_gz(dstream,4096,filepath)
     # NOTE now the SD card can be released before bitstream starts
     if close:
       return prog_close() # start the bitstream
@@ -591,9 +592,10 @@ def prog(filepath, close=True):
   return False
 
 def flash(filepath, addr=0, close=True):
-  filedata, gz = filedata_gz(filepath)
-  if filedata:
-    status=flash_stream(filedata,addr)
+  collect()
+  dstream = datastream(filepath)
+  if dstream:
+    status=flash_stream_gz(dstream,addr,filepath)
     # NOTE now the SD card can be released before bitstream starts
     if close:
       flash_close() # start the bitstream
@@ -601,17 +603,19 @@ def flash(filepath, addr=0, close=True):
   return False
 
 def flashrd(addr=0, length=1):
+  collect()
   data = bytearray(length)
   flash_read(data, addr)
   return data
 
 def passthru():
+  collect()
   id = idcode()
   if id != 0 and id != 0xFFFFFFFF:
     filepath = "passthru%08x.bit.gz" % id
     print("ecp5.prog(\"%s\")" % filepath)
-    filedata = open_file(filepath, gz=True)
-    prog_stream(filedata,blocksize=4096)
+    dstream = datastream(filepath)
+    prog_stream_gz(dstream,4096,filepath)
     return prog_close()
   return False
 

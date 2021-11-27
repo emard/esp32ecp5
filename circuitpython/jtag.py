@@ -11,8 +11,8 @@ from struct import pack, unpack
 
 gpio_tdi = board.IO15
 gpio_tck = board.IO16
-gpio_tdo = board.IO17
-gpio_tms = board.IO18  # BLUE LED - 549ohm - 3.3V
+gpio_tdo = board.IO7
+gpio_tms = board.IO8  # BLUE LED - 549ohm - 3.3V
 #gpio_tdi = board.IO35
 #gpio_tck = board.IO36
 #gpio_tdo = board.IO37

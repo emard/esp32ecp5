@@ -15,8 +15,8 @@ Pinout:
     # JTAG pinout 1
     IO15 TDI
     IO16 TCK
-    IO17 TDO
-    IO18 TMS - BLUE LED - 549ohm - 3.3V
+    IO7  TDO
+    IO8  TMS - BLUE LED - 549ohm - 3.3V
     # JTAG pinout 2
     IO35 TDI
     IO36 TCK

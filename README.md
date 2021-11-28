@@ -525,10 +525,10 @@ Special destination file names "fpga", "flash@", "sd@" are
 used for direct programming and they don't relate to actual
 files on ESP32 filesystem.
 
-if using "lftp", syntax is different, use option "-o" and prepend "/" like this:
+if using "lftp", syntax is different, use option "-o" like this:
 
-    lftp 192.168.4.1:/> put blink.bit -o /fpga
-    lftp 192.168.4.1:/> put blink.bit -o /flash@0
+    lftp 192.168.4.1:/> put blink.bit -o fpga
+    lftp 192.168.4.1:/> put blink.bit -o flash@0
 
 To automate upload from linux shell,
 enable ftp auto-login in "~/.netrc":

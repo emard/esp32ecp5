@@ -44,17 +44,26 @@ _month_name = ("", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 def mount():
-  global SD
-  try:
+  global SD,spi
+  try: # ESP32
     from machine import SDCard
-    SD = SDCard(slot=3)
+    SD=SDCard(slot=3)
     os.mount(SD,"/sd")
-    return True
   except:
-    return False
+    try: # ESP32-S2
+      import sdpin
+      from sdcard import SDCard
+      from machine import SPI
+      spi=SPI(sck=Pin(sdpin.clk), mosi=Pin(sdpin.cmd), miso=Pin(sdpin.d0))
+      SD=SDCard(spi,Pin(sdpin.d3))
+      os.mount(SD,"/sd")
+    except:
+      print("mount failed")
+      return False
+  return True
 
 def umount():
-  global SD
+  global SD,spi
   try:
     os.umount("/sd")
     try:
@@ -62,8 +71,14 @@ def umount():
       del SD
     except:
       pass
+    try:
+      spi.deinit()
+      del spi
+    except:
+      pass
     # let all SD pins be inputs
-    for i in bytearray([2,4,12,13,14,15]):
+    import sdpin
+    for i in sdpin.hiz:
       p = Pin(i,Pin.IN)
       a = p.value()
       del p, a

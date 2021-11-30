@@ -9,24 +9,6 @@ def printfile(name):
   except:
     print("file '%s' not found." % name)
 
-printfile("wifiman.conf")
-yn=input("delete old and create new WiFi users:passwords (n/y)? ")
-if yn.startswith("y"):
-  f=open("wifiman.conf","w")
-  f.close()
-  print("all WiFi users:passwords deleted")
-yn="y"
-while yn.startswith("y"):
-  yn=input("add WiFi user:password (n/y)? ")
-  if yn.startswith("y"):
-    user_pass=input("enter WiFi user:password> ")
-    if user_pass.find(":")>0:
-      f=open("wifiman.conf","a")
-      f.write(user_pass)
-      f.write("\n")
-      f.close()
-  printfile("wifiman.conf")
-
 def main():
   f=open("main.py","w")
   f.write(
@@ -45,12 +27,7 @@ def main():
   )
   f.close()
 
-yn=input("overwrite 'main.py' to run FTP server at boot (n/y)? ")
-if yn.startswith("y"):
-  main()
-  print("main.py overwritten")
-
-def pins_v20():
+def jtagpin_v20():
   f=open("jtagpin.py","w")
   f.write(
 "# ULX3S v3.0.x or v2.x.x\n"
@@ -63,7 +40,7 @@ def pins_v20():
   )
   f.close()
 
-def pins_v31():
+def jtagpin_v31():
   f=open("jtagpin.py","w")
   f.write(
 "# ULX3S v3.1.x\n"
@@ -76,7 +53,7 @@ def pins_v31():
   )
   f.close()
 
-def pins_esp32s2():
+def jtagpin_esp32s2():
   f=open("jtagpin.py","w")
   f.write(
 "# ESP32-S2 prototype\n"
@@ -89,7 +66,7 @@ def pins_esp32s2():
   )
   f.close()
 
-def pins_fjc():
+def jtagpin_fjc():
   f=open("jtagpin.py","w")
   f.write(
 "# FJC-ESP32-V0r2\n"
@@ -102,20 +79,83 @@ def pins_fjc():
   )
   f.close()
 
-printfile("jtagpin.py")
-yn=input("change JTAG pinout (n/y)? ")
-if yn.startswith("y"):
-  print("0: ULX3S v3.0.x or v2.x.x")
-  print("1: ULX3S v3.1.x")
-  print("2: ESP32-S2 prototype")
-  print("3: FJC-ESP32-V0r2")
-  pinout=input("select pinout (0-3)> ")
-  if pinout.startswith("0"):
-    pins_v20()
-  if pinout.startswith("1"):
-    pins_v31()
-  if pinout.startswith("2"):
-    pins_esp32s2()
-  if pinout.startswith("3"):
-    pins_fjc()
+def sdpin_esp32():
+  f=open("sdpin.py","w")
+  f.write(
+"# ESP32 SD-SPI-MMC\n"
+"hiz=bytearray([2,4,12,13,14,15]) # to release SD\n"
+  )
+  f.close()
+
+def sdpin_esp32s2():
+  f=open("sdpin.py","w")
+  f.write(
+"# ESP32-S2 SD-SPI\n"
+"d0=const(13)  # miso\n"
+"d3=const(10)  # csn\n"
+"clk=const(12) # sck\n"
+"cmd=const(11) # mosi\n"
+"hiz=bytearray([d0,d3,clk,cmd]) # to release SD\n"
+  )
+  f.close()
+
+def set_wifi():
+  print("--- WiFi ---")
+  printfile("wifiman.conf")
+  yn=input("delete old and create new WiFi users:passwords (n/y)? ")
+  if yn.startswith("y"):
+    f=open("wifiman.conf","w")
+    f.close()
+    print("all WiFi users:passwords deleted")
+  yn="y"
+  while yn.startswith("y"):
+    yn=input("add WiFi user:password (n/y)? ")
+    if yn.startswith("y"):
+      user_pass=input("enter WiFi user:password> ")
+      if user_pass.find(":")>0:
+        f=open("wifiman.conf","a")
+        f.write(user_pass)
+        f.write("\n")
+        f.close()
+    printfile("wifiman.conf")
+
+def set_boot():
+  print("--- BOOT ---")
+  yn=input("overwrite 'main.py' to run WiFi, NTP and FTP at boot (n/y)? ")
+  if yn.startswith("y"):
+    main()
+    print("main.py overwritten")
+  print("")
+
+def set_pinout():
+  print("--- PINOUT ---")
   printfile("jtagpin.py")
+  printfile("sdpin.py")
+  yn=input("change JTAG and SD pinout (n/y)? ")
+  if yn.startswith("y"):
+    print("0: ULX3S v3.0.x or v2.x.x")
+    print("1: ULX3S v3.1.x")
+    print("2: ESP32-S2 prototype")
+    print("3: FJC-ESP32-V0r2")
+    pinout=input("select pinout (0-3)> ")
+    if pinout.startswith("0"):
+      jtagpin_v20()
+      sdpin_esp32()
+    if pinout.startswith("1"):
+      jtagpin_v31()
+      sdpin_esp32()
+    if pinout.startswith("2"):
+      jtagpin_esp32s2()
+      sdpin_esp32s2()
+    if pinout.startswith("3"):
+      jtagpin_fjc()
+      sdpin_esp32()
+    printfile("jtagpin.py")
+    printfile("sdpin.py")
+
+def run():
+  set_wifi()
+  set_boot()
+  set_pinout()
+
+run()

@@ -268,7 +268,7 @@ It will be installed here:
 
     ~/.local/bin/ampy
 
-Upload local files to ESP32 like this:
+Upload local files to ESP32 like this (script "upload.sh"):
 
     ampy -p /dev/ttyUSB0 mkdir /lib
     ampy -p /dev/ttyUSB0 put ecp5.py /lib/ecp5.py
@@ -278,6 +278,7 @@ Upload local files to ESP32 like this:
     ampy -p /dev/ttyUSB0 put ecp5setup.py /lib/ecp5setup.py
     ampy -p /dev/ttyUSB0 put wifiman.conf /wifiman.conf
     ampy -p /dev/ttyUSB0 put jtagpin.py /jtagpin.py
+    ampy -p /dev/ttyUSB0 put sdpin.py /sdpin.py
     ampy -p /dev/ttyUSB0 put main.py /main.py
 
 List files on ESP32:

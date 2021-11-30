@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/sh
 
 PORT=/dev/ttyUSB0
 AMPY=~/.local/bin/ampy
@@ -9,6 +9,7 @@ $AMPY -p $PORT put uftpd.py /lib/uftpd.py
 $AMPY -p $PORT put sdraw.py /lib/sdraw.py
 $AMPY -p $PORT put ecp5wp.py /lib/ecp5wp.py
 $AMPY -p $PORT put ecp5setup.py /lib/ecp5setup.py
+$AMPY -p $PORT put wifiman.py /lib/wifiman.py
 $AMPY -p $PORT put wifiman.conf /wifiman.conf
 $AMPY -p $PORT put jtagpin.py /jtagpin.py
 $AMPY -p $PORT put sdpin.py /sdpin.py

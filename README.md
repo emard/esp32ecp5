@@ -276,6 +276,7 @@ Upload local files to ESP32 like this (script "upload.sh"):
     ampy -p /dev/ttyUSB0 put sdraw.py /lib/sdraw.py
     ampy -p /dev/ttyUSB0 put ecp5wp.py /lib/ecp5wp.py
     ampy -p /dev/ttyUSB0 put ecp5setup.py /lib/ecp5setup.py
+    ampy -p /dev/ttyUSB0 put wifiman.py /lib/wifiman.py
     ampy -p /dev/ttyUSB0 put wifiman.conf /wifiman.conf
     ampy -p /dev/ttyUSB0 put jtagpin.py /jtagpin.py
     ampy -p /dev/ttyUSB0 put sdpin.py /sdpin.py

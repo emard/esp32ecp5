@@ -6,7 +6,7 @@
 #tcknc = const(21)
 #led = const(19)
 
-# ULX3S v3.0.x
+# ULX3S v3.0.x, v2.x.x, v1.x
 tms = const(21)
 tck = const(18)
 tdi = const(23)

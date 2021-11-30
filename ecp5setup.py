@@ -30,7 +30,7 @@ def main():
 def jtagpin_v20():
   f=open("jtagpin.py","w")
   f.write(
-"# ULX3S v3.0.x or v2.x.x\n"
+"# ULX3S v3.0.x, v2.x.x, v1.x\n"
 "tms=const(21)\n"
 "tck=const(18)\n"
 "tdi=const(23)\n"
@@ -133,7 +133,7 @@ def set_pinout():
   printfile("sdpin.py")
   yn=input("change JTAG and SD pinout (n/y)? ")
   if yn.startswith("y"):
-    print("0: ULX3S v3.0.x or v2.x.x")
+    print("0: ULX3S v3.0.x, v2.x.x, v1.x")
     print("1: ULX3S v3.1.x")
     print("2: ESP32-S2 prototype")
     print("3: FJC-ESP32-V0r2")

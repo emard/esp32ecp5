@@ -9,9 +9,22 @@ def printfile(name):
   except:
     print("file '%s' not found." % name)
 
+def boot():
+  f=open("boot.py","w")
+  f.write(
+"# boot.py: executed on every boot (including wake-boot from deepsleep)\n"
+"#import esp\n"
+"#esp.osdebug(None)\n"
+"import webrepl\n"
+"webrepl.start()\n"
+"gc.collect()\n"
+  )
+  f.close()
+
 def main():
   f=open("main.py","w")
   f.write(
+"# main.py: executed on every boot\n"
 "try:\n"
 "  import wifiman\n"
 "except:\n"
@@ -22,6 +35,7 @@ def main():
 "from ntptime import settime\n"
 "try:\n"
 "  settime()\n"
+"  print('NTP time set')\n"
 "except:\n"
 "  print('NTP not available')\n"
   )
@@ -121,11 +135,14 @@ def set_wifi():
 
 def set_boot():
   print("--- BOOT ---")
-  yn=input("overwrite 'main.py' to run WiFi, NTP and FTP at boot (n/y)? ")
+  printfile("boot.py")
+  printfile("main.py")
+  yn=input("overwrite 'boot.py' and 'main.py' to run WiFi, WebREPL, NTP and FTP at boot (n/y)? ")
   if yn.startswith("y"):
+    boot()
     main()
-    print("main.py overwritten")
-  print("")
+    printfile("boot.py")
+    printfile("main.py")
 
 def set_pinout():
   print("--- PINOUT ---")

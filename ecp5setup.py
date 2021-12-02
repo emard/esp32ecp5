@@ -17,7 +17,6 @@ def boot():
 "#esp.osdebug(None)\n"
 "import webrepl\n"
 "webrepl.start()\n"
-"gc.collect()\n"
   )
   f.close()
 

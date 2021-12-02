@@ -94,6 +94,16 @@ Upload micropython to ESP32
 
 Power off and on ESP32
 
+Micropython v1.12 can be used with small modifications:
+
+    from machine import SPI, SoftSPI, Pin, freq
+    # don't import SoftSPI, it doesn't exist on v1.12
+    from machine import SPI, Pin, freq
+    
+    swspi=SoftSPI(baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(jtagpin.tck), mosi=Pin(jtagpin.tdi), miso=Pin(jtagpin.tdo))
+    # SPI(-1, ...) is SoftSPI at v1.12
+    swspi=SPI(-1, baudrate=spi_freq, polarity=1, phase=1, bits=8, firstbit=SPI.MSB, sck=Pin(jtagpin.tck), mosi=Pin(jtagpin.tdi), miso=Pin(jtagpin.tdo))
+
 # ESP32-S2 pinout
 
 This pinout is not yet tested does it glitch at

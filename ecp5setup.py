@@ -150,9 +150,9 @@ def set_pinout():
   yn=input("change JTAG and SD pinout (n/y)? ")
   if yn.startswith("y"):
     print("0: ULX3S v3.0.x, v2.x.x, v1.x")
-    print("1: ULX3S v3.1.x")
+    print("1: ULX3S v3.1.x, ULX4M + ESP32 HAT, FFC-RBP V0r12")
     print("2: ESP32-S2 prototype")
-    print("3: FJC-ESP32-V0r2")
+    print("3: FFC-RBP V0r10 + FJC-ESP32-V0r2")
     pinout=input("select pinout (0-3)> ")
     if pinout.startswith("0"):
       jtagpin_v20()

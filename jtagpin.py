@@ -1,4 +1,4 @@
-# FJC-ESP32-V0r2 pluggable
+# FFC-RBP V0r10 + FJC-ESP32-V0r2 pluggable
 #tms = const(4)
 #tck = const(16)
 #tdi = const(15)
@@ -14,7 +14,7 @@ tdo = const(19)
 tcknc = const(17) # free pin for SPI workaround
 led = const(5)
 
-# ULX3S v3.1.x
+# ULX3S v3.1.x, ULX4M + ESP32 HAT, FFC-RBP V0r12
 #tms = const(5)   # BLUE LED - 549ohm - 3.3V
 #tck = const(18)
 #tdi = const(23)

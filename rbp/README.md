@@ -37,6 +37,10 @@ Pinout:
 # ECP-5
 
 ecp5.prog() and ecp5.flash() work at ESP32-WROVER.
+FLASH write should use 64KB erase block, change in ecp5.py:
+
+    flash_erase_size = const(65536)
+
 FLASH doesn't work at ESP32-WROOM for it can't buffer 64KB erase blocks.
 jtagspi bypass bitstream is not needed for ECP5. 
 

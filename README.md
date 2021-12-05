@@ -26,8 +26,8 @@ esp32ecp5 can be installed or upgraded online with
 
 It can be also upgraded from FTP or LFTP prompt:
 
-    ftp> site import upip; upip.install(\"esp32ecp5\")
-    lftp> site "import upip; upip.install(\"esp32ecp5\")"
+    ftp> site "import upip; upip.install('esp32ecp5')"
+    lftp> site "import upip; upip.install('esp32ecp5')"
     250-
     Installing to: /lib/
     Installing esp32ecp5 1.0.12 from https://files.pythonhosted.org/packages/46/d6/15b3f9f2312b4bc16f9c2d0c042ad4e4ae8aee969c50b352d816b090a8b0/esp32ecp5-1.0.12.tar.gz
@@ -495,28 +495,30 @@ SD card with FAT filesystem can be mounted or unmounted to "/sd" directory:
     ftp> ls sd
 
 "site" can exec() any micropython command.
-Quotes ("") and backslash escaping may be required. Actual syntax may vary
-between ftp clients.
+If command needs quotes, use double quotes outside and single quotes inside:
+
+    lftp> site "print('abc')"
+
+Actual syntax may vary between ftp clients.
 
     ftp> site import ecp5; ecp5.passthru()
     lftp> site "import ecp5; ecp5.passthru()"
     250-                                                                
     ecp5.prog("passthru41113043.bit.gz")
-    Warning: SPI(-1, ...) is deprecated, use SoftSPI(...) instead
     282624 bytes uploaded in 613 ms (461 kB/s)
     250 OK
-    lftp> site ecp5.flash(\"passthru41113043.bit.gz\",0x200000)
+    lftp> site "ecp5.flash('passthru41113043.bit.gz',0x200000)"
     250-                                                                                  
-    Warning: SPI(-1, ...) is deprecated, use SoftSPI(...) instead
     0x200000 4K wwwwwwwwwwwwwwww
     0x210000 4K wwwwwwwww
     102400 bytes uploaded in 5890 ms (17 kB/s)
     4K blocks: 25 total, 25 erased, 25 written.
 
-Theoretically "site" should work well if there is enough RAM
-but even on ESP32-WROVER with 2MB there is instability.
-After few ecp5.prog() or ecp5.flash(), FTP traffic stops
-and ESP32 freezes.
+Theoretically "site" should work well if there is enough RAM.
+During upload of bitstream FPGA lines may have unpredictable
+state. If a glitch occurs at ESP32 "EN" and other
+pins, ESP32 may reset or freeze (stop responding)
+until next power off/on cycle.
 
 It is possible to directly put a binary file
 (not gzipped) from "ftp>" prompt into FPGA, FLASH or

@@ -39,12 +39,11 @@ def get_connection():
       ssid = ssid.decode('utf-8')
       encrypted = authmode > 0
       print("ssid: %s chan: %d rssi: %d authmode: %s" % (ssid, channel, rssi, AUTHMODE.get(authmode, '?')))
-      if encrypted:
-        if ssid in profiles:
-          password = profiles[ssid]
-          connected = do_connect(ssid, password)
-      else:  # open
-        connected = do_connect(ssid, None)
+      if ssid in profiles: # connect only to configured ssids
+        if encrypted:
+          connected = do_connect(ssid, profiles[ssid])
+        else:
+          connected = do_connect(ssid, None)
       if connected:
         break
 

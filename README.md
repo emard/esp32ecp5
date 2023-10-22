@@ -357,7 +357,7 @@ Get micropython's "mpremote"
          114 jtagpin.py
 
     mpremote connect /dev/ttyUSB0 mkdir lib
-    mpremote connect /dev/ttyUSB0 cp ecp5.py uftpd.py sdraw.py ecp5wp.py ecp5setup.py wifiman.py wifiman.conf :/lib/
+    mpremote connect /dev/ttyUSB0 cp ecp5.py uftpd.py sdraw.py ecp5wp.py ecp5setup.py wifiman.py :/lib/
     mpremote connect /dev/ttyUSB0 ls lib
     ...
 

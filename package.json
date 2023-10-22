@@ -4,7 +4,7 @@
     ["ecp5setup.py", "https://raw.githubusercontent.com/emard/esp32ecp5/master/ecp5setup.py"]
   ],
   "deps": [
-    ["zlib", "zlib"]
+    ["zlib"]
   ],
   "version": "0.0"
 }

@@ -122,7 +122,7 @@ or
 [ESP32_GENERIC-SPIRAM-20231005-v1.21.0.bin](https://micropython.org/resources/firmware/ESP32_GENERIC-SPIRAM-20231005-v1.21.0.bin)
 v1.14 build is slightly old but widely tested, it
 can mount and unmount SD card multiple times.
-v1.21 is now and promising full of fresh features,
+v1.21 is new and promising full of fresh features,
 early tests seem everything works like before.
 On non-SPIRAM devices v1.21 has about 130K bytes free
 while v1.14 had about bytes 100K free RAM.

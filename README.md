@@ -14,7 +14,10 @@ Reboot ESP32, type this and follow interactive setup procedure:
 
     import ecp5setup
 
-Reboot ESP32. If connected to internet,
+Reboot ESP32. If connected to internet:
+
+# micropython <= 1.14:
+
 esp32ecp5 can be installed or upgraded online with
 [upip.install("esp32ecp5")](https://pypi.org/project/esp32ecp5):
 
@@ -31,6 +34,40 @@ It can be also upgraded from FTP or LFTP prompt:
     250-
     Installing to: /lib/
     Installing esp32ecp5 1.0.12 from https://files.pythonhosted.org/packages/46/d6/15b3f9f2312b4bc16f9c2d0c042ad4e4ae8aee969c50b352d816b090a8b0/esp32ecp5-1.0.12.tar.gz
+    250 OK
+
+# micropython >= 1.21:
+
+esp32ecp5 can be installed or upgraded online with mip
+
+    import mip
+    mip.install("https://raw.githubusercontent.com/emard/esp32ecp5/master")
+    Installing https://raw.githubusercontent.com/emard/esp32ecp5/master/package.json to /lib
+    Copying: /lib/ecp5.py
+    Copying: /lib/uftpd.py
+    Copying: /lib/wifiman.py
+    Copying: /lib/sdraw.py
+    Copying: /lib/ecp5wp.py
+    Copying: /lib/ecp5setup.py
+    Installing zlib (latest) from https://micropython.org/pi/v2 to /lib
+    Copying: /lib/zlib.mpy
+    Done
+
+It can be also upgraded from FTP or LFTP prompt:
+
+    ftp> site "import mip; mip.install('https://raw.githubusercontent.com/emard/esp32ecp5/master')"
+    lftp> site "import mip; mip.install('https://raw.githubusercontent.com/emard/esp32ecp5/master')"
+    250-
+    Installing https://raw.githubusercontent.com/emard/esp32ecp5/master/package.json to /lib
+    Copying: /lib/ecp5.py
+    Copying: /lib/uftpd.py
+    Copying: /lib/wifiman.py
+    Copying: /lib/sdraw.py
+    Copying: /lib/ecp5wp.py
+    Copying: /lib/ecp5setup.py
+    Installing zlib (latest) from https://micropython.org/pi/v2 to /lib
+    Exists: /lib/zlib.mpy
+    Done
     250 OK
 
 # ESP32 pinout

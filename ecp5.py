@@ -444,8 +444,12 @@ def prog_stream(dstream, blocksize=4096):
 
 def prog_stream_gz(dstream, blocksize=4096, name=""):
   if name.lower().endswith(".gz"):
-    import uzlib
-    prog_stream(uzlib.DecompIO(dstream,31), blocksize)
+    try:
+      import deflate
+      prog_stream(deflate.DeflateIO(dstream), blocksize)
+    except:
+      import uzlib
+      prog_stream(uzlib.DecompIO(dstream,31), blocksize)
   else:
     prog_stream(dstream, blocksize)
 
@@ -569,8 +573,12 @@ def flash_stream(dstream, addr=0):
 
 def flash_stream_gz(dstream, addr=0, name=""):
   if name.lower().endswith(".gz"):
-    import uzlib
-    flash_stream(uzlib.DecompIO(dstream,31), addr)
+    try:
+      import deflate
+      flash_stream(deflate.DeflateIO(dstream), addr)
+    except:
+      import uzlib
+      flash_stream(uzlib.DecompIO(dstream,31), addr)
   else:
     flash_stream(dstream, addr)
 

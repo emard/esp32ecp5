@@ -111,18 +111,26 @@ Choose appropriate for your board and ECP5 chip and upload passthru bitstream to
 
 For ESP32 classic download [micropython for ESP32](https://micropython.org/download#esp32)
 "Stable" version.
-For WROOM modules use non-SPIRAM versions like:
-[esp32-idf3-20210202-v1.14.bin](https://micropython.org/resources/firmware/esp32-idf3-20210202-v1.14.bin).
+For WROOM modules use non-SPIRAM IDF3 versions like:
+[ESP32_GENERIC-IDF3-20210202-v1.14.bin](https://micropython.org/resources/firmware/ESP32_GENERIC-IDF3-20210202-v1.14.bin).
+or
+[ESP32_GENERIC-20231005-v1.21.0.bin](https://micropython.org/resources/firmware/ESP32_GENERIC-20231005-v1.21.0.bin).
 Non-SPIRAM will work for WROVER modules too,
 but to use extra RAM, WROVER modules need SPIRAM versions like:
-[esp32spiram-idf3-20210202-v1.14.bin](https://micropython.org/resources/firmware/esp32spiram-idf3-20210202-v1.14.bin).
-Versions v1.14 - v1.17 built with idf3 or idf4 should all work.
-idf3 v1.14 build is recommended as the latest version 
-which can mount and unmount SD card multiple times.
-idf3 leaves slighty more free RAM than idf4 builds,
-and ESP32-WROOM modules always need more RAM.
+[ESP32_GENERIC-SPIRAM-20210202-v1.14.bin](https://micropython.org/resources/firmware/ESP32_GENERIC-SPIRAM-20210202-v1.14.bin).
+or
+[ESP32_GENERIC-SPIRAM-20231005-v1.21.0.bin](https://micropython.org/resources/firmware/ESP32_GENERIC-SPIRAM-20231005-v1.21.0.bin)
+v1.14 build is slightly old but widely tested, it
+can mount and unmount SD card multiple times.
+v1.21 is now and promising full of fresh features,
+early tests seem everything works like before.
+On non-SPIRAM devices v1.21 has about 130K bytes free
+while v1.14 had about bytes 100K free RAM.
 
-    wget https://micropython.org/resources/firmware/esp32-idf3-20210202-v1.14.bin
+    import gc
+    print(gc.mem_free())
+
+    wget https://micropython.org/resources/firmware/ESP32_GENERIC-IDF3-20210202-v1.14.bin
 
 Upload micropython to ESP32
 

@@ -344,6 +344,24 @@ List files on ESP32:
     /main.py
     ...
 
+Get micropython's "mpremote"
+
+    pipx install mpremote
+
+    mpremote connect /dev/ttyUSB0
+    >>>
+
+    mpremote connect /dev/ttyUSB0 ls
+    ls :
+         137 boot.py
+         114 jtagpin.py
+
+    mpremote connect /dev/ttyUSB0 mkdir lib
+    mpremote connect /dev/ttyUSB0 cp ecp5.py uftpd.py sdraw.py ecp5wp.py ecp5setup.py wifiman.py wifiman.conf :/lib/
+    mpremote connect /dev/ttyUSB0 ls lib
+    ...
+
+
 # Upload files over WiFi from linux command line
 
 Get [webrepl for commandline](https://github.com/Hermann-SW/webrepl),

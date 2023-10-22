@@ -16,7 +16,7 @@ Reboot ESP32, type this and follow interactive setup procedure:
 
 Reboot ESP32. If connected to internet:
 
-# micropython <= 1.14:
+# micropython <= 1.14 (recommended):
 
 esp32ecp5 can be installed or upgraded online with
 [upip.install("esp32ecp5")](https://pypi.org/project/esp32ecp5):
@@ -121,11 +121,11 @@ but to use extra RAM, WROVER modules need SPIRAM versions like:
 or
 [ESP32_GENERIC-SPIRAM-20231005-v1.21.0.bin](https://micropython.org/resources/firmware/ESP32_GENERIC-SPIRAM-20231005-v1.21.0.bin)
 v1.14 build is slightly old but widely tested, it
-can mount and unmount SD card multiple times.
-v1.21 is new and promising full of fresh features,
-early tests seem everything works like before.
-On non-SPIRAM devices v1.21 has about 130K bytes free
-while v1.14 had about bytes 100K free RAM.
+can mount and unmount SD card multiple times while
+v1.15-v1.19 crash at next mount/umount.
+v1.21 is new and full of fresh features,
+most things work like on 1.14 but flashing of
+FPGA SPI chip currently doesn't work.
 
     import gc
     print(gc.mem_free())

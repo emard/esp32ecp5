@@ -1,6 +1,10 @@
 {
   "urls": [
     ["ecp5.py",      "https://raw.githubusercontent.com/emard/esp32ecp5/master/ecp5.py"],
+    ["uftpd.py",     "https://raw.githubusercontent.com/emard/esp32ecp5/master/uftpd.py"],
+    ["wifiman.py",   "https://raw.githubusercontent.com/emard/esp32ecp5/master/wifiman.py"],
+    ["sdraw.py",     "https://raw.githubusercontent.com/emard/esp32ecp5/master/sdraw.py"],
+    ["ecp5wp.py",    "https://raw.githubusercontent.com/emard/esp32ecp5/master/ecp5wp.py"],
     ["ecp5setup.py", "https://raw.githubusercontent.com/emard/esp32ecp5/master/ecp5setup.py"]
   ],
   "deps": [

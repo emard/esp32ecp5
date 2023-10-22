@@ -1,7 +1,7 @@
 {
   "urls": [
-    ["lib/ecp5.py",      "github:com/emard/ecp5esp32/ecp5.py"],
-    ["lib/ecp5setup.py", "github:com/emard/ecp5esp32/ecp5setup.py"]
+    ["lib/ecp5.py",      "https://raw.githubusercontent.com/emard/ecp5esp32/master/ecp5.py"],
+    ["lib/ecp5setup.py", "https://raw.githubusercontent.com/emard/ecp5esp32/master/ecp5setup.py"]
   ],
   "deps": [
     ["micropython-lib", "zlib"]

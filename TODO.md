@@ -5,3 +5,4 @@
 [ ] watchdog in uftpd
 [ ] freeze after 5-10 times site ecp5.prog(\"passthru21111043.bit.gz\")
 [ ] micropython 1.21 zlib
+[ ] mip.install("https://raw.githubusercontent.com/emard/esp32ecp5/master")

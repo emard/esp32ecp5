@@ -16,7 +16,7 @@ Reboot ESP32, type this and follow interactive setup procedure:
 
 Reboot ESP32. If connected to internet:
 
-# micropython <= 1.14 (recommended):
+# micropython 1.14 (recommended):
 
 esp32ecp5 can be installed or upgraded online with
 [upip.install("esp32ecp5")](https://pypi.org/project/esp32ecp5):

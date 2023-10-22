@@ -315,9 +315,30 @@ try again.
 
 # Upload files over USB from linux command line
 
+Get micropython's "mpremote"
+
+    pipx install mpremote
+
+Get prompt:
+
+    mpremote connect /dev/ttyUSB0
+    >>>
+
+List files:
+
+    mpremote connect /dev/ttyUSB0 ls
+    ls :
+         137 boot.py
+         114 jtagpin.py
+
+Upload local files to ESP32 like this:
+
+    mpremote connect /dev/ttyUSB0 mkdir lib
+    mpremote connect /dev/ttyUSB0 cp ecp5.py uftpd.py sdraw.py ecp5wp.py ecp5setup.py wifiman.py :/lib/
+
 Get Adafruit "ampy"
 
-    pip3 install adafruit-ampy
+    pipx install adafruit-ampy
 
 It will be installed here:
 
@@ -344,22 +365,6 @@ List files on ESP32:
     /main.py
     ...
 
-Get micropython's "mpremote"
-
-    pipx install mpremote
-
-    mpremote connect /dev/ttyUSB0
-    >>>
-
-    mpremote connect /dev/ttyUSB0 ls
-    ls :
-         137 boot.py
-         114 jtagpin.py
-
-    mpremote connect /dev/ttyUSB0 mkdir lib
-    mpremote connect /dev/ttyUSB0 cp ecp5.py uftpd.py sdraw.py ecp5wp.py ecp5setup.py wifiman.py :/lib/
-    mpremote connect /dev/ttyUSB0 ls lib
-    ...
 
 
 # Upload files over WiFi from linux command line

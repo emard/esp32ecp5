@@ -124,8 +124,7 @@ v1.14 build is slightly old but widely tested, it
 can mount and unmount SD card multiple times while
 v1.15-v1.19 crash at next mount/umount.
 v1.21 is new and full of fresh features,
-most things work like on 1.14 but flashing of
-FPGA SPI chip currently doesn't work.
+most things work like on 1.14.
 
     import gc
     print(gc.mem_free())

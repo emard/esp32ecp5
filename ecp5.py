@@ -394,9 +394,12 @@ def flash_read_block(data, addr:int):
   p8[1]=addr>>16
   p8[2]=addr>>8
   p8[3]=addr
-  send_tms(0,2) # -> capture DR -> shift DR
-  swspi.write(flash_req) # send SPI FLASH read command and address and dummy byte
-  swspi.readinto(data) # retrieve whole block
+  send_tms(0,1) # -> capture DR
+  hwspi.init(sck=Pin(jtagpin.tck)) # 1 TCK-glitch -> shift DR
+  hwspi.write(flash_req) # send SPI FLASH read command and address and dummy byte
+  hwspi.readinto(data) # retrieve whole block
+  hwspi.init(sck=Pin(jtagpin.tcknc)) # avoid TCK-glitch
+  bitbang_jtag_on()
   send_int_msb1st(0,1,8) # dummy read byte -> exit 1 DR
   send_tms0111() # -> select DR scan
 

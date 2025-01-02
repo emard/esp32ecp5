@@ -211,6 +211,25 @@ Serial port "/dev/ttyACM0" will appear, providing micropython prompt:
 
     screen /dev/ttyACM0
 
+# ESP32-S3 pinout
+
+    XIAO ESP32S3 MINI
+    Mouser P/N: 713-113991114    7$
+    
+           XIAO  ESP32S3                   SDCARD
+              ┌─────┐                 ┌───────────────┐
+          ┌───┘ USB └───┐             │8   DAT1       │
+      TCK │1          5V│             │7   DAT0  MISO │
+      TMS │2         GND│ GND         │6   VSS2  GND  │
+      TDI │3        3.3V│ 3.3V        │5   CLK   CLK  │
+      TDO │4           9│ MISO        │4   VDD   3.3V │
+     SRST │5           8│ MOSI        │3   VSS1  GND  │
+       CS │6           7│ CLK         │2   CMD   MOSI │
+          │43 TX   RX 44│             │1   DAT3  CS   │
+          └─────────────┘              ╲ 9 DAT2       │
+              top view                   ─────────────┘
+                                           bot view
+
 # ESP32 micropython prompt
 
 Connect over USB-serial

@@ -699,7 +699,8 @@ connected with screen /dev/ttyUSB0 115200
 
 # LOW RAM
 
-Instead of ESP32-WROOM, use ESP32-WROVER :)
+Instead of ESP32-WROOM, use ESP32-WROVER or new 
+ESP32-WROOM-32E or ESP32S3 with PSRAM :)
 
 ecp5, ftp, gzip decompression, buffers and other things in use
 allocate RAM. Sometimes there won't be enough

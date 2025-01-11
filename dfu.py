@@ -1,42 +1,26 @@
-# Implementation of USB DFU device in Python.
+# ESP32S3 USB DFU micropython_spiram_oct >= 1.24
 #
-# To run, just execute this file on a device with machine.USBDevice support.  The device
-# will then change to DFU mode.
+# option "--no-follow" starts the script from PC
+# without waiting for a response,
+# because there won't be a response,
+# the default USB-serial will disconnect
+# and re-enumerate as a USB-DFU device:
 #
-# For example, use `mpremote` (the `--no-follow` option starts the script running
-# without waiting for a response, because there won't be a response, the USB will change
-# to a DFU device):
+# $ mpremote run --no-follow dfu.py
+# 
+# apt install dfu-util
 #
-# $ mpremote run --no-follow usb_dfu_device.py
-#
-# Then you can access the DFU device using the `pydfu.py` script in this repository, to
-# list DFU device, copy a file to the device, then exit DFU mode:
-#
-# $ ../../tools/pydfu.py -l
-# $ ../../tools/pydfu.py -u <file.dfu>
-#
-# After running the last command above, the USB CDC device and REPL should reappear.
-#
-# using dfu-util
-#
-# write bitstream.bit to FPGA SRAM but don't start it
-# dfu-util --dfuse-address 0 -D bitstream.bit
-
-# write bitstream.bit to FPGA SRAM and leave DFU to start it
-# dfu-util --dfuse-address 0:leave -D bitstream.bit
+# write bitstream.bit to FPGA SRAM
 # dfu-util -s 0:leave -D bitstream.bit
 
-# write bitstream.bit to SPI FLASH from address 0 (bootloader or user)
-# dfu-util --dfuse-address 0xF000000 -D bitstream.bit
+# write flash from address 0 (bootloader or user)
+# dfu-util -s 0xF000000:leave -D bitstream.bit
 
-# write bitstream.bit to SPI FLASH from address 0x200000 (user)
-# dfu-util --dfuse-address 0xF200000 -D bitstream.bit
+# write flash from address 0x200000 (user)
+# dfu-util -s 0xF200000:leave -D bitstream.bit
 
-# example to read flash
-# dfu-util -s 0xF200000:0xE00000:leave -U g2.bit
-
-# example to write flash
-# dfu-util -s 0xF200000:leave -D blink.bit
+# read flash from 0x200000 length 0xE00000 to file readflash.bit
+# dfu-util -s 0xF200000:0xE00000:leave -U readflash.bit
 
 import struct, machine
 import ecp5
@@ -253,16 +237,16 @@ class DFU:
   STATUS_OK = 0x00
 
   def __init__(self):
-      self.state = DFU.STATE_IDLE
-      self.cmd = DFU.CMD_NONE
-      self.status = DFU.STATUS_OK
-      self.error = 0
-      self.leave_dfu = False
-      self.addr = 0
-      self.dnload_block_num = 0
-      self.dnload_len = 0
-      self.dnload_buf = bytearray(wTransferSize)
-      self.open = 0
+    self.state = DFU.STATE_IDLE
+    self.cmd = DFU.CMD_NONE
+    self.status = DFU.STATUS_OK
+    self.error = 0
+    self.leave_dfu = False
+    self.addr = 0
+    self.dnload_block_num = 0
+    self.dnload_len = 0
+    self.dnload_buf = bytearray(wTransferSize)
+    self.open = 0
 
   def handle_rx(self, cmd, arg, buf):
     # Handle an incoming packet of data.
@@ -291,13 +275,13 @@ class DFU:
     # Prepare data to go to the host.
     if cmd == DFU.UPLOAD:
       if arg >= 2 and self.addr >= 0xF000000:
-          if self.open == 0:
-            ecp5.flash_open()
-            self.open = 1
-          self.cmd = DFU.CMD_UPLOAD
-          addr = (arg - 2) * flash_read_size + self.addr
-          self.do_read(addr, buf)
-          return buf
+        if self.open == 0:
+          ecp5.flash_open()
+          self.open = 1
+        self.cmd = DFU.CMD_UPLOAD
+        addr = (arg - 2) * flash_read_size + self.addr
+        self.do_read(addr, buf)
+        return buf
       return None
     elif cmd == DFU.GETSTATUS and len(buf) == 6:
       if self.cmd == DFU.CMD_NONE:

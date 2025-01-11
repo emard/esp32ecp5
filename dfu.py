@@ -295,7 +295,7 @@ class DFU:
             ecp5.flash_open()
             self.open = 1
           self.cmd = DFU.CMD_UPLOAD
-          addr = (arg - 2) * len(buf) + self.addr
+          addr = (arg - 2) * flash_read_size + self.addr
           self.do_read(addr, buf)
           return buf
       return None
@@ -386,7 +386,7 @@ class DFU:
 
   # read block from addr of flash memory.
   def do_read(self, addr, buf):
-    ecp5.flash_read_block(buf, addr);
+    ecp5.flash_read_block(buf, addr & 0xFFFFFF);
     return 0  # indicate success
 
   # if addr < 0xF000000, write block directly to FPGA RAM

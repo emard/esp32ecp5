@@ -93,8 +93,8 @@ _desc_cfg = bytes([
 0x09,  # bLength
 0x04,  # bDescriptorType
 0x00,  # bInterfaceNumber
-0x00,  # bNumEndpointns
 0x00,  # bAlternateSetting
+0x00,  # bNumEndpointns
 0xFE,  # bInterfaceClass: application specific interface
 0x01,  # bInterfaceSubClasse: device firmware update
 0x02,  # bInterfaceProtocol

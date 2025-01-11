@@ -49,7 +49,7 @@ USB_DIR_OUT = 0x00
 USB_DIR_IN = 0x80
 
 # String describing the memory layout of the DFU device.
-MEMORY_LAYOUT = b"@0xF000000:FLASH/0x0/61440*4Kd,4096*4Kg"
+MEMORY_LAYOUT = b"@0xF000000:FLASH/0x0/61440*4Kd,4096*4Ke"
 
 # Notes about the dfuse string above:
 # /<start_address>/<number>*<page_size><multiplier><memtype>
@@ -58,8 +58,8 @@ MEMORY_LAYOUT = b"@0xF000000:FLASH/0x0/61440*4Kd,4096*4Kg"
 #  <multiplier>: 'B'(ytes), 'K'(ilobytes), 'M'(egabytes)
 #  <memtype>: the bottom three bits are significant:
 #             writeable|erasable|readable
-# 'g' is writeable erasable readable
 # 'd' is writeable
+# 'e' is writeable readable
 # subsequent blocks separated by commas
 # Using the internal page size: "@Internal Flash   /0x08000000/64*128Ba,448*128Bg"
 # Using 1K blocks: "@Internal Flash   /0x08000000/8*001Ka,56*001Kg"

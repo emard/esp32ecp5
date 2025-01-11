@@ -36,7 +36,9 @@ USB_DIR_IN = 0x80
 MEMORY_LAYOUT = b"@0xF000000:FLASH/0x0/61440*4Kd,4096*4Ke"
 
 # Notes about the dfuse string above:
-# /<start_address>/<number>*<page_size><multiplier><memtype>
+# @ANY NAME/<start_address>/block[,block]
+# start_address = 0x...
+# block = <number>*<page_size><multiplier><memtype>
 #  <number>: how many pages
 #  <page_size>: self explanatory
 #  <multiplier>: 'B'(ytes), 'K'(ilobytes), 'M'(egabytes)
@@ -45,8 +47,7 @@ MEMORY_LAYOUT = b"@0xF000000:FLASH/0x0/61440*4Kd,4096*4Ke"
 # 'd' is writeable
 # 'e' is writeable readable
 # subsequent blocks separated by commas
-# Using the internal page size: "@Internal Flash   /0x08000000/64*128Ba,448*128Bg"
-# Using 1K blocks: "@Internal Flash   /0x08000000/8*001Ka,56*001Kg"
+# Using 4K blocks: "@FLASH/0x0/1024*4Ke"
 
 # VID and PID of the DFU device (these are the ST values).
 VID = 0x1d50

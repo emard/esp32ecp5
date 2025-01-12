@@ -667,6 +667,49 @@ memory situation will be better for ecp5.flash() from "webrepl"
     import ecp5
     ecp5.flash("blink.bit.gz")
 
+# ECP5 programming from DFU
+
+ESP32S3 with latest micropython >= 1.25 allows creation of
+custom USB device and for this we have DFU in micropython.
+
+On Linux we may need udev rule which permits users
+in "dialout" group to use DFU device
+
+    # file: /etc/udev/rules.d/50-dfu.rules
+    # this is for DFU 1d50 614b
+    ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="614b", \
+      GROUP="dialout", MODE="666"
+
+To install copy "dfu.py" to ESP32S3
+
+    mpremote cp dfu.py :/lib/
+    mpremote
+    >>> import dfu
+
+or upload and run "dfu.py" from linux commandline
+
+    mpremote run --no-follow dfu.py
+
+ESP32S3 will disconnect and re-enumerate as DFU device.
+
+    apt install dfu-util
+    dfu-util -l
+    Found DFU: [1d50:614b] ver=0100, devnum=50, cfg=1, intf=0, path="1-2.2", alt=0, name="@0xF000000:FLASH/0x0/61440*4Kd,4096*4Ke", serial="iSerialNumber"
+
+Examples how to use "dfu-util"
+
+    write bitstream.bit to FPGA SRAM
+    dfu-util -s 0:leave -D bitstream.bit
+
+    write flash from address 0 (bootloader or user)
+    dfu-util -s 0xF000000:leave -D bitstream.bit
+
+    write flash from address 0x200000 (user)
+    dfu-util -s 0xF200000:leave -D bitstream.bit
+
+    read flash from 0x200000 length 0xE00000 to file readflash.bit
+    dfu-util -s 0xF200000:0xE00000:leave -U readflash.bit
+
 # Releasing
 
 This is developer's procedure how to upload.

@@ -712,9 +712,9 @@ Examples how to use "dfu-util"
 
 # Dual USB-SERIAL
 
-This should be integrated into dfu.py in the future.
 Creates two USB-SERIAL ports: ttyACM0 for micropython prompt,
 ttyACM1 for communication with FPGA.
+Should be integrated into dfu.py in the future.
 
 Install "usb-device-cdc"
 

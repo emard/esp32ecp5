@@ -710,6 +710,26 @@ Examples how to use "dfu-util"
     read flash from 0x200000 length 0xE00000 to file readflash.bit
     dfu-util -s 0xF200000:0xE00000:leave -U readflash.bit
 
+# Dual USB-SERIAL
+
+This should be integrated into dfu.py in the future.
+Creates two USB-SERIAL ports: ttyACM0 for micropython prompt,
+ttyACM1 for communication with FPGA.
+
+Install "usb-device-cdc"
+
+    mpremote mip install usb-device-cdc
+
+Run dual USB-SERIAL from linux commandline
+
+    mpremote run --no-follow dualusbserial.py
+
+Default USB will disappear and two new USB-SERIAL
+ports will appear:
+
+    ttyACM0 for micrpython prompt
+    ttyACM1 for FPGA (115200 8N1)
+
 # Releasing
 
 This is developer's procedure how to upload.

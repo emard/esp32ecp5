@@ -1,0 +1,10 @@
+# file: /etc/udev/rules.d/80-fpga-ulx3s.rules
+# this is for usb-serial tty device
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6015", \
+  MODE="664", GROUP="dialout"
+# this is for ujprog libusb access
+ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6015", \
+  GROUP="dialout", MODE="666"
+# this is for DFU 1d50 614b
+ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="614b", \
+  GROUP="dialout", MODE="666"

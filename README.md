@@ -730,6 +730,14 @@ ports will appear:
     ttyACM0 for micrpython prompt
     ttyACM1 for FPGA (115200 8N1)
 
+ttyACM0 will not show micropython prompt because it will
+be busy with running support for ttyACM1.
+Press ctrl-c to stop ttyACM1 support and some prompt will
+appear.
+Currently it is not fully useable. It would be ideal
+to run it in "background" only I don't know how to make
+it.
+
 # Releasing
 
 This is developer's procedure how to upload.

@@ -732,10 +732,10 @@ ports will appear:
 
 ttyACM0 will not show micropython prompt because it will
 be busy with running support for ttyACM1.
-Press ctrl-c to stop ttyACM1 support and some prompt will
-appear.
+Press ctrl-c ctrl-b to stop ttyACM1 support, the
+micropython prompt will appear.
 Currently it is not fully useable. It would be ideal
-to run it in "background" only I don't know how to make
+to run in "background", but I don't know how to make
 it.
 
 # Releasing

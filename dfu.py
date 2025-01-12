@@ -1,4 +1,4 @@
-# ESP32S3 USB DFU micropython_spiram_oct >= 1.24
+# ESP32S3 USB DFU micropython_spiram_oct >= 1.25
 #
 # option "--no-follow" starts the script from PC
 # without waiting for a response,

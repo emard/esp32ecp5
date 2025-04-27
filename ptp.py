@@ -672,15 +672,77 @@ def SendObjectInfo(cnt):
     print_hex(i0_usbd_buf[:length])
     usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:length])
 
+# global flashing address counter
+flash_addr = 0
+
+# SPI FLASH
+flash_read_size  = const(4096)
+flash_write_size = const(256)
+flash_erase_size = const(4096)
+
+#file_block = bytearray(flash_erase_size)
+#file_blockmv=memoryview(file_block)
+flash_block = bytearray(flash_read_size)
+
+# writes file_block to flash
+# len(file_block) == flash_erase_size
+# before: ecp5.flash_open()
+# after:  ecp5.flash_close()
+def flash_write_block_retry(addr, file_block):
+  if len(file_block) != flash_erase_size:
+    return False
+  file_blockmv=memoryview(file_block)
+  addr_mask = flash_erase_size-1
+  if addr & addr_mask:
+    # print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (flash_erase_size, 0xFFFFFF & ~addr_mask))
+    return False
+  addr = addr & 0xFFFFFF & ~addr_mask # rounded to even erase size
+  bytes_uploaded = 0
+  retry = 3
+  while retry > 0:
+    must = 0
+    flash_rd = 0
+    while flash_rd<flash_erase_size:
+      ecp5.flash_read_block(flash_block,addr+bytes_uploaded+flash_rd)
+      must = ecp5.compare_flash_file_buf(flash_block,file_blockmv[flash_rd:flash_rd+flash_read_size],must)
+      flash_rd+=flash_read_size
+    write_addr = addr+bytes_uploaded
+    if must == 0:
+      bytes_uploaded += len(file_block)
+      break
+    retry -= 1
+    if must & 1: # must_erase:
+      #print("from 0x%06X erase %dK" % (write_addr, flash_erase_size>>10),end="\r")
+      ecp5.flash_erase_block(write_addr)
+    if must & 2: # must_write:
+      #print("from 0x%06X write %dK" % (write_addr, flash_erase_size>>10),end="\r")
+      block_addr = 0
+      next_block_addr = 0
+      while next_block_addr < len(file_block):
+        next_block_addr = block_addr+flash_write_size
+        ecp5.flash_write_block(file_blockmv[block_addr:next_block_addr-1], file_blockmv[next_block_addr-1], write_addr)
+        write_addr += flash_write_size
+        block_addr = next_block_addr
+    #if not verify:
+    #  count_total += 1
+    #  bytes_uploaded += len(file_block)
+    #  break
+  if retry <= 0:
+    return False
+  return True
+
 def irq_sendobject_complete(objecthandle):
   length=PTP_CNT_INIT(i0_usbd_buf,PTP_USB_CONTAINER_EVENT,PTP_EC_ObjectInfoChanged,objecthandle)
   print("irq>",end="")
   print_hex(i0_usbd_buf[:length])
   usbd.submit_xfer(I0_EP2_IN, memoryview(i0_usbd_buf)[:length])
-  ecp5.prog_close()
+  if send_dir==0xd1:
+    ecp5.prog_close()
+  if send_dir==0xd2:
+    ecp5.flash_close()
 
 def SendObject(cnt):
-  global txid,opcode,send_length,remaining_send_length
+  global txid,opcode,send_length,remaining_send_length,flash_addr
   print("SendObject")
   print("<",end="")
   print_hex(cnt)
@@ -688,7 +750,11 @@ def SendObject(cnt):
   txid=unpack_txid(cnt)
   opcode=unpack_opcode(cnt) # always 0x100D
   if type==PTP_USB_CONTAINER_COMMAND: # 1
-    ecp5.prog_open()
+    if send_dir==0xd1:
+      ecp5.prog_open()
+    if send_dir==0xd2:
+      flash_addr=0
+      ecp5.flash_open()
     # host will send another OUT command
     # prepare full buffer to read again from host
     usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
@@ -697,7 +763,11 @@ def SendObject(cnt):
     # incoming payload is 12 bytes after PTP header
     # subtract send_length by incoming payload
     if send_length>0:
-      ecp5.hwspi.write(cnt[12:])
+      if send_dir==0xd1:
+        ecp5.hwspi.write(cnt[12:])
+      if send_dir==0xd2:
+        #flash_write_block_retry(flash_addr,cnt[12:])
+        flash_addr+=len(cnt)-12
       remaining_send_length=send_length-(len(cnt)-12)
       send_length=0
     print("send_length=",send_length,"remain=",remaining_send_length)
@@ -764,10 +834,14 @@ ptp_opcode_cb = {
 }
 
 def decode_ptp(cnt):
-  global remaining_send_length
+  global remaining_send_length,flash_addr
   if remaining_send_length>0:
     # continue receiving parts of the file
-    ecp5.hwspi.write(cnt)
+    if send_dir==0xd1:
+      ecp5.hwspi.write(cnt)
+    if send_dir==0xd2:
+      #flash_write_block_retry(flash_addr,cnt)
+      flash_addr+=len(cnt)
     remaining_send_length-=len(cnt)
     #print_hexdump(cnt)
     print("remaining send_length", remaining_send_length)

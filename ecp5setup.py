@@ -92,6 +92,19 @@ def jtagpin_esp32s3():
   )
   f.close()
 
+def jtagpin_s3proto():
+  f=open("jtagpin.py","w")
+  f.write(
+"# ULX3S v3.1.7 + ESP32-S3 prototype\n"
+"tms=const(38)\n"
+"tck=const(39)\n"
+"tdi=const(1)\n"
+"tdo=const(6)\n"
+"tcknc=const(41)\n"
+"led=const(21)\n"
+  )
+  f.close()
+
 def jtagpin_fjc():
   f=open("jtagpin.py","w")
   f.write(
@@ -133,6 +146,18 @@ def sdpin_esp32s3():
 "d3=const(6)   # csn\n"
 "clk=const(7)  # sck\n"
 "cmd=const(8)  # mosi\n"
+"hiz=bytearray([d0,d3,clk,cmd]) # to release SD\n"
+  )
+  f.close()
+
+def sdpin_s3proto():
+  f=open("sdpin.py","w")
+  f.write(
+"# ULX3S v3.1.7 + ESP32-S3 prototype SD-SPI not connected\n"
+"d0=const(9)   # miso\n"
+"d3=const(10)   # csn\n"
+"clk=const(11)  # sck\n"
+"cmd=const(12)  # mosi\n"
 "hiz=bytearray([d0,d3,clk,cmd]) # to release SD\n"
   )
   f.close()
@@ -179,6 +204,7 @@ def set_pinout():
     print("2: ESP32-S2 prototype")
     print("3: ESP32-S3 prototype")
     print("4: FFC-RBP V0r10 + FJC-ESP32-V0r2")
+    print("5: ULX3S v3.1.7 ESP32S3 prototype")
     pinout=input("select pinout (0-3)> ")
     if pinout.startswith("0"):
       jtagpin_v20()
@@ -195,6 +221,9 @@ def set_pinout():
     if pinout.startswith("4"):
       jtagpin_fjc()
       sdpin_esp32()
+    if pinout.startswith("5"):
+      jtagpin_s3proto()
+      sdpin_s3proto()
     printfile("jtagpin.py")
     printfile("sdpin.py")
 

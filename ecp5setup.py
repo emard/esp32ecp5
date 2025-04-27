@@ -205,7 +205,7 @@ def set_pinout():
     print("3: ESP32-S3 prototype")
     print("4: FFC-RBP V0r10 + FJC-ESP32-V0r2")
     print("5: ULX3S v3.1.7 ESP32S3 prototype")
-    pinout=input("select pinout (0-3)> ")
+    pinout=input("select pinout (0-5)> ")
     if pinout.startswith("0"):
       jtagpin_v20()
       sdpin_esp32()

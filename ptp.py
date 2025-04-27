@@ -1,12 +1,11 @@
-# micropython PTP USB still image device
-# creates 2 files in DIR directory
-# F1.TXT and F2.TXT
-# directory browsing and reading file content works
-# there is dummy placeholder function to delete a file
-# delete succeeds but file re-appears later
+# suckless tool for FPGA programming
+# creates 2 directories "FLASH" and "FPGA"
+# using USB PTP (picture transfer protocol)
 
-# sending file "works" from protocol point of view
-# but "unspecified I/O error -1" appears - FIXME
+# copy/paste or drag'n'drop a bitstream file into
+# "FPGA" directory and it will be loaded into FPGA.
+
+# tested on linux gnome and windows 10
 
 # protocol info:
 # git clone https://github.com/gphoto/libgphoto2

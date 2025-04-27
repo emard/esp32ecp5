@@ -9,6 +9,9 @@
 
 # tested on linux gnome and windows 10
 
+# linux gnome commandline
+# cp blink.bit /run/user/1000/gvfs/gphoto2\:host\=iManufacturer_iProduct_iSerial/FPGA/
+
 # protocol info:
 # git clone https://github.com/gphoto/libgphoto2
 # cd libgphoto2/camlibs/ptp2

@@ -1,3 +1,5 @@
+# esp32s3 micropython >= 1.24
+
 # suckless tool for FPGA programming
 # creates 2 directories "FLASH" and "FPGA"
 # using USB PTP (picture transfer protocol)
@@ -32,9 +34,9 @@
 #
 # The device will then change to the custom USB device.
 #
-# if you change USB class to vendor specific (255)
-# OS will not claim the device so user-space test
-# can run
+# for debugging if you change USB class to vendor
+# specific (255) OS will not claim the device so
+# user-space test can run
 #
 # $ python hostptp.py
 #
@@ -43,7 +45,8 @@
 # udev rule is needed for user
 # to access the custom USB device.
 
-import machine, struct, time, ecp5
+import machine, struct, time
+import ecp5
 from micropython import const
 
 # VID and PID of the USB device.
@@ -191,8 +194,16 @@ txid=0
 opcode=0
 
 # global sendobject (receive file) length
+send_dir=0 # to which directory we will send object
 send_length=0
 remaining_send_length=0
+
+# handles (unique object ids)
+# each dir contains one file so it has one handle
+dir_handles={0xd1:[0xf1],0xd2:[0xf2]}
+dir_names={0xd1:b"FPGA\0",0xd2:b"FLASH\0"}
+
+new_handle=[0xf3] # increments, newly uploaded file will get this handle
 
 # USB PTP "type" 16-bit field
 PTP_USB_CONTAINER_UNDEFINED=const(0)
@@ -324,9 +335,22 @@ def ucs2_string(s):
     return struct.pack("<B"+"H"*len(s),len(s),*s)
   return b"\0"
 
+def decode_ucs2_string(s):
+  len=s[0]
+  str=bytearray(len)
+  for i in range(len):
+    str[i]=s[1+i+i]
+  return str
+
+def get_ucs2_string(s):
+  len=s[0]
+  return s[0:1+len+len]
+
 # objecthandle array
 def uint32_array(a):
   return struct.pack("<L"+"L"*len(a),len(a),*a)
+
+send_name=ucs2_string(b"F1.TXT\0") # initialize file name in d1 directory
 
 length_response=bytearray(1) # length to send response once
 send_response=bytearray(32) # response to send
@@ -486,11 +510,11 @@ def GetObjectHandles(cnt):
     # rest are elements of 32-bits
     # each element can be any unique integer
     # actually a objecthandle
-    data=uint32_array([0xf59a,0xd1]) # 0xd1 directory, 0xf59a file FPGA.BIT
+    data=uint32_array(list(dir_handles.keys())) # two directoryies 0xd1 and 0xd2
     length=PTP_CNT_INIT_DATA(i0_usbd_buf,PTP_USB_CONTAINER_DATA,opcode,data)
     respond_ok()
-  elif p3==0xd1:
-    data=uint32_array([0xf1,0xf2]) # 0xf1 file F1.TXT, 0xf2 file F2.TXT
+  elif dir_handles.get(p3):
+    data=uint32_array(dir_handles.get(p3)) # array of handles in directory
     length=PTP_CNT_INIT_DATA(i0_usbd_buf,PTP_USB_CONTAINER_DATA,opcode,data)
     respond_ok()
   else:
@@ -535,64 +559,38 @@ def GetObjectInfo(cnt):
   thumb_image_null=bytearray(26)
   ParentObject=0
   assoc_seq_null=bytearray(10)
-  if p1==0xd1: # first directory objecthandle
+  length=0 # zero response currently
+  if dir_handles.get(p1): # is this a directory objecthandle
     ObjectFormat=PTP_OFC_Directory
     ParentObject=0 # 0 means this file is in root directory
     hdr1=struct.pack("<LHHL",StorageID,ObjectFormat,ProtectionStatus,ObjectSize)
     hdr2=struct.pack("<L",ParentObject)
-    name=ucs2_string(b"D1\0") # directory name
+    name=ucs2_string(dir_names[p1]) # directory name converted
     data=hdr1+thumb_image_null+hdr2+assoc_seq_null+name+b"\0\0\0"
     #data=header+name+b"\0\0\0"
     length=PTP_CNT_INIT_DATA(i0_usbd_buf,PTP_USB_CONTAINER_DATA,opcode,data)
     respond_ok()
-  elif p1==0xf59a: # zero'th file objecthandle
-    ObjectFormat=PTP_OFC_Undefined
-    ParentObject=0 # 0 file is in root directory
-    hdr1=struct.pack("<LHHL",StorageID,ObjectFormat,ProtectionStatus,ObjectSize)
-    hdr2=struct.pack("<L",ParentObject)
-    name=ucs2_string(b"FPGA.BIT\0") # file name
-    #create=b"\0" # if we don't provide file time info
-    year, month, day, hour, minute, second, weekday, yearday = time.localtime()
-    # create/modify report as current date (file constantly changes date)
-    create=b"\0" # if we don't provide file time info
-    #create=ucs2_string(b"%04d%02d%02dT%02d%02d%02d\0" % (year,month,day,hour,minute,second))
-    #create=ucs2_string(b"20250425T100120\0") # 2025-04-25 10:01:20
-    modify=create
-    data=hdr1+thumb_image_null+hdr2+assoc_seq_null+name+create+modify+b"\0"
-    #data=header+name+b"\0\0\0"
-    length=PTP_CNT_INIT_DATA(i0_usbd_buf,PTP_USB_CONTAINER_DATA,opcode,data)
-    respond_ok()
-  elif p1==0xf1: # first file objecthandle
-    ObjectFormat=PTP_OFC_Text
-    ParentObject=0xd1 # directory id where this file is
-    hdr1=struct.pack("<LHHL",StorageID,ObjectFormat,ProtectionStatus,ObjectSize)
-    hdr2=struct.pack("<L",ParentObject)
-    name=ucs2_string(b"F1.TXT\0") # file name
-    #create=b"\0" # if we don't provide file time info
-    year, month, day, hour, minute, second, weekday, yearday = time.localtime()
-    # create/modify report as current date (file constantly changes date)
-    create=b"\0" # if we don't provide file time info
-    #create=ucs2_string(b"%04d%02d%02dT%02d%02d%02d\0" % (year,month,day,hour,minute,second))
-    #create=ucs2_string(b"20250425T100120\0") # 2025-04-25 10:01:20
-    modify=create
-    data=hdr1+thumb_image_null+hdr2+assoc_seq_null+name+create+modify+b"\0"
-    #data=header+name+b"\0\0\0"
-    length=PTP_CNT_INIT_DATA(i0_usbd_buf,PTP_USB_CONTAINER_DATA,opcode,data)
-    respond_ok()
-  elif p1==0xf2: # second file objecthandle
-    ObjectFormat=PTP_OFC_Text
-    ParentObject=0xd1 # directory id where this file is
-    hdr1=struct.pack("<LHHL",StorageID,ObjectFormat,ProtectionStatus,ObjectSize)
-    hdr2=struct.pack("<L",ParentObject)
-    name=ucs2_string(b"F2.TXT\0") # file name
-    create=b"\0" # if we don't provide file time info
-    #create=ucs2_string(b"20250425T100120\0") # 2025-04-25 10:01:20
-    modify=create # same as above
-    data=hdr1+thumb_image_null+hdr2+assoc_seq_null+name+create+modify+b"\0"
-    #data=header+name+b"\0\0\0"
-    length=PTP_CNT_INIT_DATA(i0_usbd_buf,PTP_USB_CONTAINER_DATA,opcode,data)
-    respond_ok()
-  else:
+  else: # not directory, see if it is a file
+    for dh in dir_handles.keys(): # all dirs
+      if p1==dir_handles[dh][0]: # look for a first file in each dir
+        ObjectFormat=PTP_OFC_Text
+        #ParentObject=0 # 0 file is in root directory
+        ParentObject=dh # file is found in this directory
+        hdr1=struct.pack("<LHHL",StorageID,ObjectFormat,ProtectionStatus,ObjectSize)
+        hdr2=struct.pack("<L",ParentObject)
+        #name=ucs2_string(b"F0.TXT\0") # file name
+        name=send_name # trick gnome, report the same name as we have sent before
+        #year, month, day, hour, minute, second, weekday, yearday = time.localtime()
+        # create/modify report as current date (file constantly changes date)
+        create=b"\0" # if we don't provide file time info
+        #create=ucs2_string(b"%04d%02d%02dT%02d%02d%02d\0" % (year,month,day,hour,minute,second))
+        #create=ucs2_string(b"20250425T100120\0") # 2025-04-25 10:01:20
+        modify=create
+        data=hdr1+thumb_image_null+hdr2+assoc_seq_null+name+create+modify+b"\0"
+        #data=header+name+b"\0\0\0"
+        length=PTP_CNT_INIT_DATA(i0_usbd_buf,PTP_USB_CONTAINER_DATA,opcode,data)
+        respond_ok()
+  if length==0: # p1 objecthandle not found, report just ok
     length=PTP_CNT_INIT(i0_usbd_buf,PTP_USB_CONTAINER_RESPONSE,PTP_RC_OK)
   print(">",end="")
   print_hex(i0_usbd_buf[:length])
@@ -607,19 +605,13 @@ def GetObject(cnt):
   opcode=unpack_opcode(cnt) # always 0x1009
   p1,=struct.unpack("<L",cnt[12:16])
   print("p1=%08x" % p1)
-  if p1==0xf59a: # zeroth file objecthandle
-    data=b"FPGA BITSTREAM\n"
-    length=PTP_CNT_INIT_DATA(i0_usbd_buf,PTP_USB_CONTAINER_DATA,opcode,data)
-    respond_ok()
-  elif p1==0xf1: # first file objecthandle
-    data=b"file1\n"
-    length=PTP_CNT_INIT_DATA(i0_usbd_buf,PTP_USB_CONTAINER_DATA,opcode,data)
-    respond_ok()
-  elif p1==0xf2: # second file objecthandle
-    data=b"file2\n"
-    length=PTP_CNT_INIT_DATA(i0_usbd_buf,PTP_USB_CONTAINER_DATA,opcode,data)
-    respond_ok()
-  else:
+  length=0
+  for dh in dir_handles.keys(): # iterate all dirs
+    if p1==dir_handles[dh][0]: # match first file in any dir
+      data=b"file 0x%x\n" % p1
+      length=PTP_CNT_INIT_DATA(i0_usbd_buf,PTP_USB_CONTAINER_DATA,opcode,data)
+      respond_ok()
+  if length==0:
     length=PTP_CNT_INIT(i0_usbd_buf,PTP_USB_CONTAINER_RESPONSE,PTP_RC_OK)
   print(">",end="")
   print_hex(i0_usbd_buf[:length])
@@ -646,7 +638,7 @@ def DeleteObject(cnt):
 # currently protocol "works" but
 # "unspecified error -1" appears
 def SendObjectInfo(cnt):
-  global txid,opcode,send_length
+  global txid,opcode,send_length,send_name,send_dir
   print("SendObjectInfo")
   print("<",end="")
   print_hex(cnt)
@@ -654,19 +646,25 @@ def SendObjectInfo(cnt):
   txid=unpack_txid(cnt)
   opcode=unpack_opcode(cnt) # always 0x100C
   if type==PTP_USB_CONTAINER_COMMAND: # 1
+    send_dir,=struct.unpack("<L",cnt[16:20])
+    print("send_dir: 0x%x" % send_dir)
     # prepare full buffer to read from host again
     # host will send another OUT
     usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
   if type==PTP_USB_CONTAINER_DATA: # 2
     # we just have received data from host
     # host sends in advance file length to be sent
+    send_name=get_ucs2_string(cnt[64:])
+    print("send name:", decode_ucs2_string(send_name))
     send_length,=struct.unpack("<L", cnt[20:24])
     print("send length:", send_length)
     # send OK response to host
     # here we must send extended "OK" response
     # with 3 addional 32-bit fields:
     # storage_id, parend_id, object_id
-    length=PTP_CNT_INIT(i0_usbd_buf,PTP_USB_CONTAINER_RESPONSE,PTP_RC_OK,0x10001,0xd1,0xf1)
+    new_handle[0]+=1
+    dir_handles[send_dir][0]=new_handle[0]
+    length=PTP_CNT_INIT(i0_usbd_buf,PTP_USB_CONTAINER_RESPONSE,PTP_RC_OK,0x10001,send_dir,dir_handles[send_dir][0])
     print(">",end="")
     print_hex(i0_usbd_buf[:length])
     usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:length])
@@ -692,7 +690,7 @@ def SendObject(cnt):
     # prepare full buffer to read again from host
     usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
   if type==PTP_USB_CONTAINER_DATA: # 2
-    # host has just sent data (first packet)
+    # host has just sent data
     # incoming payload is 12 bytes after PTP header
     # subtract send_length by incoming payload
     if send_length>0:
@@ -704,7 +702,6 @@ def SendObject(cnt):
     # if host has sent all bytes it promised to send
     # report it to the host that file is complete
     if remaining_send_length<=0:
-      # upload is done in first packet
       # load interrupt response of object changed
       # first sched irq and after irq reply ok to host
       # report object 0xf1 (F1.TXT) changed
@@ -713,7 +710,7 @@ def SendObject(cnt):
       #print(">",end="")
       #print_hex(i0_usbd_buf[:length])
       #usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:length])
-      irq_sendobject_complete(0xf59a)
+      irq_sendobject_complete(dir_handles[send_dir][0])
     else:
       # host will send another OUT command
       # prepare full buffer to read again from host
@@ -766,8 +763,8 @@ ptp_opcode_cb = {
 def decode_ptp(cnt):
   global remaining_send_length
   if remaining_send_length>0:
-    ecp5.hwspi.write(cnt)
     # continue receiving parts of the file
+    ecp5.hwspi.write(cnt)
     remaining_send_length-=len(cnt)
     #print_hexdump(cnt)
     print("remaining send_length", remaining_send_length)
@@ -777,7 +774,7 @@ def decode_ptp(cnt):
       usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf) 
     else:
       # signal to host we have received entire file
-      irq_sendobject_complete(0xf59a)
+      irq_sendobject_complete(dir_handles[send_dir][0])
   else:
     #length,type,code,trans_id = unpack_ptp_hdr(cnt)
     code,=struct.unpack("<H",cnt[6:8])

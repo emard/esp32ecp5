@@ -13,4 +13,8 @@
     from micropython import RingIO
     rio=RingIO(4097) # for 4096 it needs 1 extra
     rio.write(b"1234") # many ...
-    rio.read(4096)
+    bytes_available=rio.any()
+    if bytes_available>=4096:
+      bytes_read=rio.readinto(buf,4096)
+    
+    

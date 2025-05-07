@@ -9,3 +9,8 @@
 [ ] ptp.py flash_addr must increment on even address
     in the first packet read 12 byte of PTP header and then the
     rest should be received as even addresses
+[ ] ptp.py 4096 byte even buffering for flash
+    from micropython import RingIO
+    rio=RingIO(4097) # for 4096 it needs 1 extra
+    rio.write(b"1234") # many ...
+    rio.read(4096)

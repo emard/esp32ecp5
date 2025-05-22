@@ -272,7 +272,7 @@ def ls(path:str):
       path2oh[fullpath]=oh
       oh2path[oh]=fullpath
     cur_list[oh]=obj
-    print(oh,fullpath,obj)
+    #print(oh,fullpath,obj)
 
 # for a given object id return
 # its parent directory
@@ -412,8 +412,8 @@ def in_hdr_data(data):
   hdr.len=12+len(data)
   hdr.type=PTP_USB_CONTAINER_DATA
   i0_usbd_buf[12:hdr.len]=data
-  print(">",end="")
-  print_hex(i0_usbd_buf[:hdr.len])
+  #print(">",end="")
+  #print_hex(i0_usbd_buf[:hdr.len])
   usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:hdr.len])
 
 def OpenSession(cnt,code):
@@ -505,7 +505,7 @@ STORAGE_READ_ONLY_WITH_DELETE=const(2)
 
 def GetStorageInfo(cnt,code): # 0x1005
   storageid=hdr.p1
-  print("storageid 0x%08x" % storageid)
+  #print("storageid 0x%08x" % storageid)
   StorageType=STORAGE_FIXED_MEDIA
   FilesystemType=2
   AccessCapability=STORAGE_READ_WRITE
@@ -528,7 +528,7 @@ def GetStorageInfo(cnt,code): # 0x1005
 def GetObjectHandles(cnt,code): # 0x1007
   global cur_list
   storageid=hdr.p1
-  print("storageid 0x%08x" % storageid)
+  #print("storageid 0x%08x" % storageid)
   if storageid==0xFFFFFFFF:
     # return empty storage
     respond_ok()
@@ -579,7 +579,7 @@ def GetObjectInfo(cnt,code): # 0x1008
   assoc_seq_null=bytearray(10)
   if objh in oh2path:
     fullpath=oh2path[objh]
-    print(fullpath)
+    #print(fullpath)
     ParentObject=parent(objh) # 0 means this file is in root directory
     if objh>>28: # member of custom fs
       StorageID=STORID_CUSTOM
@@ -617,7 +617,7 @@ def GetObject(cnt,code): # 0x1009
   txid=hdr.txid
   if hdr.p1 in oh2path:
     fullpath=oh2path[hdr.p1]
-    print(fullpath)
+    #print(fullpath)
     if fullpath.startswith("/vfs"):
       fd=open(strip1dirlvl(fullpath),"rb")
       filesize=fd.seek(0,2)
@@ -649,7 +649,7 @@ def DeleteObject(cnt,code): # 0x100B
   del(path2oh[fullpath])
   if hdr.p1>>28==0: # VFS
     os.unlink(strip1dirlvl(fullpath))
-  print("deleted",fullpath)
+  #print("deleted",fullpath)
   in_hdr_ok()
 
 def SendObjectInfo(cnt,code): # 0x100C
@@ -824,7 +824,7 @@ hdr=uctypes.struct(uctypes.addressof(i0_usbd_buf),CNT_HDR_DESC,uctypes.LITTLE_EN
 # on linux device works without supporting
 # any of the control transfers
 def _control_xfer_cb(stage, request):
-  print("_control_xfer_cb", stage, bytes(request))
+  #print("_control_xfer_cb", stage, bytes(request))
   bmRequestType, bRequest, wValue, wIndex, wLength = struct.unpack("<BBHHH", request)
   if stage == 1:  # SETUP
     if bmRequestType == USB_DIR_OUT | USB_REQ_TYPE_CLASS | USB_REQ_RECIP_DEVICE:
@@ -873,9 +873,9 @@ def ep1_out_done(result, xferred_bytes):
       # signal to host we have received entire file
       irq_sendobject_complete(current_send_handle)
   else:
-    print("0x%04x %s" % (hdr.code,ptp_opcode_cb[hdr.code].__name__))
-    print("<",end="")
-    print_hex(i0_usbd_buf[:xferred_bytes])
+    #print("0x%04x %s" % (hdr.code,ptp_opcode_cb[hdr.code].__name__))
+    #print("<",end="")
+    #print_hex(i0_usbd_buf[:xferred_bytes])
     ptp_opcode_cb[hdr.code](i0_usbd_buf[:xferred_bytes],hdr.code)
 
 def ep1_in_done(result, xferred_bytes):

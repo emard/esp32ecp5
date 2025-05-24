@@ -8,6 +8,8 @@
 # git clone https://github.com/gphoto/libgphoto2
 # cd libgphoto2/camlibs/ptp2
 # files ptp-pack.c ptp.c ptp.h
+# or ask AI for help
+# https://aistudio.google.com/
 
 # To run, just execute this file on a device with
 # machine.USBDevice support,
@@ -416,7 +418,7 @@ def in_hdr_data(data):
   #print_hex(i0_usbd_buf[:hdr.len])
   usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:hdr.len])
 
-def OpenSession(cnt,code):
+def OpenSession(cnt):
   global sesid
   sesid=hdr.p1
   in_hdr_ok()
@@ -447,7 +449,7 @@ PTP_OFC_Text=const(0x3004)
 #PTP_OFC_Undefined_0x380C=const(0x380C)
 #PTP_OFC_TIFF=const(0x380D)
 
-def GetDeviceInfo(cnt,code): # 0x1001
+def GetDeviceInfo(cnt): # 0x1001
   # prepare response: device info standard 1.00 = 100
   header=struct.pack("<HLH",100,0,100)
   extension=b"\0"
@@ -477,7 +479,7 @@ def GetDeviceInfo(cnt,code): # 0x1001
   respond_ok()
   in_hdr_data(data)
 
-def GetStorageIDs(cnt,code): # 0x1004
+def GetStorageIDs(cnt): # 0x1004
   data=uint32_array(STORAGE)
   respond_ok()
   in_hdr_data(data)
@@ -503,7 +505,7 @@ STORAGE_READ_WRITE=const(0)
 STORAGE_READ_ONLY_WITHOUT_DELETE=const(1)
 STORAGE_READ_ONLY_WITH_DELETE=const(2)
 
-def GetStorageInfo(cnt,code): # 0x1005
+def GetStorageInfo(cnt): # 0x1005
   storageid=hdr.p1
   #print("storageid 0x%08x" % storageid)
   StorageType=STORAGE_FIXED_MEDIA
@@ -525,7 +527,7 @@ def GetStorageInfo(cnt,code): # 0x1005
 
 # for given handle id of a directory
 # returns array of handles
-def GetObjectHandles(cnt,code): # 0x1007
+def GetObjectHandles(cnt): # 0x1007
   global cur_list
   storageid=hdr.p1
   #print("storageid 0x%08x" % storageid)
@@ -570,11 +572,11 @@ def GetObjectHandles(cnt,code): # 0x1007
 # PTP_oi_filenamelen		52
 # PTP_oi_Filename               53
 
-def GetObjectInfo(cnt,code): # 0x1008
+def GetObjectInfo(cnt): # 0x1008
   objh=hdr.p1
   #print("objh=%08x" % objh)
   ObjectFormat=PTP_OFC_Text
-  ProtectionStatus=0
+  ProtectionStatus=0 # 0:rw 1:ro
   thumb_image_null=bytearray(26)
   assoc_seq_null=bytearray(10)
   if objh in oh2path:
@@ -612,7 +614,7 @@ def GetObjectInfo(cnt,code): # 0x1008
     respond_ok()
     in_hdr_data(data)
 
-def GetObject(cnt,code): # 0x1009
+def GetObject(cnt): # 0x1009
   global txid,remain_getobj_len,fd
   txid=hdr.txid
   if hdr.p1 in oh2path:
@@ -635,13 +637,13 @@ def GetObject(cnt,code): # 0x1009
       filesize=len(msg)
       length=12+filesize
       remain_getobj_len=0
-      i0_usbd_buf[12:]=msg
+      memoryview(i0_usbd_buf)[12:12+len(msg)]=msg
       respond_ok_tx(txid)
     hdr.len=12+filesize
     hdr.type=PTP_USB_CONTAINER_DATA
   usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:length])
 
-def DeleteObject(cnt,code): # 0x100B
+def DeleteObject(cnt): # 0x100B
   fullpath=oh2path[hdr.p1]
   del(oh2path[hdr.p1])
   if hdr.p1 in cur_list:
@@ -652,7 +654,7 @@ def DeleteObject(cnt,code): # 0x100B
   #print("deleted",fullpath)
   in_hdr_ok()
 
-def SendObjectInfo(cnt,code): # 0x100C
+def SendObjectInfo(cnt): # 0x100C
   global txid,send_length,send_name,next_handle,current_send_handle
   global send_parent,send_parent_path,send_fullpath
   global current_storid
@@ -741,7 +743,7 @@ def irq_sendobject_complete(objecthandle):
   else:
     fd.close()
 
-def SendObject(cnt,code): # 0x100D
+def SendObject(cnt): # 0x100D
   global txid,send_length,remaining_send_length,fd
   txid=hdr.txid
   if hdr.type==PTP_USB_CONTAINER_COMMAND: # 1
@@ -779,7 +781,12 @@ def SendObject(cnt,code): # 0x100D
       # prepare full buffer to read again from host
       usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
 
-def CloseSession(cnt,code): # 0x1007
+#def SetObjectProtection(cnt): # 0x1012
+#  # hdr.p1 objecthandle
+#  # hdr.p2 0:rw 1:ro
+#  in_hdr_ok()
+
+def CloseSession(cnt): # 0x1007
   in_hdr_ok()
 
 # opcodes lower 16 bits starting from 0x1000
@@ -798,6 +805,7 @@ ptp_opcode_cb = {
   0x100B:DeleteObject,
   0x100C:SendObjectInfo,
   0x100D:SendObject,
+  #0x1012:SetObjectProtection,
 }
 
 # EP0 control requests handlers
@@ -876,7 +884,7 @@ def ep1_out_done(result, xferred_bytes):
     #print("0x%04x %s" % (hdr.code,ptp_opcode_cb[hdr.code].__name__))
     #print("<",end="")
     #print_hex(i0_usbd_buf[:xferred_bytes])
-    ptp_opcode_cb[hdr.code](i0_usbd_buf[:xferred_bytes],hdr.code)
+    ptp_opcode_cb[hdr.code](i0_usbd_buf[:xferred_bytes])
 
 def ep1_in_done(result, xferred_bytes):
   global remain_getobj_len,fd
@@ -898,7 +906,7 @@ def ep1_in_done(result, xferred_bytes):
         respond_ok_tx(txid) # after this send ok IN response
       #print(">",end="")
       #print_hexdump(i0_usbd_buf[:packet_len])
-      usbd.submit_xfer(I0_EP1_IN, i0_usbd_buf[:packet_len])
+      usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:packet_len])
     else:
       usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
 

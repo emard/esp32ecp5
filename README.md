@@ -372,7 +372,7 @@ It will be installed here:
 
     ~/.local/bin/ampy
 
-Upload local files to ESP32 like this (script "upload.sh"):
+Upload local files to ESP32 like this (script "upload.sh" or "install.sh"):
 
     ampy -p /dev/ttyUSB0 mkdir /lib
     ampy -p /dev/ttyUSB0 put ecp5.py /lib/ecp5.py

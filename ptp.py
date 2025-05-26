@@ -193,12 +193,6 @@ remain_getobj_len=0
 addr=0
 fd=None # local open file descriptor
 
-# SPI FLASH
-flash_read_size=const(4096)
-flash_write_size=const(256)
-flash_erase_size=const(4096)
-flash_block=bytearray(flash_read_size)
-
 # for ls() generating vfs directory tree
 # global handle incremented
 # next handle must start for 0 to assign
@@ -750,53 +744,6 @@ def irq_sendobject_complete(objecthandle):
   else:
     fd.close()
 
-# writes file_block to flash
-# len(file_block) == flash_erase_size
-# before: ecp5.flash_open()
-# after:  ecp5.flash_close()
-def flash_write_block_retry(addr,file_block):
-  if len(file_block)!=flash_erase_size:
-    return False
-  file_blockmv=memoryview(file_block)
-  addr_mask=flash_erase_size-1
-  if addr&addr_mask:
-    # print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (flash_erase_size, 0xFFFFFF & ~addr_mask))
-    return False
-  addr=addr&0xFFFFFF&~addr_mask # rounded to even erase size
-  bytes_uploaded=0
-  retry=3
-  while retry>0:
-    must=0
-    flash_rd=0
-    while flash_rd<flash_erase_size:
-      ecp5.flash_read_block(flash_block,addr+bytes_uploaded+flash_rd)
-      must=ecp5.compare_flash_file_buf(flash_block,file_blockmv[flash_rd:flash_rd+flash_read_size],must)
-      flash_rd+=flash_read_size
-    write_addr=addr+bytes_uploaded
-    if must==0:
-      bytes_uploaded+=len(file_block)
-      break
-    retry-=1
-    if must&1: # must_erase:
-      #print("from 0x%06X erase %dK" % (write_addr, flash_erase_size>>10),end="\r")
-      ecp5.flash_erase_block(write_addr)
-    if must&2: # must_write:
-      #print("from 0x%06X write %dK" % (write_addr, flash_erase_size>>10),end="\r")
-      block_addr=0
-      next_block_addr=0
-      while next_block_addr<len(file_block):
-        next_block_addr=block_addr+flash_write_size
-        ecp5.flash_write_block(file_blockmv[block_addr:next_block_addr-1], file_blockmv[next_block_addr-1], write_addr)
-        write_addr+=flash_write_size
-        block_addr=next_block_addr
-    #if not verify:
-    #  count_total += 1
-    #  bytes_uploaded += len(file_block)
-    #  break
-  if retry<=0:
-    return False
-  return True
-
 def SendObject(cnt): # 0x100D
   global txid,send_length,remaining_send_length,addr,fd
   txid=hdr.txid
@@ -818,9 +765,19 @@ def SendObject(cnt): # 0x100D
       if send_parent>>24==0xc1: # fpga
         ecp5.hwspi.write(cnt[12:])
       elif send_parent>>24==0xc2: # flash
+        # first packet is read in 4160=4096+64 bytes buffer
+        # buf[0:12] header
+        # buf[12:4108] 4096 bytes flash
+        # buf[4108:4160] 52 bytes of next flash payload
+        # pad with 0xFF if flash shorter than 4096
+        # after flashing first block, copy buf[4108:4160] to buf[0:52]
+        # schecule read of every next packet 4096 bytes to buf[52:4148]
+        # flash buf[0:4096]
+        # copy buf[4096:4148] to buf[0:52]
+        # last packet: pad with 0xFF if shorter than 4096
         if len(cnt)<4108:
           memoryview(i0_usbd_buf)[len(cnt):4108]=bytearray(b"\xff"*(4108-len(cnt)))
-        flash_write_block_retry(addr&0xFFF000,memoryview(i0_usbd_buf)[12:4108])
+        ecp5.flash_write_block_retry(memoryview(i0_usbd_buf)[12:4108],addr&0xFFF000)
         memoryview(i0_usbd_buf)[:52]=i0_usbd_buf[4108:4160]
         addr+=4096
       else:
@@ -931,7 +888,7 @@ def ep1_out_done(result, xferred_bytes):
     elif send_parent>>24==0xc2: # flash
       if xferred_bytes<4096:
         memoryview(i0_usbd_buf)[52+xferred_bytes:4148]=bytearray(b"\xff"*(4096-xferred_bytes))
-      flash_write_block_retry(addr&0xFFF000,memoryview(i0_usbd_buf)[:4096])
+      ecp5.flash_write_block_retry(memoryview(i0_usbd_buf)[:4096],addr&0xFFF000)
       memoryview(i0_usbd_buf)[:52]=i0_usbd_buf[4096:4148]
       addr+=xferred_bytes
     else:

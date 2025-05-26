@@ -70,10 +70,15 @@ It can be also upgraded from FTP or LFTP prompt:
     Done
     250 OK
 
-# micropython >=1.25:
+# micropython 1.25:
 
-Flashing currently doesn't work.
-Looking for the fix...
+Flashing doesn't work.
+
+# micropython 1.26
+
+Currently not yet released but flashing works for this preview:
+
+    ESP32_GENERIC_S3-SPIRAM_OCT-20250522-v1.26.0-preview.148.g49f81d504.bin
 
 # ESP32 pinout
 

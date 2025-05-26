@@ -190,7 +190,14 @@ send_parent_path="/"
 send_length=0
 remaining_send_length=0
 remain_getobj_len=0
+addr=0
 fd=None # local open file descriptor
+
+# SPI FLASH
+flash_read_size=const(4096)
+flash_write_size=const(256)
+flash_erase_size=const(4096)
+flash_block=bytearray(flash_read_size)
 
 # for ls() generating vfs directory tree
 # global handle incremented
@@ -739,18 +746,66 @@ def irq_sendobject_complete(objecthandle):
   if send_parent>>24==0xc1: # fpga
     ecp5.prog_close()
   elif send_parent>>24==0xc2: # flash
-    pass
+    ecp5.flash_close()
   else:
     fd.close()
 
+# writes file_block to flash
+# len(file_block) == flash_erase_size
+# before: ecp5.flash_open()
+# after:  ecp5.flash_close()
+def flash_write_block_retry(addr,file_block):
+  if len(file_block)!=flash_erase_size:
+    return False
+  file_blockmv=memoryview(file_block)
+  addr_mask=flash_erase_size-1
+  if addr&addr_mask:
+    # print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (flash_erase_size, 0xFFFFFF & ~addr_mask))
+    return False
+  addr=addr&0xFFFFFF&~addr_mask # rounded to even erase size
+  bytes_uploaded=0
+  retry=3
+  while retry>0:
+    must=0
+    flash_rd=0
+    while flash_rd<flash_erase_size:
+      ecp5.flash_read_block(flash_block,addr+bytes_uploaded+flash_rd)
+      must=ecp5.compare_flash_file_buf(flash_block,file_blockmv[flash_rd:flash_rd+flash_read_size],must)
+      flash_rd+=flash_read_size
+    write_addr=addr+bytes_uploaded
+    if must==0:
+      bytes_uploaded+=len(file_block)
+      break
+    retry-=1
+    if must&1: # must_erase:
+      #print("from 0x%06X erase %dK" % (write_addr, flash_erase_size>>10),end="\r")
+      ecp5.flash_erase_block(write_addr)
+    if must&2: # must_write:
+      #print("from 0x%06X write %dK" % (write_addr, flash_erase_size>>10),end="\r")
+      block_addr=0
+      next_block_addr=0
+      while next_block_addr<len(file_block):
+        next_block_addr=block_addr+flash_write_size
+        ecp5.flash_write_block(file_blockmv[block_addr:next_block_addr-1], file_blockmv[next_block_addr-1], write_addr)
+        write_addr+=flash_write_size
+        block_addr=next_block_addr
+    #if not verify:
+    #  count_total += 1
+    #  bytes_uploaded += len(file_block)
+    #  break
+  if retry<=0:
+    return False
+  return True
+
 def SendObject(cnt): # 0x100D
-  global txid,send_length,remaining_send_length,fd
+  global txid,send_length,remaining_send_length,addr,fd
   txid=hdr.txid
   if hdr.type==PTP_USB_CONTAINER_COMMAND: # 1
     if send_parent>>24==0xc1: # fpga
       ecp5.prog_open()
     elif send_parent>>24==0xc2: # flash
-      pass
+      ecp5.flash_open()
+      addr=0
     else:
       fd=open(strip1dirlvl(send_fullpath),"wb")
     # host will send another OUT command
@@ -763,7 +818,9 @@ def SendObject(cnt): # 0x100D
       if send_parent>>24==0xc1: # fpga
         ecp5.hwspi.write(cnt[12:])
       elif send_parent>>24==0xc2: # flash
-        pass
+        flash_write_block_retry(addr&0xFFF000,memoryview(i0_usbd_buf)[12:4108])
+        memoryview(i0_usbd_buf)[:52]=i0_usbd_buf[4108:4160]
+        addr+=4096
       else:
         fd.write(cnt[12:])
       remaining_send_length=send_length-(len(cnt)-12)
@@ -779,7 +836,10 @@ def SendObject(cnt): # 0x100D
     else:
       # host will send another OUT command
       # prepare full buffer to read again from host
-      usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
+      if send_parent>>24==0xc2: # flash
+        usbd.submit_xfer(I0_EP1_OUT,memoryview(i0_usbd_buf)[52:4148])
+      else:
+        usbd.submit_xfer(I0_EP1_OUT,i0_usbd_buf)
 
 #def SetObjectProtection(cnt): # 0x1012
 #  # hdr.p1 objecthandle
@@ -823,7 +883,7 @@ usb_buf = bytearray(64)
 
 # USB data buffer for Bulk IN and OUT transfers.
 # must be multiple of 64 bytes
-i0_usbd_buf = bytearray(1024)
+i0_usbd_buf = bytearray(4160)
 
 # fixed parsed ptp header
 hdr=uctypes.struct(uctypes.addressof(i0_usbd_buf),CNT_HDR_DESC,uctypes.LITTLE_ENDIAN)
@@ -850,24 +910,26 @@ def _control_xfer_cb(stage, request):
     else:
       # EP0 RX ready.
       buf = memoryview(usb_buf)[:wLength]
-      handle_out(bRequest, wValue, buf)
+      handle_out(bRequest,wValue,buf)
   return True
 
 # USB callback when our custom USB interface is opened by the host.
 def _open_itf_cb(interface_desc_view):
   # Prepare to receive first data packet on the OUT endpoint.
   if interface_desc_view[11] == I0_EP1_IN:
-    usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
+    usbd.submit_xfer(I0_EP1_OUT,i0_usbd_buf)
   #print("_open_itf_cb", bytes(interface_desc_view))
 
 def ep1_out_done(result, xferred_bytes):
-  global remaining_send_length,fd
+  global remaining_send_length,addr,fd
   if remaining_send_length>0:
     # continue receiving parts of the file
     if send_parent>>24==0xc1:
       ecp5.hwspi.write(i0_usbd_buf)
-    elif send_parent>>24==0xc2:
-      pass
+    elif send_parent>>24==0xc2: # flash
+      flash_write_block_retry(addr&0xFFF000,memoryview(i0_usbd_buf)[:4096])
+      memoryview(i0_usbd_buf)[:52]=i0_usbd_buf[4096:4148]
+      addr+=xferred_bytes
     else:
       fd.write(i0_usbd_buf[:xferred_bytes])
     remaining_send_length-=xferred_bytes
@@ -876,7 +938,10 @@ def ep1_out_done(result, xferred_bytes):
     if remaining_send_length>0:
       # host will send another OUT command
       # prepare full buffer to read again from host
-      usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
+      if send_parent>>24==0xc2: # flash
+        usbd.submit_xfer(I0_EP1_OUT, memoryview(i0_usbd_buf)[52:4148])
+      else:
+        usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
     else:
       # signal to host we have received entire file
       irq_sendobject_complete(current_send_handle)

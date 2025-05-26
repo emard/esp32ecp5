@@ -125,57 +125,6 @@ flash_read_size  = const(4096)
 flash_write_size = const(256)
 flash_erase_size = const(4096)
 
-#file_block = bytearray(flash_erase_size)
-#file_blockmv=memoryview(file_block)
-flash_block = bytearray(flash_read_size)
-
-# writes file_block to flash
-# len(file_block) == flash_erase_size
-# before: ecp5.flash_open()
-# after:  ecp5.flash_close()
-def flash_write_block_retry(addr, file_block):
-  if len(file_block) != flash_erase_size:
-    return False
-  file_blockmv=memoryview(file_block)
-  addr_mask = flash_erase_size-1
-  if addr & addr_mask:
-    # print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (flash_erase_size, 0xFFFFFF & ~addr_mask))
-    return False
-  addr = addr & 0xFFFFFF & ~addr_mask # rounded to even erase size
-  bytes_uploaded = 0
-  retry = 3
-  while retry > 0:
-    must = 0
-    flash_rd = 0
-    while flash_rd<flash_erase_size:
-      ecp5.flash_read_block(flash_block,addr+bytes_uploaded+flash_rd)
-      must = ecp5.compare_flash_file_buf(flash_block,file_blockmv[flash_rd:flash_rd+flash_read_size],must)
-      flash_rd+=flash_read_size
-    write_addr = addr+bytes_uploaded
-    if must == 0:
-      bytes_uploaded += len(file_block)
-      break
-    retry -= 1
-    if must & 1: # must_erase:
-      #print("from 0x%06X erase %dK" % (write_addr, flash_erase_size>>10),end="\r")
-      ecp5.flash_erase_block(write_addr)
-    if must & 2: # must_write:
-      #print("from 0x%06X write %dK" % (write_addr, flash_erase_size>>10),end="\r")
-      block_addr = 0
-      next_block_addr = 0
-      while next_block_addr < len(file_block):
-        next_block_addr = block_addr+flash_write_size
-        ecp5.flash_write_block(file_blockmv[block_addr:next_block_addr-1], file_blockmv[next_block_addr-1], write_addr)
-        write_addr += flash_write_size
-        block_addr = next_block_addr
-    #if not verify:
-    #  count_total += 1
-    #  bytes_uploaded += len(file_block)
-    #  break
-  if retry <= 0:
-    return False
-  return True
-
 # This class handles the DFU USB device logic.
 class DFUOverUSB:
   def __init__(self, dfu):
@@ -382,7 +331,7 @@ class DFU:
       # write to FPGA RAM bitstream
       ecp5.hwspi.write(buf[:size])
     else: # addr >= 0xF000000 write to FLASH
-      flash_write_block_retry(addr & 0xFFF000, buf)
+      ecp5.flash_write_block_retry(buf, addr & 0xFFF000)
     return 0  # indicate success
 
 # Create an instance of the DFU state machine.

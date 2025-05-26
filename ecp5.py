@@ -24,6 +24,8 @@ read_status=bytearray([5])
 status=bytearray(1)
 #rb=bytearray(256) # reverse bits
 #init_reverse_bits()
+# flashing
+flash_block=bytearray(flash_read_size)
 
 def bitbang_jtag_on():
   global tck,tms,tdi,tdo,led
@@ -325,6 +327,10 @@ def prog_close():
 # FPGA will enter flashing mode
 # TAP should be in "select DR scan" state
 def flash_open():
+  global count_total,count_erase,count_write
+  count_total = 0
+  count_erase = 0
+  count_write = 0
   common_open()
   send_tms(1,6) # -> Test Logic Reset
   runtest_idle(1,0)
@@ -403,6 +409,53 @@ def flash_read_block(data, addr:int):
   send_int_msb1st(0,1,8) # dummy read byte -> exit 1 DR
   send_tms0111() # -> select DR scan
 
+# writes file_block to flash
+# len(file_block) == flash_erase_size
+# before: ecp5.flash_open()
+# after:  ecp5.flash_close()
+def flash_write_block_retry(file_block,addr:int):
+  global count_total,count_erase,count_write
+  if len(file_block)!=flash_erase_size:
+    return False
+  file_blockmv=memoryview(file_block)
+  addr_mask=flash_erase_size-1
+  if addr&addr_mask:
+    # print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (flash_erase_size, 0xFFFFFF & ~addr_mask))
+    return False
+  addr=addr&0xFFFFFF&~addr_mask # rounded to even erase size
+  bytes_uploaded=0
+  retry=3
+  while retry>0:
+    must=0
+    flash_rd=0
+    while flash_rd<flash_erase_size:
+      flash_read_block(flash_block,addr+flash_rd)
+      must=compare_flash_file_buf(flash_block,file_blockmv[flash_rd:flash_rd+flash_read_size],must)
+      flash_rd+=flash_read_size
+    write_addr=addr
+    if must==0:
+      addr+=len(file_block)
+      count_total+=1
+      break
+    retry-=1
+    if must&1: # must_erase:
+      #print("from 0x%06X erase %dK" % (write_addr, flash_erase_size>>10),end="\r")
+      flash_erase_block(write_addr)
+      count_erase+=1
+    if must&2: # must_write:
+      #print("from 0x%06X write %dK" % (write_addr, flash_erase_size>>10),end="\r")
+      block_addr=0
+      next_block_addr=0
+      while next_block_addr<len(file_block):
+        next_block_addr=block_addr+flash_write_size
+        flash_write_block(file_blockmv[block_addr:next_block_addr-1],file_blockmv[next_block_addr-1],write_addr)
+        write_addr+=flash_write_size
+        block_addr=next_block_addr
+      count_write+=1
+  if retry<=0:
+    return False
+  return True
+
 # call this after uploading all of the flash blocks,
 # this will exit FPGA flashing mode and start the bitstream
 def flash_close():
@@ -425,11 +478,11 @@ def stopwatch_start():
 
 def stopwatch_stop(bytes_uploaded):
   global stopwatch_ms
-  elapsed_ms = ticks_ms() - stopwatch_ms
-  transfer_rate_MBps = 0
-  if elapsed_ms > 0:
-    transfer_rate_kBps = bytes_uploaded // elapsed_ms
-  print("%d bytes uploaded in %d ms (%d kB/s)" % (bytes_uploaded, elapsed_ms, transfer_rate_kBps))
+  elapsed_ms=ticks_ms()-stopwatch_ms
+  transfer_rate_MBps=0
+  if elapsed_ms>0:
+    transfer_rate_kBps=bytes_uploaded//elapsed_ms
+  print("%d bytes uploaded in %d ms (%d kB/s)" % (bytes_uploaded,elapsed_ms,transfer_rate_kBps))
 
 def prog_stream(dstream, blocksize=4096):
   prog_open()
@@ -504,14 +557,13 @@ def compare_flash_file_buf(flash_b, file_b, must:int)->int:
 # prevents flash wear when overwriting the same data
 # 4K erase block is max that fits on ESP32-WROOM
 # returns status True-OK False-Fail
-def flash_stream(dstream, addr=0):
+def flash_stream(dstream,addr=0):
   flash_open()
-  addr_mask = flash_erase_size-1
-  if addr & addr_mask:
+  addr_mask=flash_erase_size-1
+  if addr&addr_mask:
     print("addr must be rounded to flash_erase_size = %d bytes (& 0x%06X)" % (flash_erase_size, 0xFFFFFF & ~addr_mask))
     return False
-  addr = addr & 0xFFFFFF & ~addr_mask # rounded to even 64K (erase block)
-  bytes_uploaded = 0
+  addr=addr&0xFFFFFF&~addr_mask # rounded to even 64K (erase block)
   stopwatch_start()
   #if 1:
   #  print("erase whole FLASH (max 90s)")
@@ -519,60 +571,17 @@ def flash_stream(dstream, addr=0):
   #  flash_wait_status(1005)
   #  sdr(b"\xE3") # BULK ERASE (whole chip) rb[0x60]=0x06 or rb[0xC7]=0xE3
   #  flash_wait_status(90000)
-  count_total = 0
-  count_erase = 0
-  count_write = 0
-  file_block = bytearray(flash_erase_size)
-  flash_block = bytearray(flash_read_size)
-  file_blockmv=memoryview(file_block)
-  progress_char="."
+  file_block=bytearray(flash_erase_size)
+  start_addr=addr
   while dstream.readinto(file_block):
-    led.value((bytes_uploaded >> 12)&1)
-    retry = 3
-    while retry > 0:
-      must = 0
-      flash_rd = 0
-      while flash_rd<flash_erase_size:
-        flash_read_block(flash_block,addr+bytes_uploaded+flash_rd)
-        must = compare_flash_file_buf(flash_block,file_blockmv[flash_rd:flash_rd+flash_read_size],must)
-        flash_rd+=flash_read_size
-      write_addr = addr+bytes_uploaded
-      if must == 0:
-        if (write_addr & 0xFFFF) == 0:
-          print("\r0x%06X %dK %c" % (write_addr, flash_erase_size>>10, progress_char),end="")
-        else:
-          print(progress_char,end="")
-        progress_char="."
-        count_total += 1
-        bytes_uploaded += len(file_block)
-        break
-      retry -= 1
-      if must & 1: # must_erase:
-        #print("from 0x%06X erase %dK" % (write_addr, flash_erase_size>>10),end="\r")
-        flash_erase_block(write_addr)
-        count_erase += 1
-        progress_char = "e"
-      if must & 2: # must_write:
-        #print("from 0x%06X write %dK" % (write_addr, flash_erase_size>>10),end="\r")
-        block_addr = 0
-        next_block_addr = 0
-        while next_block_addr < len(file_block):
-          next_block_addr = block_addr+flash_write_size
-          flash_write_block(file_blockmv[block_addr:next_block_addr-1], file_blockmv[next_block_addr-1], write_addr)
-          write_addr += flash_write_size
-          block_addr = next_block_addr
-        count_write += 1
-        progress_char = "w"
-      #if not verify:
-      #  count_total += 1
-      #  bytes_uploaded += len(file_block)
-      #  break
-    if retry <= 0:
+    led.value(addr>>12&1)
+    retval=flash_write_block_retry(file_block,addr)
+    if retval==False:
       break
-  print("\r",end="")
-  stopwatch_stop(bytes_uploaded)
-  print("%dK blocks: %d total, %d erased, %d written." % (flash_erase_size>>10, count_total, count_erase, count_write))
-  return retry > 0 # True if successful
+    addr+=len(file_block)
+  stopwatch_stop(addr-start_addr)
+  print("%dK blocks: %d total, %d erased, %d written." % (flash_erase_size>>10,count_total,count_erase,count_write))
+  return retval # True if successful
 
 def flash_stream_gz(dstream, addr=0, name=""):
   if name.lower().endswith(".gz"):

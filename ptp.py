@@ -818,6 +818,8 @@ def SendObject(cnt): # 0x100D
       if send_parent>>24==0xc1: # fpga
         ecp5.hwspi.write(cnt[12:])
       elif send_parent>>24==0xc2: # flash
+        if len(cnt)<4108:
+          memoryview(i0_usbd_buf)[len(cnt):4108]=bytearray(b"\xff"*(4108-len(cnt)))
         flash_write_block_retry(addr&0xFFF000,memoryview(i0_usbd_buf)[12:4108])
         memoryview(i0_usbd_buf)[:52]=i0_usbd_buf[4108:4160]
         addr+=4096
@@ -927,6 +929,8 @@ def ep1_out_done(result, xferred_bytes):
     if send_parent>>24==0xc1:
       ecp5.hwspi.write(i0_usbd_buf)
     elif send_parent>>24==0xc2: # flash
+      if xferred_bytes<4096:
+        memoryview(i0_usbd_buf)[52+xferred_bytes:4148]=bytearray(b"\xff"*(4096-xferred_bytes))
       flash_write_block_retry(addr&0xFFF000,memoryview(i0_usbd_buf)[:4096])
       memoryview(i0_usbd_buf)[:52]=i0_usbd_buf[4096:4148]
       addr+=xferred_bytes

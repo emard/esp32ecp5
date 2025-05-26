@@ -36,7 +36,7 @@ It can be also upgraded from FTP or LFTP prompt:
     Installing esp32ecp5 1.0.12 from https://files.pythonhosted.org/packages/46/d6/15b3f9f2312b4bc16f9c2d0c042ad4e4ae8aee969c50b352d816b090a8b0/esp32ecp5-1.0.12.tar.gz
     250 OK
 
-# micropython >= 1.21:
+# micropython 1.21-1.24:
 
 esp32ecp5 can be installed or upgraded online with mip
 
@@ -69,6 +69,11 @@ It can be also upgraded from FTP or LFTP prompt:
     Exists: /lib/zlib.mpy
     Done
     250 OK
+
+# micropython >=1.25:
+
+Flashing currently doesn't work.
+Looking for the fix...
 
 # ESP32 pinout
 

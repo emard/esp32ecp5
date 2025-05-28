@@ -1,7 +1,10 @@
-# esp32s3 micropython >= 1.24
+# esp32s3 micropython >= 1.26
 
-# file browser using USB PTP protocol
-# tested on linux gnome, windows 10, apple
+# file browser using USB PTP/MTP protocol
+# should work on linux, windows, apple
+# linux gvfs BUG: MTP can write but can't read
+# file r/w works on gvfs with PTP:
+# PROTOCOL=b"PTP"
 
 # protocol info:
 # https://github.com/gphoto/libgphoto2/tree/master/camlibs/ptp2
@@ -33,30 +36,24 @@ from micropython import const
 VID = const(0x1234)
 PID = const(0xabcd)
 
-# USB endpoints used by the device.
-# interface 0
-I0_EP1_IN=const(0x81)
-I0_EP1_OUT=const(0x01)
-I0_EP2_IN=const(0x82)
+# USB endpoints used by PTP
+PTP_DATA_IN=const(0x83)
+PTP_DATA_OUT=const(0x03)
+PTP_EVENT_IN=const(0x84) # not used
 
 # device textual appearance
 MANUFACTURER=b"iManufacturer"
 PRODUCT=b"iProduct"
 SERIAL=b"00000000"
-CONFIGURATION=b"iConfiguration"
 # if interface is named "MTP", host uses MTP protocol.
 # for any other name host uses PTP protocol.
 # linux gnome gvfs MTP BUG: file read doesn't work
-#INTERFACE0=b"MTP" # libmtp, windows and apple
-INTERFACE0=b"PTP" # libgphoto2, windows and linux
-INTERFACE1=b"iInterface1"
+PROTOCOL=b"MTP" # libmtp, windows and apple
+#PROTOCOL=b"PTP" # libgphoto2, windows and linux
 VERSION=b"3.1.8"
 STORID_VFS=const(0x10001) # micropython VFS
 STORID_CUSTOM=const(0x20002) # custom for FPGA
 STORAGE={STORID_VFS:b"vfs", STORID_CUSTOM:b"custom"}
-
-EVENT_OBJECTINFO_CHANGED=False # All
-#EVENT_OBJECTINFO_CHANGED=True # Windows and Linux, but not Apple
 
 current_storid=STORID_VFS # must choose one
 # PTP
@@ -66,80 +63,141 @@ USB_CLASS_IMAGE=const(6) # imaging
 STILL_IMAGE_SUBCLASS=const(1) # still image cam
 STILL_IMAGE_PROTOCOL=const(1) # cam
 
-# Class-Specific Requests - bRequest values
-STILL_IMAGE_CANCEL_REQUEST=const(0x64)
-STILL_IMAGE_GET_EXT_EVENT_DATA=const(0x65)
-STILL_IMAGE_DEV_RESET_REQ=const(0x66)
-STILL_IMAGE_GET_DEV_STATUS=const(0x67)
+# Class-Specific Requests - control bRequest values
+# not used
+#STILL_IMAGE_CANCEL_REQUEST=const(0x64)
+#STILL_IMAGE_GET_EXT_EVENT_DATA=const(0x65)
+#STILL_IMAGE_DEV_RESET_REQ=const(0x66)
+#STILL_IMAGE_GET_DEV_STATUS=const(0x67)
 
 # USB device descriptor.
 _desc_dev = bytes([
-0x12,  # 0 bLength
-0x01,  # 1 bDescriptorType: Device
-0x10,  # 2
-0x01,  # 3 USB version: 1.10
-0x00,  # 4 bDeviceClass: defined at interface level
-0x00,  # 5 bDeviceSubClass
-0x00,  # 6 bDeviceProtocol
-0x40,  # 7 bMaxPacketSize
-VID & 0xFF, # 8
-VID >> 8 & 0xFF,  # 9 VID
-PID & 0xFF, # 10
-PID >> 8 & 0xFF,  # 11 PID
-0x00,  # 12
-0x07,  # 13 bcdDevice: 7.00
-0x01,  # 14 iManufacturer
-0x02,  # 15 iProduct
-0x03,  # 16 iSerialNumber
-0x01,  # 17 bNumConfigurations: 1
+0x12, # 0 bLength
+0x01, # 1 bDescriptorType: Device
+0x10, 0x01, # 2-3 USB version: 1.10
+0xEF, # 4 bDeviceClass: Miscellaneous (for IAD)
+0x02, # 5 bDeviceSubClass: Common Class
+0x01, # 6 bDeviceProtocol: IAD Protocol
+0x40, # 7 bMaxPacketSize
+VID&0xFF, VID>>8, #  8-9  VID
+PID&0xFF, PID>>8, # 10-11 PID
+0x00, 0x01, # 12-13 bcdDevice version: 1.00
+0x01, # 14 iManufacturer
+0x02, # 15 iProduct
+0x03, # 16 iSerialNumber
+0x01, # 17 bNumConfigurations: 1
 ])
 
 # USB configuration descriptor.
 _desc_cfg = bytes([
-# Configuration Descriptor.
-0x09,  # 0 bLength
-0x02,  # 1 bDescriptorType: configuration
-0x27,  # 2
-0x00,  # 3 wTotalLength: 39
-0x01,  # 4 bNumInterfaces
-0x01,  # 5 bConfigurationValue
-0x04,  # 6 iConfiguration
-0x80,  # 7 bmAttributes = Bus powered
-0x96,  # 8 bMaxPower
-# Interface Descriptor.
-0x09,  # 0 bLength
-0x04,  # 1 bDescriptorType: interface
-0x00,  # 2 bInterfaceNumber
-0x00,  # 3 bAlternateSetting
-0x03,  # 4 bNumEndpoints
-USB_CLASS_IMAGE,  # 5 bInterfaceClass = imaging
-STILL_IMAGE_SUBCLASS,  # 6 bInterfaceSubClass
-STILL_IMAGE_PROTOCOL,  # 7 bInterfaceProtocol
-0x05,  # 8 iInterface
-# Interface 0 Bulk Endpoint OUT
-0x07,  # 0 bLength
-0x05,  # 1 bDescriptorType: endpoint
-I0_EP1_IN,  # 2 bEndpointAddress
-0x02,  # 3 bmAttributes: bulk
-0x40,  # 4
-0x00,  # 5 wMaxPacketSize
-0x00,  # 6 bInterval
-# Interface 0 Bulk Endpoint IN.
-0x07,  # 0 bLength
-0x05,  # 1 bDescriptorType: endpoint
-I0_EP1_OUT,  # 2 bEndpointAddress
-0x02,  # 3 bmAttributes: bulk
-0x40,  # 4
-0x00,  # 5 wMaxPacketSize
-0x00,  # 6 bInterval
-# Interface 0 Interrupt Endpoint IN.
-0x07,  # 0 bLength
-0x05,  # 1 bDescriptorType: endpoint
-I0_EP2_IN,  # 2 bEndpointAddress
-0x03,  # 3 bmAttributes: interrupt
-0x40,  # 4
-0x00,  # 5 wMaxPacketSize
-0x01,  # 6 bInterval
+#==============================================================================
+# Configuration Descriptor (CDC + PTP)
+# Original CDC length = 75 bytes
+# PTP Interface Descriptor = 9 bytes
+# PTP Bulk OUT Endpoint = 7 bytes
+# PTP Bulk IN Endpoint = 7 bytes
+# PTP Interrupt IN Endpoint = 7 bytes
+# Total PTP = 9 + 7 + 7 + 7 = 30 bytes
+# New wTotalLength = 75 (CDC) + 30 (PTP) = 105 bytes (0x69)
+# bNumInterfaces = 2 (CDC) + 1 (PTP) = 3
+#==============================================================================
+#--------------------------------------------------------------------------
+# Configuration Descriptor
+#--------------------------------------------------------------------------
+0x09, # bLength
+0x02, # bDescriptorType: CONFIGURATION
+105, 0x00, # wTotalLength: 105 bytes (0x69)
+0x03, # bNumInterfaces: 3 (CDC_CCI, CDC_DCI, PTP)
+0x01, # bConfigurationValue
+0x00, # iConfiguration: (none)
+0x80, # bmAttributes: Bus-powered
+250,  # bMaxPower: 500mA (250*2mA)
+# Interface Association Descriptor (IAD) for CDC
+0x08, # bLength
+0x0B, # bDescriptorType: INTERFACE_ASSOCIATION
+0x00, # bFirstInterface: Interface 0 (CDC CCI)
+0x02, # bInterfaceCount: 2 (CDC CCI + DCI)
+0x02, # bFunctionClass: CDC Control
+0x02, # bFunctionSubClass: Abstract Control Model (ACM)
+0x01, # bFunctionProtocol: V.25ter (AT Command)
+0x00, # iFunction: (none)
+# Interface Descriptor: Communications Class Interface (CCI) - CDC
+0x09, # bLength
+0x04, # bDescriptorType: INTERFACE
+0x00, # bInterfaceNumber: 0
+0x00, # bAlternateSetting
+0x01, # bNumEndpoints: 1 (Interrupt IN)
+0x02, # bInterfaceClass: CDC Control
+0x02, # bInterfaceSubClass: ACM
+0x01, # bInterfaceProtocol: V.25ter
+0x00, # iInterface: (none)
+# Class-Specific CDC Descriptors for CCI
+0x05, 0x24, 0x00, 0x10, 0x01, # Header Functional
+0x05, 0x24, 0x01, 0x00, 0x01, # Call Management Functional
+0x04, 0x24, 0x02, 0x02,       # Abstract Control Management (ACM) Functional
+0x05, 0x24, 0x06, 0x00, 0x01, # Union Functional
+# Endpoint Descriptor for CCI (Interrupt IN for notifications) - CDC
+0x07, # bLength
+0x05, # bDescriptorType: ENDPOINT
+0x81, # bEndpointAddress: EP 1 IN (CDC)
+0x03, # bmAttributes: Interrupt
+0x08, 0x00, # wMaxPacketSize: 8 bytes
+0xFF, # bInterval: 255 ms
+# Interface Descriptor: Data Class Interface (DCI) - CDC
+0x09, # bLength
+0x04, # bDescriptorType: INTERFACE
+0x01, # bInterfaceNumber: 1
+0x00, # bAlternateSetting
+0x02, # bNumEndpoints: 2 (Bulk IN & Bulk OUT)
+0x0A, # bInterfaceClass: CDC Data
+0x00, # bInterfaceSubClass: (unused)
+0x00, # bInterfaceProtocol: (none)
+0x00, # iInterface: (none)
+# Endpoint Descriptor for DCI (Bulk OUT) - CDC
+0x07, # bLength
+0x05, # bDescriptorType: ENDPOINT
+0x02, # bEndpointAddress: EP 2 OUT (CDC)
+0x02, # bmAttributes: Bulk
+0x40, 0x00, # wMaxPacketSize: 64 bytes
+0x00, # bInterval: (ignored for Bulk)
+# Endpoint Descriptor for DCI (Bulk IN) - CDC
+0x07, # bLength
+0x05, # bDescriptorType: ENDPOINT
+0x82, # bEndpointAddress: EP 2 IN (CDC)
+0x02, # bmAttributes: Bulk
+0x40, 0x00, # wMaxPacketSize: 64 bytes
+0x00, # bInterval: (ignored for Bulk)
+# PTP/MTP Interface Descriptor.
+0x09, # 0 bLength
+0x04, # 1 bDescriptorType: interface
+0x02, # 2 bInterfaceNumber
+0x00, # 3 bAlternateSetting
+0x03, # 4 bNumEndpoints
+USB_CLASS_IMAGE, # 5 bInterfaceClass = imaging
+STILL_IMAGE_SUBCLASS, # 6 bInterfaceSubClass
+STILL_IMAGE_PROTOCOL, # 7 bInterfaceProtocol
+0x04, # 8 iInterface protocol name "PTP" or "MTP"
+# Interface 2 Bulk Endpoint IN
+0x07, # 0 bLength
+0x05, # 1 bDescriptorType: endpoint
+PTP_DATA_IN, # 2 bEndpointAddress
+0x02, # 3 bmAttributes: bulk
+0x40, 0x00, # 4-5 wMaxPacketSize
+0x00, # 6 bInterval
+# Interface 2 Bulk Endpoint OUT
+0x07, # 0 bLength
+0x05, # 1 bDescriptorType: endpoint
+PTP_DATA_OUT, # 2 bEndpointAddress
+0x02, # 3 bmAttributes: bulk
+0x40, 0x00, # 4-5 wMaxPacketSize
+0x00, # 6 bInterval
+# Interface 3 Interrupt Endpoint IN.
+0x07, # 0 bLength
+0x05, # 1 bDescriptorType: endpoint
+PTP_EVENT_IN, # 2 bEndpointAddress
+0x03, # 3 bmAttributes: interrupt
+0x10, 0x00, # 4-5 wMaxPacketSize 16 bytes
+10,   # 6 [ms] bInterval
 ])
 
 # USB strings.
@@ -147,9 +205,7 @@ _desc_strs = {
 1: MANUFACTURER,
 2: PRODUCT,
 3: SERIAL,
-4: CONFIGURATION,
-5: INTERFACE0,
-6: INTERFACE1,
+4: PROTOCOL,
 }
 # USB constants for bmRequestType.
 USB_REQ_RECIP_INTERFACE=const(1)
@@ -257,9 +313,6 @@ PTP_RC_OK=const(0x2001)
 
 length_response=bytearray(1) # length to send response once
 send_response=bytearray(32) # response to send
-
-length_irq_response=bytearray(1) # length to send response once
-send_irq_response=bytearray(32) # interrupt response to send
 
 # strip 1 directory level from
 # left slide (first level after root)
@@ -371,7 +424,7 @@ def hdr_ok():
 
 def in_hdr_ok():
   hdr_ok()
-  usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:hdr.len])
+  usbd.submit_xfer(PTP_DATA_IN, memoryview(ptp_buf)[:hdr.len])
 
 def in_ok_sendobject():
   hdr.len=24
@@ -381,7 +434,7 @@ def in_ok_sendobject():
   hdr.p1=current_storid
   hdr.p2=send_parent
   hdr.p3=current_send_handle
-  usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:hdr.len])
+  usbd.submit_xfer(PTP_DATA_IN, memoryview(ptp_buf)[:hdr.len])
 
 # after one IN submit another with response OK
 def respond_ok():
@@ -396,10 +449,10 @@ def respond_ok_tx(id):
 def in_hdr_data(data):
   hdr.len=12+len(data)
   hdr.type=PTP_USB_CONTAINER_DATA
-  i0_usbd_buf[12:hdr.len]=data
+  ptp_buf[12:hdr.len]=data
   #print(">",end="")
-  #print_hex(i0_usbd_buf[:hdr.len])
-  usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:hdr.len])
+  #print_hex(ptp_buf[:hdr.len])
+  usbd.submit_xfer(PTP_DATA_IN, memoryview(ptp_buf)[:hdr.len])
 
 def OpenSession(cnt):
   global sesid
@@ -616,7 +669,7 @@ def GetObject(cnt): # 0x1009
       fd=open(strip1dirlvl(fullpath),"rb")
       filesize=fd.seek(0,2)
       fd.seek(0)
-      len1st=fd.readinto(memoryview(i0_usbd_buf)[12:])
+      len1st=fd.readinto(memoryview(ptp_buf)[12:])
       # file data after 12-byte header
       length=12+len1st
       remain_getobj_len=filesize-len1st
@@ -629,11 +682,11 @@ def GetObject(cnt): # 0x1009
       filesize=len(msg)
       length=12+filesize
       remain_getobj_len=0
-      memoryview(i0_usbd_buf)[12:12+len(msg)]=msg
+      memoryview(ptp_buf)[12:12+len(msg)]=msg
       respond_ok_tx(txid)
     hdr.len=12+filesize
     hdr.type=PTP_USB_CONTAINER_DATA
-  usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:length])
+  usbd.submit_xfer(PTP_DATA_IN, memoryview(ptp_buf)[:length])
 
 def DeleteObject(cnt): # 0x100B
   fullpath=oh2path[hdr.p1]
@@ -664,7 +717,7 @@ def SendObjectInfo(cnt): # 0x100C
     #print("send dir path",send_parent_path)
     # prepare full buffer to read from host again
     # host will send another OUT
-    usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
+    usbd.submit_xfer(PTP_DATA_OUT, ptp_buf)
   if hdr.type==PTP_USB_CONTAINER_DATA: # 2
     # we just have received data from host
     # host sends in advance file length to be sent
@@ -716,18 +769,8 @@ def SendObjectInfo(cnt): # 0x100C
     hdr.p2=send_parent
     hdr.p3=current_send_handle
     #print(">",end="")
-    #print_hex(i0_usbd_buf[:hdr.len])
-    usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:hdr.len])
-
-def irq_sendobject_complete():
-  global fd
-  hdr.len=16
-  hdr.type=PTP_USB_CONTAINER_EVENT
-  hdr.code=PTP_EC_ObjectInfoChanged
-  hdr.p1=current_send_handle
-  print("irq>",end="")
-  print_hex(i0_usbd_buf[:hdr.len])
-  usbd.submit_xfer(I0_EP2_IN, memoryview(i0_usbd_buf)[:hdr.len])
+    #print_hex(ptp_buf[:hdr.len])
+    usbd.submit_xfer(PTP_DATA_IN, memoryview(ptp_buf)[:hdr.len])
 
 def close_sendobject():
   if send_parent>>24==0xc1: # fpga
@@ -750,7 +793,7 @@ def SendObject(cnt): # 0x100D
       fd=open(strip1dirlvl(send_fullpath),"wb")
     # host will send another OUT command
     # prepare full buffer to read again from host
-    usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
+    usbd.submit_xfer(PTP_DATA_OUT, ptp_buf)
   if hdr.type==PTP_USB_CONTAINER_DATA: # 2
     # host has just sent data
     # 12 bytes header, rest is payload
@@ -769,9 +812,9 @@ def SendObject(cnt): # 0x100D
         # copy buf[4096:4148] to buf[0:52]
         # last packet: pad with 0xFF if shorter than 4096
         if len(cnt)<4108:
-          memoryview(i0_usbd_buf)[len(cnt):4108]=bytearray(b"\xff"*(4108-len(cnt)))
-        ecp5.flash_write_block_retry(memoryview(i0_usbd_buf)[12:4108],addr&0xFFF000)
-        memoryview(i0_usbd_buf)[:52]=i0_usbd_buf[4108:4160]
+          memoryview(ptp_buf)[len(cnt):4108]=bytearray(b"\xff"*(4108-len(cnt)))
+        ecp5.flash_write_block_retry(memoryview(ptp_buf)[12:4108],addr&0xFFF000)
+        memoryview(ptp_buf)[:52]=ptp_buf[4108:4160]
         addr+=4096
       else:
         fd.write(cnt[12:])
@@ -781,21 +824,17 @@ def SendObject(cnt): # 0x100D
     # if host has sent all bytes it promised to send
     # report it to the host that file is complete
     if remaining_send_length<=0:
-      # send irq, after irq reply OK to host
       #print(">",end="")
-      #print_hex(i0_usbd_buf[:length])
+      #print_hex(ptp_buf[:length])
       close_sendobject()
-      if EVENT_OBJECTINFO_CHANGED:
-        irq_sendobject_complete()
-      else:
-        in_ok_sendobject()
+      in_ok_sendobject()
     else:
       # host will send another OUT command
       # prepare full buffer to read again from host
       if send_parent>>24==0xc2: # flash
-        usbd.submit_xfer(I0_EP1_OUT,memoryview(i0_usbd_buf)[52:4148])
+        usbd.submit_xfer(PTP_DATA_OUT,memoryview(ptp_buf)[52:4148])
       else:
-        usbd.submit_xfer(I0_EP1_OUT,i0_usbd_buf)
+        usbd.submit_xfer(PTP_DATA_OUT,ptp_buf)
 
 #def SetObjectProtection(cnt): # 0x1012
 #  # hdr.p1 objecthandle
@@ -833,14 +872,14 @@ def handle_in(bRequest, wValue, buf):
   return buf
 
 # buf for control transfers
-usb_buf = bytearray(64)
+ctrl_buf=bytearray(64)
 
 # USB data buffer for Bulk IN and OUT transfers.
 # must be multiple of 64 bytes
-i0_usbd_buf = bytearray(4160)
+ptp_buf=bytearray(4160)
 
 # fixed parsed ptp header
-hdr=uctypes.struct(uctypes.addressof(i0_usbd_buf),CNT_HDR_DESC,uctypes.LITTLE_ENDIAN)
+hdr=uctypes.struct(uctypes.addressof(ptp_buf),CNT_HDR_DESC,uctypes.LITTLE_ENDIAN)
 
 # not used
 # on linux device works without supporting
@@ -851,10 +890,10 @@ def _control_xfer_cb(stage, request):
   if stage == 1:  # SETUP
     if bmRequestType == USB_DIR_OUT | USB_REQ_TYPE_CLASS | USB_REQ_RECIP_DEVICE:
       # Data coming from host, prepare to receive it.
-      return memoryview(usb_buf)[:wLength]
+      return memoryview(ctrl_buf)[:wLength]
     elif bmRequestType == USB_DIR_IN | USB_REQ_TYPE_CLASS | USB_REQ_RECIP_DEVICE:
       # Host requests data, prepare to send it.
-      buf = memoryview(usb_buf)[:wLength]
+      buf = memoryview(ctrl_buf)[:wLength]
       return handle_in(bRequest, wValue, buf) # return None or buf
 
   elif stage == 3:  # ACK
@@ -863,15 +902,15 @@ def _control_xfer_cb(stage, request):
       a=1 # process something
     else:
       # EP0 RX ready.
-      buf = memoryview(usb_buf)[:wLength]
+      buf = memoryview(ctrl_buf)[:wLength]
       handle_out(bRequest,wValue,buf)
   return True
 
 # USB callback when our custom USB interface is opened by the host.
 def _open_itf_cb(interface_desc_view):
   # Prepare to receive first data packet on the OUT endpoint.
-  if interface_desc_view[11] == I0_EP1_IN:
-    usbd.submit_xfer(I0_EP1_OUT,i0_usbd_buf)
+  if interface_desc_view[11] == PTP_DATA_IN:
+    usbd.submit_xfer(PTP_DATA_OUT,ptp_buf)
   #print("_open_itf_cb", bytes(interface_desc_view))
 
 def ep1_out_done(result, xferred_bytes):
@@ -879,15 +918,15 @@ def ep1_out_done(result, xferred_bytes):
   if remaining_send_length>0:
     # continue receiving parts of the file
     if send_parent>>24==0xc1:
-      ecp5.hwspi.write(i0_usbd_buf)
+      ecp5.hwspi.write(ptp_buf)
     elif send_parent>>24==0xc2: # flash
       if xferred_bytes<4096:
-        memoryview(i0_usbd_buf)[52+xferred_bytes:4148]=bytearray(b"\xff"*(4096-xferred_bytes))
-      ecp5.flash_write_block_retry(memoryview(i0_usbd_buf)[:4096],addr&0xFFF000)
-      memoryview(i0_usbd_buf)[:52]=i0_usbd_buf[4096:4148]
+        memoryview(ptp_buf)[52+xferred_bytes:4148]=bytearray(b"\xff"*(4096-xferred_bytes))
+      ecp5.flash_write_block_retry(memoryview(ptp_buf)[:4096],addr&0xFFF000)
+      memoryview(ptp_buf)[:52]=ptp_buf[4096:4148]
       addr+=xferred_bytes
     else:
-      fd.write(i0_usbd_buf[:xferred_bytes])
+      fd.write(ptp_buf[:xferred_bytes])
     remaining_send_length-=xferred_bytes
     #print_hexdump(cnt)
     #print("<len(cnt)=",xferred_bytes,"remaining_send_length=", remaining_send_length)
@@ -895,21 +934,18 @@ def ep1_out_done(result, xferred_bytes):
       # host will send another OUT command
       # prepare full buffer to read again from host
       if send_parent>>24==0xc2: # flash
-        usbd.submit_xfer(I0_EP1_OUT, memoryview(i0_usbd_buf)[52:4148])
+        usbd.submit_xfer(PTP_DATA_OUT, memoryview(ptp_buf)[52:4148])
       else:
-        usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
+        usbd.submit_xfer(PTP_DATA_OUT, ptp_buf)
     else:
       # signal to host we have received entire file
       close_sendobject()
-      if EVENT_OBJECTINFO_CHANGED:
-        irq_sendobject_complete()
-      else:
-        in_ok_sendobject()
+      in_ok_sendobject()
   else:
     #print("0x%04x %s" % (hdr.code,ptp_opcode_cb[hdr.code].__name__))
     #print("<",end="")
-    #print_hex(i0_usbd_buf[:xferred_bytes])
-    ptp_opcode_cb[hdr.code](i0_usbd_buf[:xferred_bytes])
+    #print_hex(ptp_buf[:xferred_bytes])
+    ptp_opcode_cb[hdr.code](ptp_buf[:xferred_bytes])
 
 def ep1_in_done(result, xferred_bytes):
   global remain_getobj_len,fd
@@ -917,32 +953,33 @@ def ep1_in_done(result, xferred_bytes):
   if length_response[0]:
     #print(">",end="")
     #print_hex(send_response[:length_response[0]])
-    usbd.submit_xfer(I0_EP1_IN, send_response[:length_response[0]])
+    usbd.submit_xfer(PTP_DATA_IN, send_response[:length_response[0]])
     length_response[0]=0 # consumed, prevent recurring
   else:
     if remain_getobj_len:
       #print("remain_getobj_len",remain_getobj_len)
       # TODO flash reading
-      packet_len=fd.readinto(i0_usbd_buf)
+      packet_len=fd.readinto(ptp_buf)
       remain_getobj_len-=packet_len
       if remain_getobj_len<=0:
         remain_getobj_len=0
         fd.close()
         respond_ok_tx(txid) # after this send ok IN response
       #print(">",end="")
-      #print_hexdump(i0_usbd_buf[:packet_len])
-      usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:packet_len])
+      #print_hexdump(ptp_buf[:packet_len])
+      usbd.submit_xfer(PTP_DATA_IN, memoryview(ptp_buf)[:packet_len])
     else:
-      usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
+      usbd.submit_xfer(PTP_DATA_OUT, ptp_buf)
 
+# not used
 def ep2_in_done(result, xferred_bytes):
   # after IRQ data being sent, reply OK to host
   in_ok_sendobject()
 
 ep_addr_cb = {
-  I0_EP1_OUT:ep1_out_done,
-  I0_EP1_IN:ep1_in_done,
-  I0_EP2_IN:ep2_in_done
+  PTP_DATA_OUT:ep1_out_done,
+  PTP_DATA_IN:ep1_in_done,
+  PTP_EVENT_IN:ep2_in_done
 }
 
 def _xfer_cb(ep_addr,result,xferred_bytes):
@@ -950,7 +987,7 @@ def _xfer_cb(ep_addr,result,xferred_bytes):
 
 # Switch the USB device to our custom USB driver.
 usbd = machine.USBDevice()
-usbd.builtin_driver = usbd.BUILTIN_NONE
+usbd.builtin_driver = usbd.BUILTIN_DEFAULT
 usbd.config(
   desc_dev=_desc_dev,
   desc_cfg=_desc_cfg,

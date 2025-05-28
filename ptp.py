@@ -1,7 +1,7 @@
 # esp32s3 micropython >= 1.24
 
 # file browser using USB PTP protocol
-# tested on linux gnome and windows 10
+# tested on linux gnome, windows 10, apple
 
 # protocol info:
 # https://github.com/gphoto/libgphoto2/tree/master/camlibs/ptp2
@@ -42,25 +42,26 @@ I0_EP2_IN=const(0x82)
 # device textual appearance
 MANUFACTURER=b"iManufacturer"
 PRODUCT=b"iProduct"
-SERIAL=b"iSerial"
+SERIAL=b"00000000"
 CONFIGURATION=b"iConfiguration"
-# if interface is named "MTP" then host will
-# use MTP protocol.
-# Any other name will make it use PTP protocol.
-# currently MTP file read doesn't work in linux
-#INTERFACE0=b"MTP" # libmtp
-INTERFACE0=b"iInterface0" # libgphoto2
+# if interface is named "MTP", host uses MTP protocol.
+# for any other name host uses PTP protocol.
+# linux gnome gvfs MTP BUG: file read doesn't work
+#INTERFACE0=b"MTP" # libmtp, windows and apple
+INTERFACE0=b"PTP" # libgphoto2, windows and linux
 INTERFACE1=b"iInterface1"
 VERSION=b"3.1.8"
 STORID_VFS=const(0x10001) # micropython VFS
 STORID_CUSTOM=const(0x20002) # custom for FPGA
 STORAGE={STORID_VFS:b"vfs", STORID_CUSTOM:b"custom"}
-VOLUME=b"iVolume"
+
+EVENT_OBJECTINFO_CHANGED=False # All
+#EVENT_OBJECTINFO_CHANGED=True # Windows and Linux, but not Apple
 
 current_storid=STORID_VFS # must choose one
 # PTP
 # USB Still Image Capture Class defines
-# set all 3 lines 255 to avoid system default driver
+# debug: set all to 255 to avoid system default driver
 USB_CLASS_IMAGE=const(6) # imaging
 STILL_IMAGE_SUBCLASS=const(1) # still image cam
 STILL_IMAGE_PROTOCOL=const(1) # cam
@@ -75,8 +76,8 @@ STILL_IMAGE_GET_DEV_STATUS=const(0x67)
 _desc_dev = bytes([
 0x12,  # 0 bLength
 0x01,  # 1 bDescriptorType: Device
-0x00,  # 2
-0x02,  # 3 USB version: 2.00
+0x10,  # 2
+0x01,  # 3 USB version: 1.10
 0x00,  # 4 bDeviceClass: defined at interface level
 0x00,  # 5 bDeviceSubClass
 0x00,  # 6 bDeviceProtocol
@@ -151,12 +152,12 @@ _desc_strs = {
 6: INTERFACE1,
 }
 # USB constants for bmRequestType.
-USB_REQ_RECIP_INTERFACE = 0x01
-USB_REQ_RECIP_DEVICE = 0
-USB_REQ_TYPE_CLASS = 0x20
-USB_REQ_TYPE_VENDOR = 0x40
-USB_DIR_OUT = 0x00
-USB_DIR_IN = 0x80
+USB_REQ_RECIP_INTERFACE=const(1)
+USB_REQ_RECIP_DEVICE=const(0)
+USB_REQ_TYPE_CLASS=const(0x20)
+USB_REQ_TYPE_VENDOR=const(0x40)
+USB_DIR_OUT=const(0)
+USB_DIR_IN=const(0x80)
 
 # VFS micrpython types
 VFS_DIR=const(0x4000)
@@ -176,9 +177,9 @@ CNT_HDR_DESC = {
 }
 
 # some USB CTRL commands (FIXME)
-SETSTATUS = 2
-GETSTATUS = 3
-status = bytearray([0,0,0,0,0,0])
+SETSTATUS=const(2)
+GETSTATUS=const(3)
+status=bytearray([0,0,0,0,0,0])
 
 # global PTP session ID, Transaction ID, opcode
 sesid=0
@@ -213,9 +214,9 @@ current_send_handle=0
 oh2path={
 0:"/custom/",
 0xc10000d1:"/custom/fpga/",
-0xc10000f1:"/custom/fpga/fpga.bit",
+0xc10000f1:"/custom/fpga/fpga.bit.txt",
 0xc20000d2:"/custom/flash/",
-0xc20000f2:"/custom/flash/flash.bin",
+0xc20000f2:"/custom/flash/flash.bin.txt",
 }
 # path2oh is reverse of oh2path, only file names
 path2oh={v:k for k,v in oh2path.items()}
@@ -226,15 +227,39 @@ cur_list={}
 # object id of current parent directory
 cur_parent=0
 
+custom_txt=b"copy binary file to this directory\n"
+
 # fuxed custom ilistdir, pre-filled with custom fs
 fix_custom_cur_list={
 0:{
   0xc10000d1:('fpga',VFS_DIR,0,0),
   0xc20000d2:('flash',VFS_DIR,0,0),
   },
-0xc10000d1:{0xc10000f1:('fpga.bit',VFS_FILE,0,10)},
-0xc20000d2:{0xc20000f2:('flash.bin',VFS_FILE,0,10)},
+0xc10000d1:{0xc10000f1:('fpga.bit.txt',VFS_FILE,0,len(custom_txt))},
+0xc20000d2:{0xc20000f2:('flash.bin.txt',VFS_FILE,0,len(custom_txt))},
 }
+
+# USB PTP "type" 16-bit field
+PTP_USB_CONTAINER_UNDEFINED=const(0)
+PTP_USB_CONTAINER_COMMAND=const(1)
+PTP_USB_CONTAINER_DATA=const(2)
+PTP_USB_CONTAINER_RESPONSE=const(3)
+PTP_USB_CONTAINER_EVENT=const(4)
+
+# response codes, more in libgphoto2 ptp.h
+PTP_RC_OK=const(0x2001)
+#PTP_RC_GeneralError=const(0x2002)
+#PTP_RC_StoreFull=const(0x200C)
+#PTP_RC_ObjectWriteProtected=const(0x200D)
+#PTP_RC_InvalidCodeFormat=const(0x2016)
+#PTP_RC_UnknownVendorCode=const(0x2017)
+#PTP_RC_InvalidDataSet=const(0x2023)
+
+length_response=bytearray(1) # length to send response once
+send_response=bytearray(32) # response to send
+
+length_irq_response=bytearray(1) # length to send response once
+send_irq_response=bytearray(32) # interrupt response to send
 
 # strip 1 directory level from
 # left slide (first level after root)
@@ -283,53 +308,6 @@ def parent(oh:int)->int:
   path=oh2path[oh]
   pp=path[:path[:-1].rfind("/")+1]
   return path2oh[pp]
-
-
-# USB PTP "type" 16-bit field
-PTP_USB_CONTAINER_UNDEFINED=const(0)
-PTP_USB_CONTAINER_COMMAND=const(1)
-PTP_USB_CONTAINER_DATA=const(2)
-PTP_USB_CONTAINER_RESPONSE=const(3)
-PTP_USB_CONTAINER_EVENT=const(4)
-
-# PTP v1.0 response codes
-#PTP_RC_Undefined=const(0x2000)
-PTP_RC_OK=const(0x2001)
-#PTP_RC_GeneralError=const(0x2002)
-#PTP_RC_SessionNotOpen=const(0x2003)
-#PTP_RC_InvalidTransactionID=const(0x2004)
-#PTP_RC_OperationNotSupported=const(0x2005)
-#PTP_RC_ParameterNotSupported=const(0x2006)
-#PTP_RC_IncompleteTransfer=const(0x2007)
-#PTP_RC_InvalidStorageId=const(0x2008)
-#PTP_RC_InvalidObjectHandle=const(0x2009)
-#PTP_RC_DevicePropNotSupported=const(0x200A)
-#PTP_RC_InvalidObjectFormatCode=const(0x200B)
-#PTP_RC_StoreFull=const(0x200C)
-#PTP_RC_ObjectWriteProtected=const(0x200D)
-#PTP_RC_StoreReadOnly=const(0x200E)
-#PTP_RC_AccessDenied=const(0x200F)
-#PTP_RC_NoThumbnailPresent=const(0x2010)
-#PTP_RC_SelfTestFailed=const(0x2011)
-#PTP_RC_PartialDeletion=const(0x2012)
-#PTP_RC_StoreNotAvailable=const(0x2013)
-#PTP_RC_SpecificationByFormatUnsupported=const(0x2014)
-#PTP_RC_NoValidObjectInfo=const(0x2015)
-#PTP_RC_InvalidCodeFormat=const(0x2016)
-#PTP_RC_UnknownVendorCode=const(0x2017)
-#PTP_RC_CaptureAlreadyTerminated=const(0x2018)
-#PTP_RC_DeviceBusy=const(0x2019)
-#PTP_RC_InvalidParentObject=const(0x201A)
-#PTP_RC_InvalidDevicePropFormat=const(0x201B)
-#PTP_RC_InvalidDevicePropValue=const(0x201C)
-#PTP_RC_InvalidParameter=const(0x201D)
-#PTP_RC_SessionAlreadyOpened=const(0x201E)
-#PTP_RC_TransactionCanceled=const(0x201F)
-#PTP_RC_SpecificationOfDestinationUnsupported=const(0x2020)
-# PTP v1.1 response codes
-#PTP_RC_InvalidEnumHandle=const(0x2021)
-#PTP_RC_NoStreamEnabled=const(0x2022)
-#PTP_RC_InvalidDataSet=const(0x2023)
 
 def print_ptp_header(cnt):
   print("%08x %04x %04x %08x" % struct.unpack("<LHHL",cnt),end="")
@@ -384,12 +362,6 @@ def get_ucs2_string(s):
 def uint32_array(a):
   return struct.pack("<L"+"L"*len(a),len(a),*a)
 
-length_response=bytearray(1) # length to send response once
-send_response=bytearray(32) # response to send
-
-length_irq_response=bytearray(1) # length to send response once
-send_irq_response=bytearray(32) # interrupt response to send
-
 # for immediate response IN "ok"
 def hdr_ok():
   hdr.len=12
@@ -399,6 +371,16 @@ def hdr_ok():
 
 def in_hdr_ok():
   hdr_ok()
+  usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:hdr.len])
+
+def in_ok_sendobject():
+  hdr.len=24
+  hdr.type=PTP_USB_CONTAINER_RESPONSE
+  hdr.code=PTP_RC_OK
+  hdr.txid=txid
+  hdr.p1=current_storid
+  hdr.p2=send_parent
+  hdr.p3=current_send_handle
   usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:hdr.len])
 
 # after one IN submit another with response OK
@@ -424,10 +406,7 @@ def OpenSession(cnt):
   sesid=hdr.p1
   in_hdr_ok()
 
-# more codes in
-# git clone https://github.com/gphoto/libgphoto2
-# cd libgphoto2/camlibs/ptp2/ptp.h
-# events
+# event codes, more in libgphoto2 ptp.h
 PTP_EC_CancelTransaction=const(0x4001)
 PTP_EC_ObjectInfoChanged=const(0x4007)
 
@@ -458,9 +437,11 @@ def GetDeviceInfo(cnt): # 0x1001
   functional_mode=struct.pack("<H", 0) # 0: standard mode
   # unique lower 16-bit keys from ptp_opcode_cb.keys()
   #operations=uint16_array(set([code&0xFFFF for code in list((ptp_opcode_cb.keys()))])) # human readable
-  operations=uint16_array(set([code&0xFFFF for code in ptp_opcode_cb])) # short of previous line, set filters unique only
+  #operations=uint16_array(set([code&0xFFFF for code in ptp_opcode_cb])) # short of previous line, set filters unique only
+  operations=uint16_array(ptp_opcode_cb) # short of previous line, set filters unique only
   events=uint16_array((PTP_EC_ObjectInfoChanged,))
-  deviceprops=uint16_array((PTP_DPC_DateTime,))
+  #deviceprops=uint16_array((PTP_DPC_DateTime,))
+  deviceprops=uint16_array(())
   captureformats=uint16_array(())
   #captureformats=uint16_array((PTP_OFC_EXIF_JPEG,))
   imageformats=uint16_array((
@@ -520,7 +501,7 @@ def GetStorageInfo(cnt): # 0x1005
   FreeSpaceInBytes=blksize*blkfree
   FreeSpaceInImages=0x10000
   StorageDescription=ucs2_string(STORAGE[storageid])
-  VolumeLabel=ucs2_string(VOLUME)
+  VolumeLabel=StorageDescription # for Apple
   hdr1=struct.pack("<HHHQQL",StorageType,FilesystemType,AccessCapability,MaxCapability,FreeSpaceInBytes,FreeSpaceInImages)
   data=hdr1+StorageDescription+VolumeLabel
   respond_ok()
@@ -550,7 +531,7 @@ def GetObjectHandles(cnt): # 0x1007
     cur_list=fix_custom_cur_list[dirhandle]
   data=uint32_array(cur_list)
   # FIXME when directory has many entries > 256 data
-  # would not fit in one 1024 byte block
+  # would not fit in one 4160 byte block
   # block continuation neede
   respond_ok()
   in_hdr_data(data)
@@ -574,7 +555,18 @@ def GetObjectHandles(cnt): # 0x1007
 # PTP_oi_Filename               53
 
 def GetObjectInfo(cnt): # 0x1008
-  objh=hdr.p1
+  global cur_list
+  objh=hdr.p1 # FIXME optimize code
+  # if object handle has different parent
+  # it is probably not in cur_list, so
+  # update cur_list with ls(parent)
+  this_parent=parent(objh)
+  if this_parent in oh2path:
+    if this_parent!=cur_parent:
+      if objh>>28: # custom
+        cur_list=fix_custom_cur_list[this_parent]
+      else: # vfs
+        ls(oh2path[this_parent])
   #print("objh=%08x" % objh)
   ObjectFormat=PTP_OFC_Text
   ProtectionStatus=0 # 0:rw 1:ro
@@ -582,7 +574,6 @@ def GetObjectInfo(cnt): # 0x1008
   assoc_seq_null=bytearray(10)
   if objh in oh2path:
     fullpath=oh2path[objh]
-    #print(fullpath)
     ParentObject=parent(objh) # 0 means this file is in root directory
     if objh>>28: # member of custom fs
       StorageID=STORID_CUSTOM
@@ -634,7 +625,7 @@ def GetObject(cnt): # 0x1009
         fd.close()
         respond_ok_tx(txid)
     if fullpath.startswith("/custom"):
-      msg=b"123456789\n"
+      msg=custom_txt
       filesize=len(msg)
       length=12+filesize
       remain_getobj_len=0
@@ -728,15 +719,17 @@ def SendObjectInfo(cnt): # 0x100C
     #print_hex(i0_usbd_buf[:hdr.len])
     usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:hdr.len])
 
-def irq_sendobject_complete(objecthandle):
+def irq_sendobject_complete():
   global fd
   hdr.len=16
   hdr.type=PTP_USB_CONTAINER_EVENT
   hdr.code=PTP_EC_ObjectInfoChanged
-  hdr.p1=objecthandle
-  #print("irq>",end="")
-  #print_hex(i0_usbd_buf[:hdr.len])
+  hdr.p1=current_send_handle
+  print("irq>",end="")
+  print_hex(i0_usbd_buf[:hdr.len])
   usbd.submit_xfer(I0_EP2_IN, memoryview(i0_usbd_buf)[:hdr.len])
+
+def close_sendobject():
   if send_parent>>24==0xc1: # fpga
     ecp5.prog_close()
   elif send_parent>>24==0xc2: # flash
@@ -791,7 +784,11 @@ def SendObject(cnt): # 0x100D
       # send irq, after irq reply OK to host
       #print(">",end="")
       #print_hex(i0_usbd_buf[:length])
-      irq_sendobject_complete(current_send_handle)
+      close_sendobject()
+      if EVENT_OBJECTINFO_CHANGED:
+        irq_sendobject_complete()
+      else:
+        in_ok_sendobject()
     else:
       # host will send another OUT command
       # prepare full buffer to read again from host
@@ -808,9 +805,7 @@ def SendObject(cnt): # 0x100D
 def CloseSession(cnt): # 0x1007
   in_hdr_ok()
 
-# opcodes lower 16 bits starting from 0x1000
-# callback functions
-# upper 16-bits are same as upper 16 bits storage id
+# callback functions for opcodes
 # more in libgphoto2 ptp.h and ptp.c
 ptp_opcode_cb = {
   0x1001:GetDeviceInfo,
@@ -905,7 +900,11 @@ def ep1_out_done(result, xferred_bytes):
         usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
     else:
       # signal to host we have received entire file
-      irq_sendobject_complete(current_send_handle)
+      close_sendobject()
+      if EVENT_OBJECTINFO_CHANGED:
+        irq_sendobject_complete()
+      else:
+        in_ok_sendobject()
   else:
     #print("0x%04x %s" % (hdr.code,ptp_opcode_cb[hdr.code].__name__))
     #print("<",end="")
@@ -937,12 +936,8 @@ def ep1_in_done(result, xferred_bytes):
       usbd.submit_xfer(I0_EP1_OUT, i0_usbd_buf)
 
 def ep2_in_done(result, xferred_bytes):
-  # after IRQ data sent reply OK to host
-  hdr_ok()
-  hdr.txid=txid
-  #print("after_irq>",end="")
-  #print_hex(i0_usbd_buf[:hdr.len])
-  usbd.submit_xfer(I0_EP1_IN, memoryview(i0_usbd_buf)[:hdr.len])
+  # after IRQ data being sent, reply OK to host
+  in_ok_sendobject()
 
 ep_addr_cb = {
   I0_EP1_OUT:ep1_out_done,
@@ -952,14 +947,6 @@ ep_addr_cb = {
 
 def _xfer_cb(ep_addr,result,xferred_bytes):
   ep_addr_cb[ep_addr](result,xferred_bytes)
-
-# from "/" create handle tree,
-# recurse n dirs deep
-# lazy browsing to save memory
-# intialy do not fetch full tree
-# but only the root. Browsing
-# later will fetch subdirs on-demand
-#ls("/",0)
 
 # Switch the USB device to our custom USB driver.
 usbd = machine.USBDevice()

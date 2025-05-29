@@ -19,11 +19,14 @@
 # normal micropython binary.
 # connect with usb-serial to see debug prints
 #
-# $ mpremote cp ptp.py :/
+# $ pipx install mpremote
 # $ mpremote
 # >>> <enter>
 # >>> <ctrl-d>
 # device soft-reset
+# re-plug esp32s3 to usb
+# $ mpremote resume cp ptp.py :/
+# mpremote
 # >>> import ptp
 #
 # The device will then change to the custom USB device.
@@ -32,7 +35,6 @@ import machine, struct, time, os, uctypes
 import ecp5
 from micropython import const
 
-# to avoid loading ftdi_sio
 VID = const(0x1234)
 PID = const(0xabcd)
 
@@ -47,8 +49,7 @@ PRODUCT=b"iProduct"
 SERIAL=b"00000000"
 # if interface is named "MTP", host uses MTP protocol.
 # for any other name host uses PTP protocol.
-# linux gnome gvfs MTP BUG: file read doesn't work
-PROTOCOL=b"MTP" # libmtp, windows and apple
+PROTOCOL=b"MTP" # libmtp, windows and apple, linux write but not read
 #PROTOCOL=b"PTP" # libgphoto2, windows and linux
 VERSION=b"3.1.8"
 STORID_VFS=const(0x10001) # micropython VFS
@@ -56,8 +57,8 @@ STORID_CUSTOM=const(0x20002) # custom for FPGA
 STORAGE={STORID_VFS:b"vfs", STORID_CUSTOM:b"custom"}
 
 current_storid=STORID_VFS # must choose one
-# PTP
-# USB Still Image Capture Class defines
+
+# USB PTP Still Image Capture Class defines
 # debug: set all to 255 to avoid system default driver
 USB_CLASS_IMAGE=const(6) # imaging
 STILL_IMAGE_SUBCLASS=const(1) # still image cam
@@ -427,17 +428,18 @@ def in_hdr_ok():
   hdr_ok()
   usbd.submit_xfer(PTP_DATA_IN, memoryview(ptp_buf)[:hdr.len])
 
-def in_ok_sendobject(ok):
-  hdr.len=24
+def in_end_sendobject(ok):
   hdr.type=PTP_USB_CONTAINER_RESPONSE
+  hdr.txid=txid
   if ok:
     hdr.code=PTP_RC_OK
+    hdr.p1=current_storid
+    hdr.p2=send_parent
+    hdr.p3=current_send_handle
+    hdr.len=24
   else:
     hdr.code=PTP_RC_SpecificationByFormatUnsupported
-  hdr.txid=txid
-  hdr.p1=current_storid
-  hdr.p2=send_parent
-  hdr.p3=current_send_handle
+    hdr.len=12
   usbd.submit_xfer(PTP_DATA_IN, memoryview(ptp_buf)[:hdr.len])
 
 # after one IN submit another with response OK
@@ -492,13 +494,11 @@ def GetDeviceInfo(cnt): # 0x1001
   extension=b"\0"
   #extension=ucs2_string(b"android.com")
   functional_mode=struct.pack("<H", 0) # 0: standard mode
-  # unique lower 16-bit keys from ptp_opcode_cb.keys()
-  #operations=uint16_array(set([code&0xFFFF for code in list((ptp_opcode_cb.keys()))])) # human readable
-  #operations=uint16_array(set([code&0xFFFF for code in ptp_opcode_cb])) # short of previous line, set filters unique only
-  operations=uint16_array(ptp_opcode_cb) # short of previous line, set filters unique only
-  events=uint16_array((PTP_EC_ObjectInfoChanged,))
-  #deviceprops=uint16_array((PTP_DPC_DateTime,))
+  operations=uint16_array(ptp_opcode_cb)
+  events=uint16_array(())
+  #events=uint16_array((PTP_EC_ObjectInfoChanged,))
   deviceprops=uint16_array(())
+  #deviceprops=uint16_array((PTP_DPC_DateTime,))
   captureformats=uint16_array(())
   #captureformats=uint16_array((PTP_OFC_EXIF_JPEG,))
   imageformats=uint16_array((
@@ -669,7 +669,7 @@ def GetObject(cnt): # 0x1009
   if hdr.p1 in oh2path:
     fullpath=oh2path[hdr.p1]
     #print(fullpath)
-    if fullpath.startswith("/vfs"):
+    if fullpath.startswith("/"+STORAGE[STORID_VFS].decode()):
       fd=open(strip1dirlvl(fullpath),"rb")
       filesize=fd.seek(0,2)
       fd.seek(0)
@@ -681,7 +681,7 @@ def GetObject(cnt): # 0x1009
         remain_getobj_len=0
         fd.close()
         respond_ok_tx(txid)
-    if fullpath.startswith("/custom"):
+    if fullpath.startswith("/"+STORAGE[STORID_CUSTOM].decode()):
       msg=custom_txt
       filesize=len(msg)
       length=12+filesize
@@ -836,7 +836,7 @@ def SendObject(cnt): # 0x100D
       #print(">",end="")
       #print_hex(ptp_buf[:length])
       ok=close_sendobject()
-      in_ok_sendobject(ok)
+      in_end_sendobject(ok)
     else:
       # host will send another OUT command
       # prepare full buffer to read again from host
@@ -870,13 +870,13 @@ ptp_opcode_cb = {
   #0x1012:SetObjectProtection,
 }
 
-# EP0 control requests handlers
+# ep0 ctrl not used if PTP protocol flows ok
 def handle_out(bRequest, wValue, buf):
-  if bRequest == SETSTATUS and len(buf) == 6:
+  if bRequest==SETSTATUS and len(buf)==6:
     status[0:6]=buf[0:6]
 
 def handle_in(bRequest, wValue, buf):
-  if bRequest == GETSTATUS and len(buf) == 6:
+  if bRequest==GETSTATUS and len(buf)==6:
     buf[0:6]=status[0:6]
   return buf
 
@@ -918,11 +918,11 @@ def _control_xfer_cb(stage, request):
 # USB callback when our custom USB interface is opened by the host.
 def _open_itf_cb(interface_desc_view):
   # Prepare to receive first data packet on the OUT endpoint.
-  if interface_desc_view[11] == PTP_DATA_IN:
+  if interface_desc_view[11]==PTP_DATA_IN:
     usbd.submit_xfer(PTP_DATA_OUT,ptp_buf)
   #print("_open_itf_cb", bytes(interface_desc_view))
 
-def ep1_out_done(result, xferred_bytes):
+def ptp_data_out_done(result, xferred_bytes):
   global remaining_send_length,addr,fd
   if remaining_send_length>0:
     # continue receiving parts of the file
@@ -949,16 +949,15 @@ def ep1_out_done(result, xferred_bytes):
     else:
       # signal to host we have received entire file
       ok=close_sendobject()
-      in_ok_sendobject(ok)
+      in_end_sendobject(ok)
   else:
     #print("0x%04x %s" % (hdr.code,ptp_opcode_cb[hdr.code].__name__))
     #print("<",end="")
     #print_hex(ptp_buf[:xferred_bytes])
     ptp_opcode_cb[hdr.code](ptp_buf[:xferred_bytes])
 
-def ep1_in_done(result, xferred_bytes):
+def ptp_data_in_done(result, xferred_bytes):
   global remain_getobj_len,fd
-  # prepare full buffer to read for next host OUT command
   if length_response[0]:
     #print(">",end="")
     #print_hex(send_response[:length_response[0]])
@@ -966,7 +965,6 @@ def ep1_in_done(result, xferred_bytes):
     length_response[0]=0 # consumed, prevent recurring
   else:
     if remain_getobj_len:
-      #print("remain_getobj_len",remain_getobj_len)
       # TODO flash reading
       packet_len=fd.readinto(ptp_buf)
       remain_getobj_len-=packet_len
@@ -981,14 +979,13 @@ def ep1_in_done(result, xferred_bytes):
       usbd.submit_xfer(PTP_DATA_OUT, ptp_buf)
 
 # not used
-def ep2_in_done(result, xferred_bytes):
-  # after IRQ data being sent, reply OK to host
-  in_ok_sendobject()
+def ptp_event_in_done(result, xferred_bytes):
+  in_end_sendobject(True)
 
 ep_addr_cb = {
-  PTP_DATA_OUT:ep1_out_done,
-  PTP_DATA_IN:ep1_in_done,
-  PTP_EVENT_IN:ep2_in_done
+  PTP_DATA_OUT:ptp_data_out_done,
+  PTP_DATA_IN:ptp_data_in_done,
+  PTP_EVENT_IN:ptp_event_in_done
 }
 
 def _xfer_cb(ep_addr,result,xferred_bytes):
@@ -996,7 +993,7 @@ def _xfer_cb(ep_addr,result,xferred_bytes):
 
 # Switch the USB device to our custom USB driver.
 usbd = machine.USBDevice()
-usbd.builtin_driver = usbd.BUILTIN_DEFAULT
+usbd.builtin_driver = usbd.BUILTIN_CDC
 usbd.config(
   desc_dev=_desc_dev,
   desc_cfg=_desc_cfg,

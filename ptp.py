@@ -307,6 +307,7 @@ PTP_RC_OK=const(0x2001)
 #PTP_RC_GeneralError=const(0x2002)
 #PTP_RC_StoreFull=const(0x200C)
 #PTP_RC_ObjectWriteProtected=const(0x200D)
+PTP_RC_SpecificationByFormatUnsupported=const(0x2014)
 #PTP_RC_InvalidCodeFormat=const(0x2016)
 #PTP_RC_UnknownVendorCode=const(0x2017)
 #PTP_RC_InvalidDataSet=const(0x2023)
@@ -426,10 +427,13 @@ def in_hdr_ok():
   hdr_ok()
   usbd.submit_xfer(PTP_DATA_IN, memoryview(ptp_buf)[:hdr.len])
 
-def in_ok_sendobject():
+def in_ok_sendobject(ok):
   hdr.len=24
   hdr.type=PTP_USB_CONTAINER_RESPONSE
-  hdr.code=PTP_RC_OK
+  if ok:
+    hdr.code=PTP_RC_OK
+  else:
+    hdr.code=PTP_RC_SpecificationByFormatUnsupported
   hdr.txid=txid
   hdr.p1=current_storid
   hdr.p2=send_parent
@@ -688,14 +692,18 @@ def GetObject(cnt): # 0x1009
     hdr.type=PTP_USB_CONTAINER_DATA
   usbd.submit_xfer(PTP_DATA_IN, memoryview(ptp_buf)[:length])
 
-def DeleteObject(cnt): # 0x100B
-  fullpath=oh2path[hdr.p1]
-  del(oh2path[hdr.p1])
-  if hdr.p1 in cur_list:
-    del(cur_list[hdr.p1])
+# delete object by handle
+def ohdel(oh):
+  fullpath=oh2path[oh]
+  del(oh2path[oh])
+  if oh in cur_list:
+    del(cur_list[oh])
   del(path2oh[fullpath])
-  if hdr.p1>>28==0: # VFS
+  if oh>>28==0: # VFS
     os.unlink(strip1dirlvl(fullpath))
+
+def DeleteObject(cnt): # 0x100B
+  ohdel(hdr.p1)
   #print("deleted",fullpath)
   in_hdr_ok()
 
@@ -772,13 +780,14 @@ def SendObjectInfo(cnt): # 0x100C
     #print_hex(ptp_buf[:hdr.len])
     usbd.submit_xfer(PTP_DATA_IN, memoryview(ptp_buf)[:hdr.len])
 
-def close_sendobject():
+def close_sendobject()->bool:
   if send_parent>>24==0xc1: # fpga
-    ecp5.prog_close()
+    return ecp5.prog_close()
   elif send_parent>>24==0xc2: # flash
     ecp5.flash_close()
   else:
     fd.close()
+  return True
 
 def SendObject(cnt): # 0x100D
   global txid,send_length,remaining_send_length,addr,fd
@@ -826,8 +835,8 @@ def SendObject(cnt): # 0x100D
     if remaining_send_length<=0:
       #print(">",end="")
       #print_hex(ptp_buf[:length])
-      close_sendobject()
-      in_ok_sendobject()
+      ok=close_sendobject()
+      in_ok_sendobject(ok)
     else:
       # host will send another OUT command
       # prepare full buffer to read again from host
@@ -939,8 +948,8 @@ def ep1_out_done(result, xferred_bytes):
         usbd.submit_xfer(PTP_DATA_OUT, ptp_buf)
     else:
       # signal to host we have received entire file
-      close_sendobject()
-      in_ok_sendobject()
+      ok=close_sendobject()
+      in_ok_sendobject(ok)
   else:
     #print("0x%04x %s" % (hdr.code,ptp_opcode_cb[hdr.code].__name__))
     #print("<",end="")

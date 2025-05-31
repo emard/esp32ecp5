@@ -371,7 +371,7 @@ class FTP_client:
           elif dname.startswith("FLASH@"):
             import ecp5
             dummy, addr = path.split("@")
-            addr = int(addr)
+            addr = int(addr,0)
             result = ecp5.flash_stream(data_client,addr)
             ecp5.flash_close()
             del addr, dummy
@@ -379,7 +379,7 @@ class FTP_client:
           elif dname.startswith("SD@"):
             import sdraw
             dummy, addr = path.split("@")
-            addr = int(addr)
+            addr = int(addr,0)
             sd_raw = sdraw.sdraw()
             result = sd_raw.sd_write_stream(data_client,addr)
             del sd_raw, addr, dummy

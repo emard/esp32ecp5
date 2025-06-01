@@ -794,9 +794,9 @@ def SendObjectInfo(cnt): # 0x100C
     #send_length,=struct.unpack("<L", cnt[20:24])
     send_length=hdr.p3
     send_fullpath=oh2path[send_parent]+str_send_name
-    if send_length<=0:
-      print("host send length",send_length)
-      print("fullpath",send_fullpath)
+    #if send_length<=0:
+    #  print("host send length",send_length)
+    #  print("fullpath",send_fullpath)
     if send_fullpath in path2oh:
       current_send_handle=path2oh[send_fullpath]
     else:
@@ -885,6 +885,11 @@ def SendObject(cnt): # 0x100D
         fd.write(cnt[12:])
       remaining_send_length=send_length-(len(cnt)-12)
       send_length=0
+    else: # host send_length=0
+      if current_storid==STORID_CUSTOM: # NOP
+        ep_cb[PTP_DATA_OUT]=out_cmd
+        in_end_sendobject(True)
+        return
     # if host has sent all bytes it promised to send
     # report it to the host that file is complete
     if remaining_send_length<=0:

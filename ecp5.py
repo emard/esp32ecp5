@@ -553,6 +553,9 @@ def compare_flash_file_buf(flash_b, file_b, must:int)->int:
         must = 2
   return must
 
+def flash_report():
+  print("%dK blocks: %d total, %d erased, %d written." % (flash_erase_size>>10,count_total,count_erase,count_write))
+
 # clever = read-compare-erase-write
 # prevents flash wear when overwriting the same data
 # 4K erase block is max that fits on ESP32-WROOM
@@ -580,7 +583,7 @@ def flash_stream(dstream,addr=0):
       break
     addr+=len(file_block)
   stopwatch_stop(addr-start_addr)
-  print("%dK blocks: %d total, %d erased, %d written." % (flash_erase_size>>10,count_total,count_erase,count_write))
+  flash_report()
   return retval # True if successful
 
 def flash_stream_gz(dstream, addr=0, name=""):

@@ -763,9 +763,15 @@ build package and upload, type pypi username/password when asked:
 # Onboard Editor
 
 ESP32 can run small [VT100 terminal editor](https://github.com/robert-hh/Micropython-Editor)
-Upload files "pye_mp.py" and "help.txt".
 
-    from pye_mp import pye
+Automatic install from internet using mpremote mip:
+
+    mpremote mip install github:robert-hh/Micropython-Editor
+    >>> from pye import pye
+
+Optional Manual install, upload files "pye_mp.py" and "help.txt":
+
+    >>> from pye_mp import pye
     pye("help.txt")
 
 connected with fujprog -t
